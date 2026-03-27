@@ -1,0 +1,5 @@
+{
+  "name": "Coin Collector",
+  "description": "A clean and simple coin collection tracker with stats and progress tracking.",
+  "requestFramePermissions": []
+}
