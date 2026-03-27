@@ -167,6 +167,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [importProgress, setImportProgress] = useState<number | null>(null);
+  const [xpGain, setXpGain] = useState<number | null>(null);
 
   // Form state
   const [newName, setNewName] = useState('');
@@ -201,6 +202,18 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [feedback]);
+
+  useEffect(() => {
+    if (xpGain) {
+      const oldPoints = profile.points - xpGain;
+      const oldLevel = [...LEVELS].reverse().find(l => oldPoints >= l.minPoints);
+      const newLevel = [...LEVELS].reverse().find(l => profile.points >= l.minPoints);
+      
+      if (oldLevel && newLevel && oldLevel.name !== newLevel.name) {
+        setFeedback({ message: `Level Up! You are now a ${newLevel.name}!`, type: 'success' });
+      }
+    }
+  }, [profile.points, xpGain]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -263,7 +276,9 @@ export default function App() {
       };
       setCoins([newCoin, ...coins]);
       setProfile(prev => ({ ...prev, points: prev.points + points }));
-      setFeedback({ message: `Coin added! +${points} points`, type: 'success' });
+      setXpGain(points);
+      setTimeout(() => setXpGain(null), 2000);
+      setFeedback({ message: `Coin added!`, type: 'success' });
     }
 
     resetForm();
@@ -443,31 +458,78 @@ export default function App() {
   // --- Render Helpers ---
 
   const renderHeader = () => (
-    <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 pt-10 pb-5 sticky top-0 z-10 transition-colors">
+    <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 pt-12 pb-6 sticky top-0 z-10 transition-colors">
       <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold tracking-tight">My Coins</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200 dark:shadow-none">
+              <Star size={20} className="fill-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight leading-none">Coinly</h1>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Collector Edition</p>
+            </div>
+          </div>
           <div className="flex gap-1">
-            <button id="refresh-app-btn" onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Refresh App">
+            <motion.button whileTap={{ scale: 0.9 }} id="refresh-app-btn" onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Refresh App">
               <Clock size={20} />
-            </button>
-            <button id="export-data-btn" onClick={exportData} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Export Data">
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} id="export-data-btn" onClick={exportData} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Export Data">
               <Download size={20} />
-            </button>
-            <button id="import-data-btn" onClick={() => importInputRef.current?.click()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Import Data">
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} id="import-data-btn" onClick={() => importInputRef.current?.click()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Import Data">
               <Upload size={20} />
-            </button>
+            </motion.button>
           </div>
         </div>
-        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 transition-colors">
-          <div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mb-0.5">Total Coins</p>
-            <p className="text-2xl font-bold">{stats.total}</p>
+
+        {/* Hero Stats Section */}
+        <div className="bg-gray-900 dark:bg-gray-800 rounded-[2.5rem] p-6 text-white shadow-2xl shadow-blue-100 dark:shadow-none relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full -mr-16 -mt-16 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/20 rounded-full -ml-12 -mb-12 blur-2xl" />
+          
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Current Level</p>
+                <h2 className="text-3xl font-black italic">{currentLevel.name}</h2>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Total Coins</p>
+                <p className="text-3xl font-black">{stats.total}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-end">
+                <p className="text-xs font-bold text-gray-400">{profile.points} XP</p>
+                <p className="text-xs font-bold text-blue-400">{progressToNextLevel}% to {nextLevel?.name || 'Max'}</p>
+              </div>
+              <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressToNextLevel}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full"
+                />
+              </div>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mb-0.5">Completion</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.completion}%</p>
-          </div>
+
+          <AnimatePresence>
+            {xpGain && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.5 }}
+                animate={{ opacity: 1, y: -40, scale: 1.2 }}
+                exit={{ opacity: 0, scale: 1.5 }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none"
+              >
+                <span className="text-4xl font-black text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                  +{xpGain} XP
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </header>
@@ -615,7 +677,7 @@ export default function App() {
                 {!isAdding ? (
                   <motion.button
                     id="add-coin-btn"
-                    whileTap={{ scale: 0.98 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setIsAdding(true)}
                     className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
                   >
@@ -735,7 +797,8 @@ export default function App() {
 
                     <button
                       type="submit"
-                      className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold mt-2"
+                      whileTap={{ scale: 0.95 }}
+                      className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold mt-2 shadow-lg shadow-blue-100 dark:shadow-none"
                     >
                       {isEditing ? 'Update Coin' : 'Save Coin'}
                     </button>
@@ -764,48 +827,67 @@ export default function App() {
                     )}
                   </div>
                 ) : (
-                  <div className={profile.preferences.compactUI ? 'space-y-2' : 'space-y-3'}>
-                    {sortedCoins.map((coin) => (
-                      <motion.div
-                        layout
-                        key={coin.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        onClick={() => openCoin(coin)}
-                        className={`bg-white dark:bg-gray-900 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer active:scale-[0.98] ${
-                          profile.preferences.compactUI ? 'p-2' : 'p-3'
-                        } ${
-                          coin.rarity === 'Very Rare' ? 'border-amber-400 shadow-amber-100 dark:shadow-none' : 
-                          coin.rarity === 'Rare' ? 'border-blue-400 shadow-blue-100 dark:shadow-none' : 'border-gray-100 dark:border-gray-800 shadow-sm'
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={`${profile.preferences.compactUI ? 'w-10 h-10' : 'w-14 h-14'} rounded-xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center`}>
-                            {coin.image ? (
-                              <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className={`${profile.preferences.compactUI ? 'text-sm' : 'text-lg'} font-bold ${
-                                coin.rarity === 'Very Rare' ? 'text-amber-600' :
-                                coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-400'
-                              }`}>
-                                {coin.type}
-                              </span>
-                            )}
+                    <div className={profile.preferences.compactUI ? 'space-y-2' : 'space-y-4'}>
+                      {sortedCoins.map((coin) => (
+                        <motion.div
+                          layout
+                          key={coin.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => openCoin(coin)}
+                          className={`bg-white dark:bg-gray-900 rounded-3xl border transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden ${
+                            profile.preferences.compactUI ? 'p-2' : 'p-4'
+                          } ${
+                            coin.rarity === 'Very Rare' ? 'border-amber-400/50 bg-amber-50/30 dark:bg-amber-900/10 shadow-lg shadow-amber-100 dark:shadow-none' : 
+                            coin.rarity === 'Rare' ? 'border-blue-400/50 bg-blue-50/30 dark:bg-blue-900/10 shadow-lg shadow-blue-100 dark:shadow-none' : 'border-gray-100 dark:border-gray-800 shadow-sm'
+                          }`}
+                        >
+                          {coin.rarity === 'Very Rare' && (
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-amber-400/10 rounded-full -mr-8 -mt-8 blur-xl" />
+                          )}
+                          <div className="flex items-center gap-4">
+                            <div className={`${profile.preferences.compactUI ? 'w-12 h-12' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner`}>
+                              {coin.image ? (
+                                <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className={`${profile.preferences.compactUI ? 'text-sm' : 'text-2xl'} font-black ${
+                                  coin.rarity === 'Very Rare' ? 'text-amber-600' :
+                                  coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-300'
+                                }`}>
+                                  {coin.type}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <h4 className={`font-black text-gray-800 dark:text-gray-100 ${profile.preferences.compactUI ? 'text-sm' : 'text-lg'}`}>
+                                  {coin.name}
+                                </h4>
+                                {coin.rarity !== 'Common' && (
+                                  <div className={`p-1 rounded-full ${coin.rarity === 'Very Rare' ? 'bg-amber-100 dark:bg-amber-900/50' : 'bg-blue-100 dark:bg-blue-900/50'}`}>
+                                    <Star size={10} className={`fill-current ${coin.rarity === 'Very Rare' ? 'text-amber-600' : 'text-blue-600'}`} />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{coin.year}</span>
+                                <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${
+                                  coin.rarity === 'Very Rare' ? 'text-amber-600' :
+                                  coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-400'
+                                }`}>{coin.rarity}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className={`font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 ${profile.preferences.compactUI ? 'text-sm' : ''}`}>
-                              {coin.name}
-                              {coin.rarity !== 'Common' && <Star size={profile.preferences.compactUI ? 12 : 14} className="fill-amber-400 text-amber-400" />}
-                            </h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium line-clamp-1">
-                              {coin.year} • {coin.rarity} • £{coin.amountPaid?.toFixed(2)}
-                            </p>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-sm font-black text-gray-800 dark:text-gray-200">£{coin.amountPaid?.toFixed(2)}</span>
+                            <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                           </div>
-                        </div>
-                        <ChevronRight size={18} className="text-gray-300 dark:text-gray-600" />
-                      </motion.div>
-                    ))}
-                  </div>
+                        </motion.div>
+                      ))}
+                    </div>
                 )}
               </motion.div>
             )}
@@ -819,55 +901,75 @@ export default function App() {
                 className="space-y-8"
               >
                 {/* Suggestion */}
-                <div className="bg-blue-600 p-6 rounded-3xl text-white shadow-xl shadow-blue-100 dark:shadow-none">
-                  <p className="text-blue-100 text-sm font-bold uppercase tracking-wider mb-1">Suggestion</p>
-                  <h3 className="text-2xl font-bold leading-tight">{suggestion}</h3>
+                <div className="bg-blue-600 p-6 rounded-[2.5rem] text-white shadow-xl shadow-blue-100 dark:shadow-none relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                  <div className="relative z-10">
+                    <p className="text-blue-100 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Daily Suggestion</p>
+                    <h3 className="text-2xl font-black leading-tight italic">"{suggestion}"</h3>
+                  </div>
                 </div>
 
                 {/* Progress Bars */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Progress by Type</h3>
-                  {(['50p', '£1', '£2'] as CoinType[]).map((type) => {
-                    const count = stats.counts[type];
-                    const percent = Math.min((count / TARGET_PER_TYPE) * 100, 100);
-                    return (
-                      <div key={type} className="space-y-2">
-                        <div className="flex justify-between items-end">
-                          <span className="font-bold text-gray-700 dark:text-gray-300">{type} Coins</span>
-                          <span className="text-sm font-bold text-gray-400">{count} / {TARGET_PER_TYPE}</span>
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200">Progress by Type</h3>
+                    <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{stats.completion}% Total</span>
+                  </div>
+                  <div className="grid gap-4">
+                    {(['50p', '£1', '£2'] as CoinType[]).map((type) => {
+                      const count = stats.counts[type];
+                      const percent = Math.min((count / TARGET_PER_TYPE) * 100, 100);
+                      return (
+                        <div key={type} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
+                                type === '50p' ? 'bg-blue-50 text-blue-600' :
+                                type === '£1' ? 'bg-indigo-50 text-indigo-600' : 'bg-purple-50 text-purple-600'
+                              }`}>
+                                {type}
+                              </div>
+                              <span className="font-black text-gray-800 dark:text-gray-200">{type} Coins</span>
+                            </div>
+                            <span className="text-sm font-black text-gray-400">{count} / {TARGET_PER_TYPE}</span>
+                          </div>
+                          <div className="h-3 bg-gray-50 dark:bg-gray-800 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${percent}%` }}
+                              transition={{ duration: 1, ease: "easeOut" }}
+                              className={`h-full rounded-full ${
+                                type === '50p' ? 'bg-blue-500' :
+                                type === '£1' ? 'bg-indigo-500' : 'bg-purple-500'
+                              }`}
+                            />
+                          </div>
                         </div>
-                        <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${percent}%` }}
-                            className={`h-full rounded-full ${
-                              type === '50p' ? 'bg-blue-500' :
-                              type === '£1' ? 'bg-indigo-500' : 'bg-purple-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Monthly Totals */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Collection History</h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800">
+                  <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Collection History</h3>
+                  <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
                     {Object.entries(stats.monthlyTotals).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6).map(([month, count]) => {
                       const [year, m] = month.split('-');
                       const date = new Date(parseInt(year), parseInt(m) - 1);
                       const monthName = date.toLocaleString('default', { month: 'long' });
                       return (
-                        <div key={month} className="p-4 flex items-center justify-between">
-                          <span className="font-medium text-gray-600 dark:text-gray-400">{monthName} {year}</span>
-                          <span className="font-bold text-blue-600 dark:text-blue-400">+{count} coins</span>
+                        <div key={month} className="p-5 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <span className="font-bold text-gray-600 dark:text-gray-400">{monthName} {year}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-blue-600 dark:text-blue-400">+{count}</span>
+                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Coins</span>
+                          </div>
                         </div>
                       );
                     })}
                     {Object.keys(stats.monthlyTotals).length === 0 && (
-                      <div className="p-8 text-center text-gray-400 italic">No history yet.</div>
+                      <div className="p-10 text-center text-gray-400 italic font-medium">No history yet. Start adding coins!</div>
                     )}
                   </div>
                 </div>
@@ -875,18 +977,21 @@ export default function App() {
                 {/* Duplicates */}
                 {stats.duplicateList.length > 0 && (
                   <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Duplicates Tracked</h3>
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800">
+                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Duplicates Tracked</h3>
+                    <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
                       {stats.duplicateList.map(({ count, coin }) => (
-                        <div key={coin.id} className="p-4 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">
+                        <div key={coin.id} className="p-5 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-[10px] font-black text-gray-400 shadow-inner">
                               {coin.type}
                             </div>
-                            <span className="font-medium text-gray-700 dark:text-gray-300">{coin.name} ({coin.year})</span>
+                            <div>
+                              <p className="font-bold text-gray-800 dark:text-gray-200">{coin.name}</p>
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{coin.year}</p>
+                            </div>
                           </div>
-                          <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold">
-                            {count} owned
+                          <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                            {count} Owned
                           </span>
                         </div>
                       ))}
@@ -905,89 +1010,81 @@ export default function App() {
                 className="space-y-6"
               >
                 {/* Profile Card */}
-                <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4">
-                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
-                    <User size={32} />
+                <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-5">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-blue-200 dark:shadow-none">
+                    <User size={40} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold">{profile.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{currentLevel.name} Collector</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-gray-400 uppercase">Total Spend</p>
-                    <p className="text-lg font-bold text-green-600 dark:text-green-400">£{stats.totalSpend.toFixed(2)}</p>
+                    <h3 className="text-2xl font-black tracking-tight">{profile.name}</h3>
+                    <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{currentLevel.name} Collector</p>
                   </div>
                 </div>
 
-                {/* Level Progress */}
-                <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-xs font-bold text-gray-400 uppercase mb-1">Level Progress</p>
-                      <h4 className="text-lg font-bold">{profile.points} Points</h4>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-gray-400 uppercase mb-1">Next: {nextLevel?.name || 'Max'}</p>
-                      <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{progressToNextLevel}%</p>
-                    </div>
+                {/* Collector Stats Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Value</p>
+                    <p className="text-2xl font-black text-green-600 dark:text-green-400">£{stats.totalSpend.toFixed(2)}</p>
                   </div>
-                  <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressToNextLevel}%` }}
-                      className="h-full bg-blue-600 rounded-full"
-                    />
+                  <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Points</p>
+                    <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{profile.points}</p>
                   </div>
                 </div>
 
-                {/* Preferences */}
+                {/* Display Section */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                    <Settings size={20} /> Settings
-                  </h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800">
-                    <div className="p-4 flex items-center justify-between">
-                      <span className="font-medium">Theme Mode</span>
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Display</h3>
+                  <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Theme Mode</span>
                       <select 
                         value={profile.preferences.theme}
                         onChange={(e) => setProfile({ ...profile, preferences: { ...profile.preferences, theme: e.target.value as any } })}
-                        className="bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-lg text-sm font-bold border-none focus:ring-0"
+                        className="bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-xl text-sm font-black border-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="system">System</option>
                         <option value="light">Light</option>
                         <option value="dark">Dark</option>
                       </select>
                     </div>
-                    <div className="p-4 flex items-center justify-between">
-                      <span className="font-medium">Compact UI</span>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Compact UI</span>
                       <button 
                         onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, compactUI: !profile.preferences.compactUI } })}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${profile.preferences.compactUI ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.compactUI ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
                       >
                         <motion.div 
-                          animate={{ x: profile.preferences.compactUI ? 26 : 2 }}
-                          className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-sm"
+                          animate={{ x: profile.preferences.compactUI ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
                         />
                       </button>
                     </div>
-                    <div className="p-4 flex items-center justify-between">
-                      <span className="font-medium">Bottom Menu</span>
+                  </div>
+                </div>
+
+                {/* App Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">App</h3>
+                  <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Bottom Menu</span>
                       <button 
                         onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showBottomMenu: !profile.preferences.showBottomMenu } })}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${profile.preferences.showBottomMenu ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showBottomMenu ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
                       >
                         <motion.div 
-                          animate={{ x: profile.preferences.showBottomMenu ? 26 : 2 }}
-                          className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-sm"
+                          animate={{ x: profile.preferences.showBottomMenu ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
                         />
                       </button>
                     </div>
-                    <div className="p-4 flex items-center justify-between">
-                      <span className="font-medium">Sort Collection By</span>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Sort By</span>
                       <select 
                         value={profile.preferences.sortBy}
                         onChange={(e) => setProfile({ ...profile, preferences: { ...profile.preferences, sortBy: e.target.value as 'added' | 'opened' } })}
-                        className="bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-lg text-sm font-bold border-none focus:ring-0"
+                        className="bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-xl text-sm font-black border-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="added">Recently Added</option>
                         <option value="opened">Recently Opened</option>
@@ -996,27 +1093,32 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* App Actions */}
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    id="profile-refresh-btn"
-                    onClick={() => window.location.reload()}
-                    className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
-                  >
-                    <Clock size={18} className="text-blue-600" /> Refresh App
-                  </button>
-                  <button 
-                    id="clear-cache-btn"
-                    onClick={() => {
-                      if (confirm('Are you sure? This will delete all your coins and settings!')) {
-                        localStorage.clear();
-                        window.location.reload();
-                      }
-                    }}
-                    className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 text-red-600"
-                  >
-                    <Trash2 size={18} /> Clear Cache
-                  </button>
+                {/* Data Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Data</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      id="profile-refresh-btn"
+                      onClick={() => window.location.reload()}
+                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
+                    >
+                      <Clock size={24} className="text-blue-600" />
+                      <span>Refresh</span>
+                    </button>
+                    <button 
+                      id="clear-cache-btn"
+                      onClick={() => {
+                        if (confirm('Are you sure? This will delete all your coins and settings!')) {
+                          localStorage.clear();
+                          window.location.reload();
+                        }
+                      }}
+                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 text-red-600 shadow-sm active:scale-95 transition-transform"
+                    >
+                      <Trash2 size={24} />
+                      <span>Reset</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Recovery Code */}
@@ -1033,19 +1135,20 @@ export default function App() {
 
                 {/* Folders Management */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                    <FolderIcon size={20} /> Folders
-                  </h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Folders</h3>
+                  <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
                     {folders.map(folder => (
-                      <div key={folder.id} className="p-4 flex items-center justify-between">
-                        <span className="font-medium">{folder.name}</span>
+                      <div key={folder.id} className="p-5 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <FolderIcon size={18} className="text-gray-400" />
+                          <span className="font-bold text-gray-700 dark:text-gray-300">{folder.name}</span>
+                        </div>
                         {!folder.isDefault && (
                           <button 
                             onClick={() => setFolders(folders.filter(f => f.id !== folder.id))}
-                            className="text-red-400 p-2"
+                            className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={18} />
                           </button>
                         )}
                       </div>
@@ -1055,9 +1158,9 @@ export default function App() {
                         const name = prompt('Folder Name:');
                         if (name) setFolders([...folders, { id: crypto.randomUUID(), name }]);
                       }}
-                      className="w-full p-4 text-blue-600 dark:text-blue-400 font-bold text-sm flex items-center justify-center gap-2"
+                      className="w-full p-5 text-blue-600 dark:text-blue-400 font-black text-sm flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                     >
-                      <Plus size={16} /> Add Folder
+                      <Plus size={18} /> Add New Folder
                     </button>
                   </div>
                 </div>
@@ -1083,63 +1186,99 @@ export default function App() {
                 className="bg-white dark:bg-gray-900 w-full max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden max-h-[90vh] flex flex-col border-t sm:border border-gray-100 dark:border-gray-800"
                 onClick={e => e.stopPropagation()}
               >
-                <div className="relative h-64 bg-gray-100 dark:bg-gray-800 flex-shrink-0">
-                  {selectedCoin.image ? (
-                    <img src={selectedCoin.image} alt={selectedCoin.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-6xl font-bold text-gray-200 dark:text-gray-700">
-                      {selectedCoin.type}
-                    </div>
+                <div className={`relative h-80 flex-shrink-0 flex items-center justify-center overflow-hidden ${
+                  selectedCoin.rarity === 'Very Rare' ? 'bg-amber-50 dark:bg-amber-900/10' :
+                  selectedCoin.rarity === 'Rare' ? 'bg-blue-50 dark:bg-blue-900/10' : 'bg-gray-100 dark:bg-gray-800'
+                }`}>
+                  {/* Subtle Glow for Rare Coins */}
+                  {(selectedCoin.rarity === 'Rare' || selectedCoin.rarity === 'Very Rare') && (
+                    <div className={`absolute inset-0 blur-3xl opacity-30 ${
+                      selectedCoin.rarity === 'Very Rare' ? 'bg-amber-400' : 'bg-blue-400'
+                    }`} />
                   )}
+
+                  {selectedCoin.image ? (
+                    <motion.img 
+                      initial={{ scale: 1.2, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      src={selectedCoin.image} 
+                      alt={selectedCoin.name} 
+                      className="w-full h-full object-cover relative z-10" 
+                    />
+                  ) : (
+                    <motion.div 
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className={`w-full h-full flex items-center justify-center text-8xl font-black relative z-10 ${
+                        selectedCoin.rarity === 'Very Rare' ? 'text-amber-600/20' :
+                        selectedCoin.rarity === 'Rare' ? 'text-blue-600/20' : 'text-gray-200 dark:text-gray-700'
+                      }`}
+                    >
+                      {selectedCoin.type}
+                    </motion.div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white dark:from-gray-900 to-transparent z-20" />
                   <button 
                     onClick={() => setSelectedCoin(null)}
-                    className="absolute top-4 right-4 w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white"
+                    className="absolute top-6 right-6 w-12 h-12 bg-black/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform z-30"
                   >
-                    <X size={20} />
+                    <X size={24} />
                   </button>
                 </div>
 
-                <div className="p-8 overflow-y-auto">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                      selectedCoin.rarity === 'Very Rare' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
-                      selectedCoin.rarity === 'Rare' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                    }`}>
-                      {selectedCoin.rarity}
-                    </span>
-                    <span className="text-sm font-bold text-gray-400">{selectedCoin.year}</span>
-                  </div>
-                  
-                  <h2 className="text-3xl font-bold mb-4">{selectedCoin.name}</h2>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl mb-6">
-                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed italic">"{selectedCoin.summary || 'No summary provided.'}"</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl">
-                      <p className="text-xs font-bold text-gray-400 uppercase mb-1">Type</p>
-                      <p className="font-bold text-lg">{selectedCoin.type}</p>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl">
-                      <p className="text-xs font-bold text-gray-400 uppercase mb-1">Folder</p>
-                      <p className="font-bold text-lg">{folders.find(f => f.id === selectedCoin.folderId)?.name}</p>
+                <div className="px-8 pb-10 overflow-y-auto relative z-30">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex gap-2">
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
+                        selectedCoin.rarity === 'Very Rare' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
+                        selectedCoin.rarity === 'Rare' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                      }`}>
+                        {selectedCoin.rarity !== 'Common' && <Star size={10} className="fill-current" />}
+                        {selectedCoin.rarity}
+                      </span>
+                      <span className="px-4 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                        {selectedCoin.year}
+                      </span>
                     </div>
                   </div>
+                  
+                  <h2 className="text-4xl font-black mb-6 leading-tight tracking-tight text-gray-900 dark:text-white">{selectedCoin.name}</h2>
+                  
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2rem] mb-8 border border-gray-100 dark:border-gray-800 relative group">
+                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
+                      <Info size={16} />
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-bold italic text-lg">"{selectedCoin.summary || 'No summary provided.'}"</p>
+                  </div>
 
-                  <div className="flex gap-3">
-                    <button 
+                  <div className="grid grid-cols-2 gap-4 mb-10">
+                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Denomination</p>
+                      <p className="font-black text-2xl text-gray-800 dark:text-gray-100">{selectedCoin.type}</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Investment</p>
+                      <p className="font-black text-2xl text-green-600 dark:text-green-400">£{selectedCoin.amountPaid?.toFixed(2)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <motion.button 
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => startEdit(selectedCoin)}
-                      className="flex-1 py-4 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl font-bold"
+                      className="flex-1 py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-3xl font-black text-lg shadow-xl active:scale-95 transition-transform"
                     >
                       Edit Details
-                    </button>
-                    <button 
-                      onClick={() => deleteCoin(selectedCoin.id)}
-                      className="flex-1 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl font-bold"
+                    </motion.button>
+                    <motion.button 
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        if (confirm('Delete this coin permanently?')) deleteCoin(selectedCoin.id);
+                      }}
+                      className="w-20 py-5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-3xl font-black flex items-center justify-center active:scale-95 transition-transform"
                     >
-                      Delete
-                    </button>
+                      <Trash2 size={24} />
+                    </motion.button>
                   </div>
                 </div>
               </motion.div>
