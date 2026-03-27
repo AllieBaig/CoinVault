@@ -164,6 +164,7 @@ export default function App() {
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState<Coin | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [importProgress, setImportProgress] = useState<number | null>(null);
 
@@ -363,6 +364,16 @@ export default function App() {
       filtered = coins.filter(c => c.folderId === selectedFolderId);
     }
 
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(c => 
+        c.name.toLowerCase().includes(query) || 
+        c.year.includes(query) || 
+        c.type.toLowerCase().includes(query) ||
+        c.summary.toLowerCase().includes(query)
+      );
+    }
+
     return [...filtered].sort((a, b) => {
       if (profile.preferences.sortBy === 'opened') {
         return b.lastOpened - a.lastOpened;
@@ -432,29 +443,29 @@ export default function App() {
   // --- Render Helpers ---
 
   const renderHeader = () => (
-    <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 pt-12 pb-6 sticky top-0 z-10 transition-colors">
+    <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 pt-10 pb-5 sticky top-0 z-10 transition-colors">
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold tracking-tight">My Coins</h1>
-          <div className="flex gap-2">
-            <button onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Refresh App">
+          <div className="flex gap-1">
+            <button id="refresh-app-btn" onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Refresh App">
               <Clock size={20} />
             </button>
-            <button onClick={exportData} className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+            <button id="export-data-btn" onClick={exportData} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Export Data">
               <Download size={20} />
             </button>
-            <button onClick={() => importInputRef.current?.click()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+            <button id="import-data-btn" onClick={() => importInputRef.current?.click()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Import Data">
               <Upload size={20} />
             </button>
           </div>
         </div>
         <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 transition-colors">
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Total Coins</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mb-0.5">Total Coins</p>
             <p className="text-2xl font-bold">{stats.total}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Completion</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mb-0.5">Completion</p>
             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.completion}%</p>
           </div>
         </div>
@@ -534,7 +545,7 @@ export default function App() {
 
   return (
     <ErrorBoundary onExport={exportData}>
-      <div className={`min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans transition-colors ${profile.preferences.showBottomMenu ? 'pb-32' : 'pb-24'}`}>
+      <div className={`min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans transition-colors ${profile.preferences.showBottomMenu ? 'pb-24' : 'pb-12'}`}>
         <input 
           type="file" 
           ref={importInputRef} 
@@ -545,7 +556,7 @@ export default function App() {
 
         {renderHeader()}
 
-        <main className="max-w-md mx-auto px-6 pt-6">
+        <main className="max-w-md mx-auto px-6 pt-4">
           {renderTabs()}
 
           <AnimatePresence mode="wait">
@@ -557,8 +568,28 @@ export default function App() {
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-4"
               >
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search collection..."
+                    className="w-full pl-11 pr-4 py-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+                  />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
                 {/* Folder Selector */}
-                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                   <button
                     onClick={() => setSelectedFolderId('all')}
                     className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
@@ -583,6 +614,7 @@ export default function App() {
                 {/* Add Button / Form */}
                 {!isAdding ? (
                   <motion.button
+                    id="add-coin-btn"
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setIsAdding(true)}
                     className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
@@ -591,6 +623,7 @@ export default function App() {
                   </motion.button>
                 ) : (
                   <motion.form
+                    id="add-coin-form"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     onSubmit={addCoin}
@@ -713,10 +746,22 @@ export default function App() {
                 {sortedCoins.length === 0 ? (
                   <div className="py-20 text-center">
                     <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Info className="text-gray-400" />
+                      {searchQuery ? <Search className="text-gray-400" /> : <Info className="text-gray-400" />}
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">No Coins Found</h3>
-                    <p className="text-gray-500 dark:text-gray-400">Try adding a coin or checking another folder.</p>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                      {searchQuery ? 'No Match Found' : 'No Coins Found'}
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {searchQuery ? `We couldn't find anything for "${searchQuery}"` : 'Try adding a coin or checking another folder.'}
+                    </p>
+                    {searchQuery && (
+                      <button 
+                        onClick={() => setSearchQuery('')}
+                        className="mt-4 text-blue-600 dark:text-blue-400 font-bold text-sm"
+                      >
+                        Clear Search
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className={profile.preferences.compactUI ? 'space-y-2' : 'space-y-3'}>
@@ -791,7 +836,7 @@ export default function App() {
                           <span className="font-bold text-gray-700 dark:text-gray-300">{type} Coins</span>
                           <span className="text-sm font-bold text-gray-400">{count} / {TARGET_PER_TYPE}</span>
                         </div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${percent}%` }}
@@ -954,12 +999,14 @@ export default function App() {
                 {/* App Actions */}
                 <div className="grid grid-cols-2 gap-3">
                   <button 
+                    id="profile-refresh-btn"
                     onClick={() => window.location.reload()}
                     className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
                   >
                     <Clock size={18} className="text-blue-600" /> Refresh App
                   </button>
                   <button 
+                    id="clear-cache-btn"
                     onClick={() => {
                       if (confirm('Are you sure? This will delete all your coins and settings!')) {
                         localStorage.clear();
@@ -989,14 +1036,14 @@ export default function App() {
                   <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
                     <FolderIcon size={20} /> Folders
                   </h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
                     {folders.map(folder => (
                       <div key={folder.id} className="p-4 flex items-center justify-between">
                         <span className="font-medium">{folder.name}</span>
                         {!folder.isDefault && (
                           <button 
                             onClick={() => setFolders(folders.filter(f => f.id !== folder.id))}
-                            className="text-red-400"
+                            className="text-red-400 p-2"
                           >
                             <Trash2 size={16} />
                           </button>
