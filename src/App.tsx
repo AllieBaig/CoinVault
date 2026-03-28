@@ -8,8 +8,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Trash2, PieChart, LayoutGrid, Info, CheckCircle2, Star, 
   Folder as FolderIcon, Image as ImageIcon, Download, Upload, 
-  Settings, User, ChevronRight, X, ArrowLeft, Search, Clock
+  Settings, User, ChevronRight, X, ArrowLeft, Search, Clock,
+  Loader2, AlertCircle, Grid, List as ListIcon
 } from 'lucide-react';
+import { removeBackground } from '@imgly/background-removal';
 
 // --- Types ---
 
@@ -159,7 +161,8 @@ export default function App() {
     };
   });
 
-  const [activeTab, setActiveTab] = useState<'collection' | 'stats' | 'profile'>('collection');
+  const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'stats' | 'profile'>('collection');
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | 'all'>('all');
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -240,14 +243,30 @@ export default function App() {
 
   // --- Actions ---
 
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setIsProcessingImage(true);
+      try {
+        // Process background removal
+        const blob = await removeBackground(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setNewImage(reader.result as string);
+          setIsProcessingImage(false);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Background removal failed:', error);
+        // Fallback to original image if processing fails
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setNewImage(reader.result as string);
+          setIsProcessingImage(false);
+          setFeedback({ message: 'Background removal failed, used original', type: 'info' });
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -359,10 +378,20 @@ export default function App() {
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
+        
+        // Validation
+        if (!data || typeof data !== 'object') throw new Error('Invalid data format');
+        if (!Array.isArray(data.coins)) throw new Error('Missing or invalid coins data');
+        
         if (data.coins) {
           // Migration for coins
           const migratedCoins = data.coins.map((c: any) => ({
-            ...c,
+            id: c.id || crypto.randomUUID(),
+            name: c.name || 'Unknown Coin',
+            year: c.year || '',
+            type: c.type || 'Unknown',
+            rarity: c.rarity || 'Common',
+            image: c.image || null,
             amountPaid: c.amountPaid ?? 0,
             summary: c.summary ?? '',
             folderId: c.folderId ?? 'purchased',
@@ -371,12 +400,19 @@ export default function App() {
           }));
           setCoins(migratedCoins);
         }
-        if (data.folders) setFolders(data.folders);
+        
+        if (Array.isArray(data.folders)) {
+          setFolders(data.folders);
+        } else {
+          setFolders([{ id: 'purchased', name: 'Coins Purchased', isDefault: true }]);
+        }
+
         if (data.profile) {
           // Migration for profile
           const p = data.profile;
           setProfile({
-            ...p,
+            name: p.name || 'Collector',
+            recoveryCode: p.recoveryCode || Math.random().toString(36).substring(2, 10).toUpperCase(),
             points: p.points ?? 0,
             preferences: {
               sortBy: p.preferences?.sortBy ?? 'added',
@@ -389,7 +425,8 @@ export default function App() {
         
         setFeedback({ message: 'Data imported successfully', type: 'success' });
       } catch (err) {
-        setFeedback({ message: 'Invalid data format', type: 'info' });
+        console.error('Import error:', err);
+        setFeedback({ message: `Import failed: ${err instanceof Error ? err.message : 'Invalid format'}`, type: 'info' });
       } finally {
         setImportProgress(null);
         if (importInputRef.current) importInputRef.current.value = '';
@@ -570,10 +607,10 @@ export default function App() {
   const renderTabs = () => {
     if (profile.preferences.showBottomMenu) return null;
     return (
-      <div className="flex bg-gray-200/50 dark:bg-gray-800/50 p-1 rounded-xl mb-6">
+      <div className="flex bg-gray-200/50 dark:bg-gray-800/50 p-1 rounded-xl mb-6 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab('collection')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
             activeTab === 'collection' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
           }`}
         >
@@ -581,8 +618,17 @@ export default function App() {
           Collection
         </button>
         <button
+          onClick={() => setActiveTab('library')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+            activeTab === 'library' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
+          }`}
+        >
+          <ImageIcon size={18} />
+          Library
+        </button>
+        <button
           onClick={() => setActiveTab('stats')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
             activeTab === 'stats' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
           }`}
         >
@@ -591,7 +637,7 @@ export default function App() {
         </button>
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
             activeTab === 'profile' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
           }`}
         >
@@ -613,7 +659,16 @@ export default function App() {
           }`}
         >
           <LayoutGrid size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Collection</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest">Home</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('library')}
+          className={`flex flex-col items-center gap-1 transition-all ${
+            activeTab === 'library' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
+          }`}
+        >
+          <ImageIcon size={24} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Library</span>
         </button>
         <button
           onClick={() => setActiveTab('stats')}
@@ -736,10 +791,15 @@ export default function App() {
 
                     {/* Image Upload */}
                     <div 
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => !isProcessingImage && fileInputRef.current?.click()}
                       className="w-full aspect-video bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative"
                     >
-                      {newImage ? (
+                      {isProcessingImage ? (
+                        <div className="flex flex-col items-center gap-2 p-4 text-center">
+                          <Loader2 size={32} className="text-blue-600 animate-spin" />
+                          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Removing Background...</span>
+                        </div>
+                      ) : newImage ? (
                         <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
                         <>
@@ -934,6 +994,47 @@ export default function App() {
               </motion.div>
             )}
 
+            {activeTab === 'library' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-6 pb-24"
+              >
+                <div className="flex items-center justify-between px-2">
+                  <h2 className="text-2xl font-black text-gray-800 dark:text-gray-200">Image Library</h2>
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{coins.filter(c => c.image).length} Images</span>
+                </div>
+
+                {coins.filter(c => c.image).length === 0 ? (
+                  <div className="py-20 text-center bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <ImageIcon className="text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 font-bold">No coin images yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Add photos to your coins to see them here</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-3">
+                    {coins.filter(c => c.image).map(coin => (
+                      <motion.button
+                        key={coin.id}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => openCoin(coin)}
+                        className="aspect-square bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-2 shadow-sm overflow-hidden"
+                      >
+                        <img 
+                          src={coin.image!} 
+                          alt={coin.name} 
+                          className="w-full h-full object-contain"
+                          referrerPolicy="no-referrer"
+                        />
+                      </motion.button>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
             {activeTab === 'stats' && (
               <motion.div
                 key="stats"
