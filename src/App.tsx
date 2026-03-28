@@ -168,6 +168,9 @@ export default function App() {
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [importProgress, setImportProgress] = useState<number | null>(null);
   const [xpGain, setXpGain] = useState<number | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+  const [inputModal, setInputModal] = useState<{ title: string; placeholder: string; onConfirm: (value: string) => void } | null>(null);
+  const [modalInputValue, setModalInputValue] = useState('');
 
   // Form state
   const [newName, setNewName] = useState('');
@@ -417,17 +420,20 @@ export default function App() {
       monthlyTotals[key] = (monthlyTotals[key] || 0) + 1;
     });
 
-    // Duplicate tracking
-    const duplicates: { [key: string]: { count: number; coin: Coin } } = {};
+    // Duplicate tracking with dates
+    const duplicates: { [key: string]: { count: number; coin: Coin; dates: number[] } } = {};
     coins.forEach(c => {
       const key = `${c.name}-${c.year}-${c.type}`.toLowerCase();
       if (duplicates[key]) {
         duplicates[key].count += 1;
+        duplicates[key].dates.push(c.dateAdded);
       } else {
-        duplicates[key] = { count: 1, coin: c };
+        duplicates[key] = { count: 1, coin: c, dates: [c.dateAdded] };
       }
     });
-    const duplicateList = Object.values(duplicates).filter(d => d.count > 1).sort((a, b) => b.count - a.count);
+    const duplicateList = Object.values(duplicates)
+      .filter(d => d.count > 1)
+      .sort((a, b) => b.count - a.count);
 
     return { counts, total, completion, totalSpend, monthlyTotals, duplicateList };
   }, [coins]);
@@ -979,20 +985,29 @@ export default function App() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Duplicates Tracked</h3>
                     <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
-                      {stats.duplicateList.map(({ count, coin }) => (
-                        <div key={coin.id} className="p-5 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-[10px] font-black text-gray-400 shadow-inner">
-                              {coin.type}
+                      {stats.duplicateList.map(({ count, coin, dates }) => (
+                        <div key={coin.id} className="p-5 flex flex-col gap-3 group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-[10px] font-black text-gray-400 shadow-inner">
+                                {coin.type}
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-800 dark:text-gray-200">{coin.name}</p>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{coin.year}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-bold text-gray-800 dark:text-gray-200">{coin.name}</p>
-                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{coin.year}</p>
-                            </div>
+                            <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                              {count} Owned
+                            </span>
                           </div>
-                          <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
-                            {count} Owned
-                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {dates.sort((a, b) => b - a).map((date, idx) => (
+                              <span key={idx} className="text-[9px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md">
+                                {new Date(date).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1108,15 +1123,19 @@ export default function App() {
                     <button 
                       id="clear-cache-btn"
                       onClick={() => {
-                        if (confirm('Are you sure? This will delete all your coins and settings!')) {
-                          localStorage.clear();
-                          window.location.reload();
-                        }
+                        setConfirmModal({
+                          title: 'Clear Cache',
+                          message: 'Are you sure? This will delete all your coins and settings permanently!',
+                          onConfirm: () => {
+                            localStorage.clear();
+                            window.location.reload();
+                          }
+                        });
                       }}
                       className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 text-red-600 shadow-sm active:scale-95 transition-transform"
                     >
                       <Trash2 size={24} />
-                      <span>Reset</span>
+                      <span>Clear Cache</span>
                     </button>
                   </div>
                 </div>
@@ -1155,8 +1174,12 @@ export default function App() {
                     ))}
                     <button 
                       onClick={() => {
-                        const name = prompt('Folder Name:');
-                        if (name) setFolders([...folders, { id: crypto.randomUUID(), name }]);
+                        setModalInputValue('');
+                        setInputModal({
+                          title: 'New Folder',
+                          placeholder: 'Folder Name',
+                          onConfirm: (name) => setFolders([...folders, { id: crypto.randomUUID(), name }])
+                        });
                       }}
                       className="w-full p-5 text-blue-600 dark:text-blue-400 font-black text-sm flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                     >
@@ -1273,7 +1296,11 @@ export default function App() {
                     <motion.button 
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
-                        if (confirm('Delete this coin permanently?')) deleteCoin(selectedCoin.id);
+                        setConfirmModal({
+                          title: 'Delete Coin',
+                          message: 'Are you sure you want to delete this coin permanently?',
+                          onConfirm: () => deleteCoin(selectedCoin.id)
+                        });
                       }}
                       className="w-20 py-5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-3xl font-black flex items-center justify-center active:scale-95 transition-transform"
                     >
@@ -1320,6 +1347,102 @@ export default function App() {
                 <CheckCircle2 size={18} />
                 {feedback.message}
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Custom Confirmation Modal */}
+        <AnimatePresence>
+          {confirmModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+              onClick={() => setConfirmModal(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white dark:bg-gray-900 w-full max-w-xs rounded-3xl p-6 shadow-2xl border border-gray-100 dark:border-gray-800"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-xl font-black mb-2">{confirmModal.title}</h3>
+                <p className="text-gray-500 dark:text-gray-400 font-bold text-sm mb-6">{confirmModal.message}</p>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setConfirmModal(null)}
+                    className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl font-black text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => {
+                      confirmModal.onConfirm();
+                      setConfirmModal(null);
+                    }}
+                    className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black text-sm shadow-lg shadow-red-200 dark:shadow-none"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Custom Input Modal */}
+        <AnimatePresence>
+          {inputModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+              onClick={() => setInputModal(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white dark:bg-gray-900 w-full max-w-xs rounded-3xl p-6 shadow-2xl border border-gray-100 dark:border-gray-800"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-xl font-black mb-4">{inputModal.title}</h3>
+                <input 
+                  autoFocus
+                  type="text"
+                  value={modalInputValue}
+                  onChange={(e) => setModalInputValue(e.target.value)}
+                  placeholder={inputModal.placeholder}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 mb-6 font-bold"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && modalInputValue.trim()) {
+                      inputModal.onConfirm(modalInputValue.trim());
+                      setInputModal(null);
+                    }
+                  }}
+                />
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setInputModal(null)}
+                    className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl font-black text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    disabled={!modalInputValue.trim()}
+                    onClick={() => {
+                      inputModal.onConfirm(modalInputValue.trim());
+                      setInputModal(null);
+                    }}
+                    className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black text-sm shadow-lg shadow-blue-200 dark:shadow-none disabled:opacity-50"
+                  >
+                    Create
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
