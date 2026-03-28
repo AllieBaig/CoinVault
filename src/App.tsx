@@ -359,9 +359,33 @@ export default function App() {
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        if (data.coins) setCoins(data.coins);
+        if (data.coins) {
+          // Migration for coins
+          const migratedCoins = data.coins.map((c: any) => ({
+            ...c,
+            amountPaid: c.amountPaid ?? 0,
+            summary: c.summary ?? '',
+            folderId: c.folderId ?? 'purchased',
+            dateAdded: c.dateAdded ?? Date.now(),
+            lastOpened: c.lastOpened ?? Date.now(),
+          }));
+          setCoins(migratedCoins);
+        }
         if (data.folders) setFolders(data.folders);
-        if (data.profile) setProfile(data.profile);
+        if (data.profile) {
+          // Migration for profile
+          const p = data.profile;
+          setProfile({
+            ...p,
+            points: p.points ?? 0,
+            preferences: {
+              sortBy: p.preferences?.sortBy ?? 'added',
+              theme: p.preferences?.theme ?? 'system',
+              compactUI: p.preferences?.compactUI ?? false,
+              showBottomMenu: p.preferences?.showBottomMenu ?? true,
+            }
+          });
+        }
         
         setFeedback({ message: 'Data imported successfully', type: 'success' });
       } catch (err) {
@@ -412,12 +436,14 @@ export default function App() {
 
     const totalSpend = coins.reduce((sum, c) => sum + (c.amountPaid || 0), 0);
     
-    // Monthly totals
-    const monthlyTotals: { [key: string]: number } = {};
+    // Monthly totals (Coins and Spend)
+    const monthlyTotals: { [key: string]: { count: number; spend: number } } = {};
     coins.forEach(c => {
       const date = new Date(c.dateAdded);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      monthlyTotals[key] = (monthlyTotals[key] || 0) + 1;
+      if (!monthlyTotals[key]) monthlyTotals[key] = { count: 0, spend: 0 };
+      monthlyTotals[key].count += 1;
+      monthlyTotals[key].spend += (c.amountPaid || 0);
     });
 
     // Duplicate tracking with dates
@@ -626,6 +652,7 @@ export default function App() {
 
         <main className="max-w-md mx-auto px-6 pt-4">
           {renderTabs()}
+          {renderBottomMenu()}
 
           <AnimatePresence mode="wait">
             {activeTab === 'collection' && (
@@ -681,14 +708,19 @@ export default function App() {
 
                 {/* Add Button / Form */}
                 {!isAdding ? (
-                  <motion.button
-                    id="add-coin-btn"
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setIsAdding(true)}
-                    className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
-                  >
-                    <Plus size={20} /> Add New Coin
-                  </motion.button>
+                    <motion.button
+                      id="add-coin-btn"
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        if (selectedFolderId !== 'all') {
+                          setNewFolderId(selectedFolderId);
+                        }
+                        setIsAdding(true);
+                      }}
+                      className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 dark:shadow-none"
+                    >
+                      <Plus size={20} /> Add New Coin
+                    </motion.button>
                 ) : (
                   <motion.form
                     id="add-coin-form"
@@ -805,13 +837,13 @@ export default function App() {
                       </select>
                     </div>
 
-                    <button
+                    <motion.button
                       type="submit"
                       whileTap={{ scale: 0.95 }}
                       className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold mt-2 shadow-lg shadow-blue-100 dark:shadow-none"
                     >
                       {isEditing ? 'Update Coin' : 'Save Coin'}
-                    </button>
+                    </motion.button>
                   </motion.form>
                 )}
 
@@ -964,13 +996,17 @@ export default function App() {
                 <div className="space-y-4">
                   <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Collection History</h3>
                   <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
-                    {Object.entries(stats.monthlyTotals).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6).map(([month, count]) => {
+                    {Object.entries(stats.monthlyTotals).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6).map(([month, data]) => {
+                      const { count, spend } = data as { count: number; spend: number };
                       const [year, m] = month.split('-');
                       const date = new Date(parseInt(year), parseInt(m) - 1);
                       const monthName = date.toLocaleString('default', { month: 'long' });
                       return (
                         <div key={month} className="p-5 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                          <span className="font-bold text-gray-600 dark:text-gray-400">{monthName} {year}</span>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-600 dark:text-gray-400">{monthName} {year}</span>
+                            <span className="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest">£{spend.toFixed(2)} Spent</span>
+                          </div>
                           <div className="flex items-center gap-2">
                             <span className="font-black text-blue-600 dark:text-blue-400">+{count}</span>
                             <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Coins</span>
@@ -1116,6 +1152,22 @@ export default function App() {
                 <div className="space-y-4">
                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Data</h3>
                   <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      id="profile-export-btn"
+                      onClick={exportData}
+                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
+                    >
+                      <Download size={24} className="text-blue-600" />
+                      <span>Export</span>
+                    </button>
+                    <button 
+                      id="profile-import-btn"
+                      onClick={() => importInputRef.current?.click()}
+                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
+                    >
+                      <Upload size={24} className="text-blue-600" />
+                      <span>Import</span>
+                    </button>
                     <button 
                       id="profile-refresh-btn"
                       onClick={() => window.location.reload()}
