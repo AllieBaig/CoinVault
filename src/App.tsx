@@ -9,7 +9,8 @@ import {
   Plus, Trash2, PieChart, LayoutGrid, Info, CheckCircle2, Star, 
   Folder as FolderIcon, Image as ImageIcon, Download, Upload, 
   Settings, User, ChevronRight, X, ArrowLeft, Search, Clock,
-  Loader2, AlertCircle, Grid, List as ListIcon
+  Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
+  Zap, Target, Gift, RefreshCw, Eye, EyeOff, Check
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 
@@ -38,15 +39,42 @@ interface Folder {
   isDefault?: boolean;
 }
 
+interface Mission {
+  id: string;
+  title: string;
+  description: string;
+  points: number;
+  isCompleted: boolean;
+  type: 'daily' | 'weekly';
+}
+
+interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  isUnlocked: boolean;
+  unlockedAt?: number;
+}
+
 interface Profile {
   name: string;
   recoveryCode: string;
   points: number;
+  streak: {
+    current: number;
+    lastLoginDate: number;
+  };
+  missions: Mission[];
+  badges: Badge[];
+  lastSpinDate: number;
   preferences: {
     sortBy: 'added' | 'opened';
     theme: 'light' | 'dark' | 'system';
     compactUI: boolean;
     showBottomMenu: boolean;
+    textMode: boolean;
+    autoRemoveBackground: boolean;
   };
 }
 
@@ -64,6 +92,21 @@ const RARITY_POINTS = {
   'Rare': 50,
   'Very Rare': 100,
 };
+
+const DEFAULT_MISSIONS: Mission[] = [
+  { id: 'daily-check', title: 'Daily Check-in', description: 'Open the app today', points: 5, isCompleted: false, type: 'daily' },
+  { id: 'add-coin', title: 'New Addition', description: 'Add a coin to your collection', points: 15, isCompleted: false, type: 'daily' },
+  { id: 'view-stats', title: 'Data Analyst', description: 'Check your collection stats', points: 5, isCompleted: false, type: 'daily' },
+];
+
+const DEFAULT_BADGES: Badge[] = [
+  { id: 'first-coin', name: 'First Coin', description: 'Added your first coin', icon: 'Trophy', isUnlocked: false },
+  { id: 'rare-find', name: 'Rare Find', description: 'Added a Rare or Very Rare coin', icon: 'Star', isUnlocked: false },
+  { id: 'collector-10', name: 'Collector', description: 'Collected 10 coins', icon: 'FolderIcon', isUnlocked: false },
+  { id: 'expert-50', name: 'Expert', description: 'Collected 50 coins', icon: 'Zap', isUnlocked: false },
+  { id: 'master-100', name: 'Master', description: 'Collected 100 coins', icon: 'Trophy', isUnlocked: false },
+  { id: 'streak-7', name: 'Week Streak', description: 'Maintained a 7-day streak', icon: 'Flame', isUnlocked: false },
+];
 
 // --- Error Boundary ---
 
@@ -140,11 +183,17 @@ export default function App() {
       return {
         ...parsed,
         points: parsed.points ?? 0,
+        streak: parsed.streak ?? { current: 0, lastLoginDate: 0 },
+        missions: parsed.missions ?? DEFAULT_MISSIONS,
+        badges: parsed.badges ?? DEFAULT_BADGES,
+        lastSpinDate: parsed.lastSpinDate ?? 0,
         preferences: {
           sortBy: parsed.preferences?.sortBy ?? 'added',
           theme: parsed.preferences?.theme ?? 'system',
           compactUI: parsed.preferences?.compactUI ?? false,
           showBottomMenu: parsed.preferences?.showBottomMenu ?? true,
+          textMode: parsed.preferences?.textMode ?? false,
+          autoRemoveBackground: parsed.preferences?.autoRemoveBackground ?? true,
         }
       };
     }
@@ -152,17 +201,25 @@ export default function App() {
       name: 'Collector',
       recoveryCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
       points: 0,
+      streak: { current: 0, lastLoginDate: 0 },
+      missions: DEFAULT_MISSIONS,
+      badges: DEFAULT_BADGES,
+      lastSpinDate: 0,
       preferences: { 
         sortBy: 'added',
         theme: 'system',
         compactUI: false,
         showBottomMenu: true,
+        textMode: false,
+        autoRemoveBackground: true,
       }
     };
   });
 
   const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'stats' | 'profile'>('collection');
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [showSpinModal, setShowSpinModal] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | 'all'>('all');
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -171,6 +228,7 @@ export default function App() {
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [importProgress, setImportProgress] = useState<number | null>(null);
   const [xpGain, setXpGain] = useState<number | null>(null);
+  const [spinResult, setSpinResult] = useState<number | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [inputModal, setInputModal] = useState<{ title: string; placeholder: string; onConfirm: (value: string) => void } | null>(null);
   const [modalInputValue, setModalInputValue] = useState('');
@@ -189,6 +247,127 @@ export default function App() {
   const importInputRef = useRef<HTMLInputElement>(null);
 
   // --- Effects ---
+
+  useEffect(() => {
+    // Streak and Daily Mission Logic
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const lastLogin = new Date(profile.streak.lastLoginDate);
+    const lastLoginDay = new Date(lastLogin.getFullYear(), lastLogin.getMonth(), lastLogin.getDate()).getTime();
+    
+    const diffDays = Math.floor((today - lastLoginDay) / (1000 * 60 * 60 * 24));
+    
+    let newStreak = profile.streak.current;
+    let updatedMissions = [...profile.missions];
+    let newPoints = profile.points;
+
+    if (diffDays === 1) {
+      newStreak += 1;
+    } else if (diffDays > 1) {
+      newStreak = 1;
+    } else if (profile.streak.lastLoginDate === 0) {
+      newStreak = 1;
+    }
+
+    // Reset daily missions if it's a new day
+    if (diffDays >= 1) {
+      updatedMissions = updatedMissions.map(m => m.type === 'daily' ? { ...m, isCompleted: false } : m);
+    }
+
+    // Complete "Daily Check-in" mission
+    const checkInMission = updatedMissions.find(m => m.id === 'daily-check');
+    if (checkInMission && !checkInMission.isCompleted) {
+      updatedMissions = updatedMissions.map(m => m.id === 'daily-check' ? { ...m, isCompleted: true } : m);
+      newPoints += checkInMission.points;
+      setFeedback({ message: `Mission Completed: ${checkInMission.title} (+${checkInMission.points} XP)`, type: 'success' });
+    }
+
+    setProfile(prev => ({
+      ...prev,
+      points: newPoints,
+      streak: { current: newStreak, lastLoginDate: Date.now() },
+      missions: updatedMissions
+    }));
+  }, []);
+
+  useEffect(() => {
+    // Achievement Logic
+    const newBadges = [...profile.badges];
+    let changed = false;
+
+    // First Coin
+    if (coins.length >= 1 && !newBadges.find(b => b.id === 'first-coin')?.isUnlocked) {
+      const badge = newBadges.find(b => b.id === 'first-coin')!;
+      badge.isUnlocked = true;
+      badge.unlockedAt = Date.now();
+      changed = true;
+      setFeedback({ message: `Achievement Unlocked: ${badge.name}`, type: 'success' });
+    }
+
+    // Rare Find
+    if (coins.some(c => c.rarity !== 'Common') && !newBadges.find(b => b.id === 'rare-find')?.isUnlocked) {
+      const badge = newBadges.find(b => b.id === 'rare-find')!;
+      badge.isUnlocked = true;
+      badge.unlockedAt = Date.now();
+      changed = true;
+      setFeedback({ message: `Achievement Unlocked: ${badge.name}`, type: 'success' });
+    }
+
+    // Collector 10
+    if (coins.length >= 10 && !newBadges.find(b => b.id === 'collector-10')?.isUnlocked) {
+      const badge = newBadges.find(b => b.id === 'collector-10')!;
+      badge.isUnlocked = true;
+      badge.unlockedAt = Date.now();
+      changed = true;
+      setFeedback({ message: `Achievement Unlocked: ${badge.name}`, type: 'success' });
+    }
+
+    // Expert 50
+    if (coins.length >= 50 && !newBadges.find(b => b.id === 'expert-50')?.isUnlocked) {
+      const badge = newBadges.find(b => b.id === 'expert-50')!;
+      badge.isUnlocked = true;
+      badge.unlockedAt = Date.now();
+      changed = true;
+      setFeedback({ message: `Achievement Unlocked: ${badge.name}`, type: 'success' });
+    }
+
+    // Master 100
+    if (coins.length >= 100 && !newBadges.find(b => b.id === 'master-100')?.isUnlocked) {
+      const badge = newBadges.find(b => b.id === 'master-100')!;
+      badge.isUnlocked = true;
+      badge.unlockedAt = Date.now();
+      changed = true;
+      setFeedback({ message: `Achievement Unlocked: ${badge.name}`, type: 'success' });
+    }
+
+    // Streak 7
+    if (profile.streak.current >= 7 && !newBadges.find(b => b.id === 'streak-7')?.isUnlocked) {
+      const badge = newBadges.find(b => b.id === 'streak-7')!;
+      badge.isUnlocked = true;
+      badge.unlockedAt = Date.now();
+      changed = true;
+      setFeedback({ message: `Achievement Unlocked: ${badge.name}`, type: 'success' });
+    }
+
+    if (changed) {
+      setProfile(prev => ({ ...prev, badges: newBadges }));
+    }
+  }, [coins.length, profile.streak.current]);
+
+  useEffect(() => {
+    // Mission: Data Analyst
+    if (activeTab === 'stats') {
+      const mission = profile.missions.find(m => m.id === 'view-stats');
+      if (mission && !mission.isCompleted) {
+        setProfile(prev => ({
+          ...prev,
+          points: prev.points + mission.points,
+          missions: prev.missions.map(m => m.id === 'view-stats' ? { ...m, isCompleted: true } : m)
+        }));
+        setFeedback({ message: `Mission Completed: ${mission.title} (+${mission.points} XP)`, type: 'success' });
+      }
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     localStorage.setItem('coin-collection', JSON.stringify(coins));
@@ -243,27 +422,48 @@ export default function App() {
 
   // --- Actions ---
 
+  const handleLuckySpin = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    
+    if (profile.lastSpinDate >= today) {
+      setFeedback({ message: 'You already used your daily spin!', type: 'info' });
+      return;
+    }
+
+    setShowSpinModal(true);
+    setSpinResult(null);
+  };
+
   const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setIsProcessingImage(true);
-      try {
-        // Process background removal
-        const blob = await removeBackground(file);
+      if (profile.preferences.autoRemoveBackground) {
+        setIsProcessingImage(true);
+        try {
+          // Process background removal
+          const blob = await removeBackground(file);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setNewImage(reader.result as string);
+            setIsProcessingImage(false);
+          };
+          reader.readAsDataURL(blob);
+        } catch (error) {
+          console.error('Background removal failed:', error);
+          // Fallback to original image if processing fails
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setNewImage(reader.result as string);
+            setIsProcessingImage(false);
+            setFeedback({ message: 'Background removal failed, used original', type: 'info' });
+          };
+          reader.readAsDataURL(file);
+        }
+      } else {
         const reader = new FileReader();
         reader.onloadend = () => {
           setNewImage(reader.result as string);
-          setIsProcessingImage(false);
-        };
-        reader.readAsDataURL(blob);
-      } catch (error) {
-        console.error('Background removal failed:', error);
-        // Fallback to original image if processing fails
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setNewImage(reader.result as string);
-          setIsProcessingImage(false);
-          setFeedback({ message: 'Background removal failed, used original', type: 'info' });
         };
         reader.readAsDataURL(file);
       }
@@ -297,8 +497,23 @@ export default function App() {
         lastOpened: Date.now(),
       };
       setCoins([newCoin, ...coins]);
-      setProfile(prev => ({ ...prev, points: prev.points + points }));
-      setXpGain(points);
+      
+      // Mission: New Addition
+      let updatedMissions = [...profile.missions];
+      let bonusPoints = 0;
+      const addMission = updatedMissions.find(m => m.id === 'add-coin');
+      if (addMission && !addMission.isCompleted) {
+        updatedMissions = updatedMissions.map(m => m.id === 'add-coin' ? { ...m, isCompleted: true } : m);
+        bonusPoints = addMission.points;
+        setFeedback({ message: `Mission Completed: ${addMission.title} (+${addMission.points} XP)`, type: 'success' });
+      }
+
+      setProfile(prev => ({ 
+        ...prev, 
+        points: prev.points + points + bonusPoints,
+        missions: updatedMissions
+      }));
+      setXpGain(points + bonusPoints);
       setTimeout(() => setXpGain(null), 2000);
       setFeedback({ message: `Coin added!`, type: 'success' });
     }
@@ -349,12 +564,17 @@ export default function App() {
       coins,
       folders,
       profile,
-      version: '1.1'
+      version: '1.2'
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const now = new Date();
+    const timestamp = now.getFullYear() + 
+      String(now.getMonth() + 1).padStart(2, '0') + 
+      String(now.getDate()).padStart(2, '0') + '_' + 
+      String(now.getHours()).padStart(2, '0') + 
+      String(now.getMinutes()).padStart(2, '0');
     a.href = url;
     a.download = `coin-collection-${timestamp}.json`;
     a.click();
@@ -536,50 +756,78 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight leading-none">Coinly</h1>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Collector Edition</p>
+              <div className="flex items-center gap-2 mt-1">
+                <motion.div 
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-800/50"
+                >
+                  <Flame size={10} className="text-orange-500" />
+                  <span className="text-[10px] font-black text-orange-600 dark:text-orange-400">{profile.streak.current}</span>
+                </motion.div>
+                <div className="w-1 h-1 bg-gray-300 rounded-full" />
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{currentLevel.name}</p>
+              </div>
             </div>
           </div>
-          <div className="flex gap-1">
-            <motion.button whileTap={{ scale: 0.9 }} id="refresh-app-btn" onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Refresh App">
-              <Clock size={20} />
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleLuckySpin}
+              disabled={isSpinning}
+              className={`p-2 rounded-full transition-all ${
+                isSpinning ? 'bg-gray-100 text-gray-400 animate-spin' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100'
+              }`}
+              title="Daily Lucky Spin"
+            >
+              <Gift size={20} />
             </motion.button>
-            <motion.button whileTap={{ scale: 0.9 }} id="export-data-btn" onClick={exportData} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Export Data">
-              <Download size={20} />
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.9 }} id="import-data-btn" onClick={() => importInputRef.current?.click()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Import Data">
-              <Upload size={20} />
-            </motion.button>
+            <div className="flex gap-1">
+              <motion.button whileTap={{ scale: 0.9 }} id="refresh-app-btn" onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Refresh App">
+                <Clock size={20} />
+              </motion.button>
+              <motion.button whileTap={{ scale: 0.9 }} id="export-data-btn" onClick={exportData} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Export Data">
+                <Download size={20} />
+              </motion.button>
+            </div>
           </div>
         </div>
 
         {/* Hero Stats Section */}
-        <div className="bg-gray-900 dark:bg-gray-800 rounded-[2.5rem] p-6 text-white shadow-2xl shadow-blue-100 dark:shadow-none relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full -mr-16 -mt-16 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/20 rounded-full -ml-12 -mb-12 blur-2xl" />
+        <div className={`rounded-[2.5rem] p-6 text-white relative overflow-hidden ${
+          profile.preferences.textMode 
+            ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700' 
+            : 'bg-gray-900 dark:bg-gray-800 shadow-2xl shadow-blue-100 dark:shadow-none'
+        }`}>
+          {!profile.preferences.textMode && (
+            <>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full -mr-16 -mt-16 blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/20 rounded-full -ml-12 -mb-12 blur-2xl" />
+            </>
+          )}
           
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Current Level</p>
-                <h2 className="text-3xl font-black italic">{currentLevel.name}</h2>
+                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400'}`}>Current Level</p>
+                <h2 className={`text-3xl font-black ${profile.preferences.textMode ? '' : 'italic'}`}>{currentLevel.name}</h2>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Total Coins</p>
+                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400'}`}>Total Coins</p>
                 <p className="text-3xl font-black">{stats.total}</p>
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-end">
-                <p className="text-xs font-bold text-gray-400">{profile.points} XP</p>
-                <p className="text-xs font-bold text-blue-400">{progressToNextLevel}% to {nextLevel?.name || 'Max'}</p>
+                <p className={`text-xs font-bold ${profile.preferences.textMode ? 'text-gray-500' : 'text-gray-400'}`}>{profile.points} XP</p>
+                <p className={`text-xs font-bold ${profile.preferences.textMode ? 'text-blue-600' : 'text-blue-400'}`}>{progressToNextLevel}% to {nextLevel?.name || 'Max'}</p>
               </div>
-              <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
+              <div className={`h-2.5 rounded-full overflow-hidden ${profile.preferences.textMode ? 'bg-gray-200 dark:bg-gray-700' : 'bg-white/10'}`}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progressToNextLevel}%` }}
                   transition={{ duration: 1, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full"
+                  className={`h-full rounded-full ${profile.preferences.textMode ? 'bg-blue-600' : 'bg-gradient-to-r from-blue-500 to-indigo-400'}`}
                 />
               </div>
             </div>
@@ -950,24 +1198,26 @@ export default function App() {
                             <div className="absolute top-0 right-0 w-16 h-16 bg-amber-400/10 rounded-full -mr-8 -mt-8 blur-xl" />
                           )}
                           <div className="flex items-center gap-4">
-                            <div className={`${profile.preferences.compactUI ? 'w-12 h-12' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner`}>
-                              {coin.image ? (
-                                <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className={`${profile.preferences.compactUI ? 'text-sm' : 'text-2xl'} font-black ${
-                                  coin.rarity === 'Very Rare' ? 'text-amber-600' :
-                                  coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-300'
-                                }`}>
-                                  {coin.type}
-                                </span>
-                              )}
-                            </div>
+                            {!profile.preferences.textMode && (
+                              <div className={`${profile.preferences.compactUI ? 'w-12 h-12' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner`}>
+                                {coin.image ? (
+                                  <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className={`${profile.preferences.compactUI ? 'text-sm' : 'text-2xl'} font-black ${
+                                    coin.rarity === 'Very Rare' ? 'text-amber-600' :
+                                    coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-300'
+                                  }`}>
+                                    {coin.type}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             <div>
                               <div className="flex items-center gap-2 mb-0.5">
                                 <h4 className={`font-black text-gray-800 dark:text-gray-100 ${profile.preferences.compactUI ? 'text-sm' : 'text-lg'}`}>
                                   {coin.name}
                                 </h4>
-                                {coin.rarity !== 'Common' && (
+                                {!profile.preferences.textMode && coin.rarity !== 'Common' && (
                                   <div className={`p-1 rounded-full ${coin.rarity === 'Very Rare' ? 'bg-amber-100 dark:bg-amber-900/50' : 'bg-blue-100 dark:bg-blue-900/50'}`}>
                                     <Star size={10} className={`fill-current ${coin.rarity === 'Very Rare' ? 'text-amber-600' : 'text-blue-600'}`} />
                                   </div>
@@ -1172,7 +1422,27 @@ export default function App() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-2xl font-black tracking-tight">{profile.name}</h3>
-                    <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{currentLevel.name} Collector</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{currentLevel.name} Collector</p>
+                      {nextLevel && (
+                        <span className="text-[10px] font-bold text-gray-400">Level {LEVELS.indexOf(currentLevel) + 1}</span>
+                      )}
+                    </div>
+                    {nextLevel && (
+                      <div className="mt-2">
+                        <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">
+                          <span>Progress to {nextLevel.name}</span>
+                          <span>{Math.round(progressToNextLevel)}%</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progressToNextLevel}%` }}
+                            className="h-full bg-blue-500 rounded-full"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1216,6 +1486,18 @@ export default function App() {
                         />
                       </button>
                     </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Text Mode UI</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, textMode: !profile.preferences.textMode } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.textMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.textMode ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1236,6 +1518,18 @@ export default function App() {
                       </button>
                     </div>
                     <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Background Removal</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, autoRemoveBackground: !profile.preferences.autoRemoveBackground } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.autoRemoveBackground ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.autoRemoveBackground ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
                       <span className="font-bold text-gray-700 dark:text-gray-300">Sort By</span>
                       <select 
                         value={profile.preferences.sortBy}
@@ -1246,6 +1540,57 @@ export default function App() {
                         <option value="opened">Recently Opened</option>
                       </select>
                     </div>
+                  </div>
+                </div>
+
+                {/* Missions Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Daily Missions</h3>
+                  <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
+                    {profile.missions.map(mission => (
+                      <div key={mission.id} className="p-5 flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-bold text-gray-700 dark:text-gray-300">{mission.name}</p>
+                          <p className="text-xs text-gray-400">{mission.description}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black text-blue-600 dark:text-blue-400">+{mission.points} XP</span>
+                          {mission.isCompleted ? (
+                            <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-600">
+                              <Check size={14} />
+                            </div>
+                          ) : (
+                            <div className="w-6 h-6 bg-gray-100 dark:bg-gray-800 rounded-full" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Achievements Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Achievements</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {profile.badges.map(badge => (
+                      <div 
+                        key={badge.id} 
+                        className={`p-4 rounded-3xl border flex flex-col items-center text-center gap-2 transition-all ${
+                          badge.isUnlocked 
+                            ? 'bg-white dark:bg-gray-900 border-blue-100 dark:border-blue-900/30 shadow-sm' 
+                            : 'bg-gray-50 dark:bg-gray-800/50 border-transparent grayscale opacity-50'
+                        }`}
+                      >
+                        <div className={`p-3 rounded-2xl ${badge.isUnlocked ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
+                          {badge.icon === 'Trophy' && <Trophy size={24} />}
+                          {badge.icon === 'Star' && <Star size={24} />}
+                          {badge.icon === 'FolderIcon' && <FolderIcon size={24} />}
+                          {badge.icon === 'Zap' && <Zap size={24} />}
+                          {badge.icon === 'Flame' && <Flame size={24} />}
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-tighter leading-tight">{badge.name}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -1467,6 +1812,108 @@ export default function App() {
                     </motion.button>
                   </div>
                 </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Lucky Spin Modal */}
+        <AnimatePresence>
+          {showSpinModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-6"
+              onClick={() => !isSpinning && setShowSpinModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, rotate: -5 }}
+                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                exit={{ scale: 0.9, opacity: 0, rotate: 5 }}
+                className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-gray-100 dark:border-gray-800 text-center relative overflow-hidden"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+                
+                <button 
+                  onClick={() => setShowSpinModal(false)}
+                  disabled={isSpinning}
+                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors disabled:opacity-0"
+                >
+                  <X size={24} />
+                </button>
+
+                <div className="mb-8 relative">
+                  <div className="w-24 h-24 bg-blue-50 dark:bg-blue-900/30 rounded-[2rem] flex items-center justify-center text-blue-600 mx-auto mb-4 relative z-10">
+                    <Gift size={48} className={isSpinning ? 'animate-bounce' : ''} />
+                  </div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl animate-pulse" />
+                </div>
+
+                <h2 className="text-3xl font-black mb-2 tracking-tight">Lucky Spin</h2>
+                <p className="text-gray-500 dark:text-gray-400 font-bold text-sm mb-8 px-4">
+                  Spin the wheel to win bonus XP! You can spin once every 24 hours.
+                </p>
+
+                {spinResult !== null ? (
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-5xl font-black text-blue-600 dark:text-blue-400">
+                      +{spinResult} XP
+                    </div>
+                    <p className="text-green-600 dark:text-green-400 font-black uppercase tracking-widest text-xs">Reward Claimed!</p>
+                    <button 
+                      onClick={() => setShowSpinModal(false)}
+                      className="w-full py-4 bg-gray-900 dark:bg-white dark:text-gray-900 text-white rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all"
+                    >
+                      Awesome!
+                    </button>
+                  </motion.div>
+                ) : (
+                  <button 
+                    disabled={isSpinning}
+                    onClick={() => {
+                      setIsSpinning(true);
+                      setTimeout(() => {
+                        const win = Math.floor(Math.random() * 50) + 10;
+                        setSpinResult(win);
+                        setIsSpinning(false);
+                        setProfile(prev => ({ 
+                          ...prev, 
+                          points: prev.points + win,
+                          lastSpinDate: Date.now()
+                        }));
+                        setFeedback({ message: `You won ${win} XP!`, type: 'success' });
+                      }, 2000);
+                    }}
+                    className={`w-full py-5 rounded-2xl font-black text-xl shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 ${
+                      isSpinning 
+                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed' 
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200 dark:shadow-none'
+                    }`}
+                  >
+                    {isSpinning ? (
+                      <>
+                        <motion.div 
+                          animate={{ rotate: 360 }}
+                          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                        >
+                          <RefreshCw size={24} />
+                        </motion.div>
+                        Spinning...
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={24} className="fill-current" />
+                        Spin Now
+                      </>
+                    )}
+                  </button>
+                )}
               </motion.div>
             </motion.div>
           )}
