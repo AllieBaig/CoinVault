@@ -75,6 +75,8 @@ interface Profile {
     showBottomMenu: boolean;
     textMode: boolean;
     autoRemoveBackground: boolean;
+    purchaseMode: boolean;
+    showPrice: boolean;
   };
 }
 
@@ -194,6 +196,8 @@ export default function App() {
           showBottomMenu: parsed.preferences?.showBottomMenu ?? true,
           textMode: parsed.preferences?.textMode ?? false,
           autoRemoveBackground: parsed.preferences?.autoRemoveBackground ?? true,
+          purchaseMode: parsed.preferences?.purchaseMode ?? false,
+          showPrice: parsed.preferences?.showPrice ?? true,
         }
       };
     }
@@ -212,6 +216,8 @@ export default function App() {
         showBottomMenu: true,
         textMode: false,
         autoRemoveBackground: true,
+        purchaseMode: false,
+        showPrice: true,
       }
     };
   });
@@ -1177,6 +1183,43 @@ export default function App() {
                     )}
                   </div>
                 ) : (
+                  profile.preferences.purchaseMode ? (
+                    <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] border-2 border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-gray-100 dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
+                            <th className="p-6 text-lg font-black text-gray-900 dark:text-white uppercase tracking-widest">Coin</th>
+                            <th className="p-6 text-lg font-black text-gray-900 dark:text-white uppercase tracking-widest">Year</th>
+                            <th className="p-6 text-lg font-black text-gray-900 dark:text-white uppercase tracking-widest text-right">View</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y-2 divide-gray-100 dark:divide-gray-800">
+                          {sortedCoins.map((coin) => (
+                            <tr 
+                              key={coin.id} 
+                              onClick={() => openCoin(coin)}
+                              className="active:bg-blue-50 dark:active:bg-blue-900/20 transition-colors cursor-pointer"
+                            >
+                              <td className="p-6">
+                                <div className="flex flex-col">
+                                  <span className="text-3xl font-black text-gray-900 dark:text-white">{coin.type}</span>
+                                  <span className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">{coin.name}</span>
+                                </div>
+                              </td>
+                              <td className="p-6">
+                                <span className="text-3xl font-black text-gray-900 dark:text-white">{coin.year}</span>
+                              </td>
+                              <td className="p-6 text-right">
+                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800">
+                                  <ChevronRight size={32} className="text-gray-900 dark:text-white" />
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
                     <div className={profile.preferences.compactUI ? 'space-y-2' : 'space-y-4'}>
                       {sortedCoins.map((coin) => (
                         <motion.div
@@ -1234,12 +1277,15 @@ export default function App() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1">
-                            <span className="text-sm font-black text-gray-800 dark:text-gray-200">£{coin.amountPaid?.toFixed(2)}</span>
+                            {profile.preferences.showPrice && (
+                              <span className="text-sm font-black text-gray-800 dark:text-gray-200">£{coin.amountPaid?.toFixed(2)}</span>
+                            )}
                             <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                           </div>
                         </motion.div>
                       ))}
                     </div>
+                  )
                 )}
               </motion.div>
             )}
@@ -1494,6 +1540,30 @@ export default function App() {
                       >
                         <motion.div 
                           animate={{ x: profile.preferences.textMode ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Purchase Mode</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, purchaseMode: !profile.preferences.purchaseMode } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.purchaseMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.purchaseMode ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Show Coin Price</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showPrice ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.showPrice ? 28 : 4 }}
                           className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
                         />
                       </button>
