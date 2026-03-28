@@ -13,6 +13,7 @@ import {
   Zap, Target, Gift, RefreshCw, Eye, EyeOff, Check
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
+import LZString from 'lz-string';
 
 // --- Types ---
 
@@ -182,6 +183,38 @@ class ErrorBoundary extends React.Component<any, any> {
   }
 }
 
+// --- Storage Helper ---
+
+const storage = {
+  save: (key: string, data: any) => {
+    try {
+      const json = JSON.stringify(data);
+      const compressed = LZString.compressToUTF16(json);
+      localStorage.setItem(key, compressed);
+    } catch (e) {
+      console.error('Failed to save data:', e);
+    }
+  },
+  load: (key: string) => {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    try {
+      // Try decompressing
+      const decompressed = LZString.decompressFromUTF16(raw);
+      if (decompressed) return JSON.parse(decompressed);
+      // Fallback to plain JSON
+      return JSON.parse(raw);
+    } catch (e) {
+      try {
+        return JSON.parse(raw);
+      } catch (e2) {
+        console.error('Failed to load data:', e2);
+        return null;
+      }
+    }
+  }
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -193,22 +226,22 @@ export default function App() {
 
   const [coins, setCoins] = useState<Coin[]>(() => {
     const key = isSafeMode ? 'coin-backup-collection' : 'coin-collection';
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : [];
+    const saved = storage.load(key);
+    return saved || [];
   });
 
   const [folders, setFolders] = useState<Folder[]>(() => {
     const key = isSafeMode ? 'coin-backup-folders' : 'coin-folders';
-    const saved = localStorage.getItem(key);
-    if (saved) return JSON.parse(saved);
+    const saved = storage.load(key);
+    if (saved) return saved;
     return [{ id: 'purchased', name: 'Coins Purchased', isDefault: true }];
   });
 
   const [profile, setProfile] = useState<Profile>(() => {
     const key = isSafeMode ? 'coin-backup-profile' : 'coin-profile';
-    const saved = localStorage.getItem(key);
+    const saved = storage.load(key);
     if (saved) {
-      const parsed = JSON.parse(saved);
+      const parsed = saved;
       // Migration for new fields
       return {
         ...parsed,
@@ -411,28 +444,28 @@ export default function App() {
     const lastBackup = localStorage.getItem('coin-last-backup-date');
     
     if (!lastBackup || parseInt(lastBackup) < today) {
-      localStorage.setItem('coin-backup-collection', JSON.stringify(coins));
-      localStorage.setItem('coin-backup-folders', JSON.stringify(folders));
-      localStorage.setItem('coin-backup-profile', JSON.stringify(profile));
+      storage.save('coin-backup-collection', coins);
+      storage.save('coin-backup-folders', folders);
+      storage.save('coin-backup-profile', profile);
       localStorage.setItem('coin-last-backup-date', today.toString());
     }
   }, [coins, folders, profile, isSafeMode]);
 
   useEffect(() => {
     if (!isSafeMode) {
-      localStorage.setItem('coin-collection', JSON.stringify(coins));
+      storage.save('coin-collection', coins);
     }
   }, [coins, isSafeMode]);
 
   useEffect(() => {
     if (!isSafeMode) {
-      localStorage.setItem('coin-folders', JSON.stringify(folders));
+      storage.save('coin-folders', folders);
     }
   }, [folders, isSafeMode]);
 
   useEffect(() => {
     if (!isSafeMode) {
-      localStorage.setItem('coin-profile', JSON.stringify(profile));
+      storage.save('coin-profile', profile);
     }
   }, [profile, isSafeMode]);
 
@@ -657,53 +690,58 @@ export default function App() {
 
     reader.onload = (event) => {
       try {
-        const data = JSON.parse(event.target?.result as string);
+        const raw = event.target?.result as string;
+        let data;
+        try {
+          data = JSON.parse(raw);
+        } catch (e) {
+          const decompressed = LZString.decompressFromUTF16(raw);
+          if (decompressed) {
+            data = JSON.parse(decompressed);
+          } else {
+            throw new Error('Invalid file format');
+          }
+        }
         
-        // Validation
         if (!data || typeof data !== 'object') throw new Error('Invalid data format');
-        if (!Array.isArray(data.coins)) throw new Error('Missing or invalid coins data');
         
-        if (data.coins) {
-          // Migration for coins
-          const migratedCoins = data.coins.map((c: any) => ({
-            id: c.id || crypto.randomUUID(),
-            name: c.name || 'Unknown Coin',
-            year: c.year || '',
-            type: c.type || 'Unknown',
-            rarity: c.rarity || 'Common',
-            image: c.image || null,
-            amountPaid: c.amountPaid ?? 0,
-            summary: c.summary ?? '',
-            folderId: c.folderId ?? 'purchased',
-            dateAdded: c.dateAdded ?? Date.now(),
-            lastOpened: c.lastOpened ?? Date.now(),
-          }));
-          setCoins(migratedCoins);
-        }
-        
-        if (Array.isArray(data.folders)) {
-          setFolders(data.folders);
-        } else {
-          setFolders([{ id: 'purchased', name: 'Coins Purchased', isDefault: true }]);
-        }
-
-        if (data.profile) {
-          // Migration for profile
-          const p = data.profile;
-          setProfile({
-            name: p.name || 'Collector',
-            recoveryCode: p.recoveryCode || Math.random().toString(36).substring(2, 10).toUpperCase(),
-            points: p.points ?? 0,
-            preferences: {
-              sortBy: p.preferences?.sortBy ?? 'added',
-              theme: p.preferences?.theme ?? 'system',
-              compactUI: p.preferences?.compactUI ?? false,
-              showBottomMenu: p.preferences?.showBottomMenu ?? true,
-            }
+        let importedCount = 0;
+        if (Array.isArray(data.coins)) {
+          setCoins(prev => {
+            const existingIds = new Set(prev.map(c => c.id));
+            const newCoins = data.coins
+              .filter((c: any) => c && c.id && !existingIds.has(c.id))
+              .map((c: any) => ({
+                id: c.id,
+                name: String(c.name || 'Unknown Coin'),
+                year: String(c.year || ''),
+                type: (['£1', '£2', '50p'].includes(c.type) ? c.type : '50p') as CoinType,
+                rarity: (['Common', 'Rare', 'Very Rare'].includes(c.rarity) ? c.rarity : 'Common') as Rarity,
+                image: c.image || null,
+                amountPaid: Number(c.amountPaid) || 0,
+                summary: String(c.summary ?? '').substring(0, 100),
+                folderId: String(c.folderId ?? 'purchased'),
+                dateAdded: Number(c.dateAdded) || Date.now(),
+                lastOpened: Number(c.lastOpened) || Date.now(),
+              }));
+            importedCount = newCoins.length;
+            return [...prev, ...newCoins];
           });
         }
         
-        setFeedback({ message: 'Data imported successfully', type: 'success' });
+        if (Array.isArray(data.folders)) {
+          setFolders(prev => {
+            const existingIds = new Set(prev.map(f => f.id));
+            const newFolders = data.folders.filter((f: any) => f && f.id && !existingIds.has(f.id));
+            return [...prev, ...newFolders];
+          });
+        }
+
+        if (importedCount > 0) {
+          setFeedback({ message: `Imported ${importedCount} new coins!`, type: 'success' });
+        } else {
+          setFeedback({ message: 'No new coins found in file', type: 'info' });
+        }
       } catch (err) {
         console.error('Import error:', err);
         setFeedback({ message: `Import failed: ${err instanceof Error ? err.message : 'Invalid format'}`, type: 'info' });
@@ -713,6 +751,27 @@ export default function App() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const loadRecentData = () => {
+    const backupCoins = storage.load('coin-backup-collection');
+    const backupFolders = storage.load('coin-backup-folders');
+    const backupProfile = storage.load('coin-backup-profile');
+
+    if (backupCoins || backupFolders || backupProfile) {
+      setConfirmModal({
+        title: 'Restore Backup',
+        message: 'This will replace your current data with the last working backup. Continue?',
+        onConfirm: () => {
+          if (backupCoins) setCoins(backupCoins);
+          if (backupFolders) setFolders(backupFolders);
+          if (backupProfile) setProfile(backupProfile);
+          setFeedback({ message: 'Backup restored successfully!', type: 'success' });
+        }
+      });
+    } else {
+      setFeedback({ message: 'No backup found', type: 'info' });
+    }
   };
 
   // --- Memos ---
@@ -1251,10 +1310,27 @@ export default function App() {
                       <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Folder</label>
                       <select
                         value={newFolderId}
-                        onChange={(e) => setNewFolderId(e.target.value)}
+                        onChange={(e) => {
+                          if (e.target.value === 'new') {
+                            setInputModal({
+                              title: 'New Folder',
+                              placeholder: 'Folder name...',
+                              onConfirm: (name) => {
+                                if (name.trim()) {
+                                  const id = crypto.randomUUID();
+                                  setFolders(prev => [...prev, { id, name: name.trim(), isDefault: false }]);
+                                  setNewFolderId(id);
+                                }
+                              }
+                            });
+                          } else {
+                            setNewFolderId(e.target.value);
+                          }
+                        }}
                         className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
                       >
                         {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                        <option value="new">+ Create New Folder</option>
                       </select>
                     </div>
 
@@ -1792,12 +1868,12 @@ export default function App() {
                       <span>Import</span>
                     </button>
                     <button 
-                      id="profile-refresh-btn"
-                      onClick={() => window.location.reload()}
+                      id="profile-restore-btn"
+                      onClick={loadRecentData}
                       className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
                     >
                       <Clock size={24} className="text-blue-600" />
-                      <span>Refresh</span>
+                      <span>Restore</span>
                     </button>
                     <button 
                       id="clear-cache-btn"
