@@ -135,25 +135,46 @@ class ErrorBoundary extends React.Component<any, any> {
     console.error("App Error:", error, errorInfo);
   }
 
+  handleSafeMode = () => {
+    localStorage.setItem('coin-safe-mode', 'true');
+    window.location.reload();
+  };
+
   render() {
     const self = this as any;
     if (self.state.hasError) {
       return (
         <div className="min-h-screen bg-red-50 flex flex-col items-center justify-center p-6 text-center">
-          <h2 className="text-2xl font-bold text-red-800 mb-2">Something went wrong</h2>
-          <p className="text-red-600 mb-6">The app encountered an error. You can still export your data to keep it safe.</p>
-          <button
-            onClick={self.props.onExport}
-            className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2"
-          >
-            <Download size={20} /> Export Data Now
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 text-red-500 font-medium underline"
-          >
-            Reload App
-          </button>
+          <div className="w-20 h-20 bg-red-100 rounded-[2rem] flex items-center justify-center text-red-600 mb-6 mx-auto">
+            <AlertCircle size={40} />
+          </div>
+          <h2 className="text-3xl font-black text-red-900 mb-2 tracking-tight">App Encountered an Issue</h2>
+          <p className="text-red-700 mb-8 max-w-md mx-auto font-medium">
+            Something went wrong while loading your collection. You can try reloading or enter Safe Mode to recover your data.
+          </p>
+          
+          <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-red-600 text-white px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl shadow-red-200 active:scale-95 transition-all"
+            >
+              <RefreshCw size={20} /> Try Reloading
+            </button>
+            
+            <button
+              onClick={this.handleSafeMode}
+              className="bg-white text-red-600 border-2 border-red-100 px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              <Zap size={20} /> Launch Safe Mode
+            </button>
+
+            <button
+              onClick={self.props.onExport}
+              className="mt-4 text-red-500 font-bold flex items-center justify-center gap-2 hover:underline"
+            >
+              <Download size={18} /> Export Data to Safety
+            </button>
+          </div>
         </div>
       );
     }
@@ -166,19 +187,26 @@ class ErrorBoundary extends React.Component<any, any> {
 export default function App() {
   // --- State ---
   
+  const [isSafeMode, setIsSafeMode] = useState(() => {
+    return localStorage.getItem('coin-safe-mode') === 'true';
+  });
+
   const [coins, setCoins] = useState<Coin[]>(() => {
-    const saved = localStorage.getItem('coin-collection');
+    const key = isSafeMode ? 'coin-backup-collection' : 'coin-collection';
+    const saved = localStorage.getItem(key);
     return saved ? JSON.parse(saved) : [];
   });
 
   const [folders, setFolders] = useState<Folder[]>(() => {
-    const saved = localStorage.getItem('coin-folders');
+    const key = isSafeMode ? 'coin-backup-folders' : 'coin-folders';
+    const saved = localStorage.getItem(key);
     if (saved) return JSON.parse(saved);
     return [{ id: 'purchased', name: 'Coins Purchased', isDefault: true }];
   });
 
   const [profile, setProfile] = useState<Profile>(() => {
-    const saved = localStorage.getItem('coin-profile');
+    const key = isSafeMode ? 'coin-backup-profile' : 'coin-profile';
+    const saved = localStorage.getItem(key);
     if (saved) {
       const parsed = JSON.parse(saved);
       // Migration for new fields
@@ -376,16 +404,37 @@ export default function App() {
   }, [activeTab]);
 
   useEffect(() => {
-    localStorage.setItem('coin-collection', JSON.stringify(coins));
-  }, [coins]);
+    if (isSafeMode) return;
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const lastBackup = localStorage.getItem('coin-last-backup-date');
+    
+    if (!lastBackup || parseInt(lastBackup) < today) {
+      localStorage.setItem('coin-backup-collection', JSON.stringify(coins));
+      localStorage.setItem('coin-backup-folders', JSON.stringify(folders));
+      localStorage.setItem('coin-backup-profile', JSON.stringify(profile));
+      localStorage.setItem('coin-last-backup-date', today.toString());
+    }
+  }, [coins, folders, profile, isSafeMode]);
 
   useEffect(() => {
-    localStorage.setItem('coin-folders', JSON.stringify(folders));
-  }, [folders]);
+    if (!isSafeMode) {
+      localStorage.setItem('coin-collection', JSON.stringify(coins));
+    }
+  }, [coins, isSafeMode]);
 
   useEffect(() => {
-    localStorage.setItem('coin-profile', JSON.stringify(profile));
-  }, [profile]);
+    if (!isSafeMode) {
+      localStorage.setItem('coin-folders', JSON.stringify(folders));
+    }
+  }, [folders, isSafeMode]);
+
+  useEffect(() => {
+    if (!isSafeMode) {
+      localStorage.setItem('coin-profile', JSON.stringify(profile));
+    }
+  }, [profile, isSafeMode]);
 
   useEffect(() => {
     if (feedback) {
@@ -586,6 +635,11 @@ export default function App() {
     a.click();
     URL.revokeObjectURL(url);
     setFeedback({ message: 'Data exported successfully', type: 'success' });
+  };
+
+  const exitSafeMode = () => {
+    localStorage.removeItem('coin-safe-mode');
+    window.location.reload();
   };
 
   const importData = (e: ChangeEvent<HTMLInputElement>) => {
@@ -945,6 +999,59 @@ export default function App() {
       </nav>
     );
   };
+
+  if (isSafeMode) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+        <div className="max-w-2xl mx-auto space-y-8">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 p-6 rounded-[2.5rem] flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/50 rounded-2xl flex items-center justify-center text-amber-600">
+              <Zap size={24} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-amber-900 dark:text-amber-100">Safe Mode Active</h1>
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Loading from last working backup. Core features only.</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 p-8 shadow-sm space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100">Your Collection</h2>
+              <button 
+                onClick={exportData}
+                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-blue-100 dark:shadow-none active:scale-95 transition-all"
+              >
+                <Download size={20} /> Export Data
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {coins.length === 0 ? (
+                <p className="text-center py-10 text-gray-400 font-bold">No coins found in backup</p>
+              ) : (
+                coins.map(coin => (
+                  <div key={coin.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl flex justify-between items-center">
+                    <div>
+                      <p className="font-black text-gray-800 dark:text-gray-100">{coin.name}</p>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{coin.type} • {coin.year}</p>
+                    </div>
+                    <span className="text-sm font-black text-gray-900 dark:text-gray-100">£{coin.amountPaid.toFixed(2)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <button 
+            onClick={exitSafeMode}
+            className="w-full py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-[2rem] font-black text-lg shadow-xl active:scale-95 transition-all"
+          >
+            Exit Safe Mode & Restart
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary onExport={exportData}>
