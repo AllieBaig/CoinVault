@@ -780,14 +780,18 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Summary (2 lines)</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Summary (Max 100 chars)</label>
                       <textarea
                         rows={2}
+                        maxLength={100}
                         value={newSummary}
                         onChange={(e) => setNewSummary(e.target.value)}
                         placeholder="Brief description of the coin..."
-                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all resize-none text-sm font-medium"
                       />
+                      <div className="flex justify-end mt-1">
+                        <span className="text-[10px] font-bold text-gray-400">{newSummary.length}/100</span>
+                      </div>
                     </div>
 
                     <div>
@@ -1025,7 +1029,7 @@ export default function App() {
                 className="space-y-6"
               >
                 {/* Profile Card */}
-                <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-5">
+                <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-5 mb-2">
                   <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-blue-200 dark:shadow-none">
                     <User size={40} />
                   </div>
@@ -1271,7 +1275,9 @@ export default function App() {
                     <div className="absolute -top-2 -left-2 w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
                       <Info size={16} />
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-bold italic text-lg">"{selectedCoin.summary || 'No summary provided.'}"</p>
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-bold italic text-lg line-clamp-3">
+                      "{selectedCoin.summary || 'No summary provided.'}"
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-10">
