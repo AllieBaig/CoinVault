@@ -81,6 +81,7 @@ interface Profile {
   missions: Mission[];
   badges: Badge[];
   lastSpinDate: number;
+  unlockedMilestones: string[];
   preferences: {
     sortBy: 'added' | 'opened';
     theme: 'light' | 'dark' | 'system';
@@ -94,6 +95,7 @@ interface Profile {
     performanceMode: boolean;
     experimentalFeatures: boolean;
     focusMode: boolean;
+    nightBonusEnabled: boolean;
   };
 }
 
@@ -110,6 +112,19 @@ const RARITY_POINTS = {
   'Common': 10,
   'Rare': 50,
   'Very Rare': 100,
+};
+
+const CLUE_MAP: Record<string, string> = {
+  'Kew Gardens': 'The Great Pagoda holds a secret... look for the 2009 50p.',
+  'Isaac Newton': 'Gravity pulls us towards the 2017 50p... check the year.',
+  'Battle of Hastings': '1066 is the key to the 2016 50p... find the arrow.',
+  'Paddington': 'A bear at the station... look for the 2018 50p.',
+  'Sherlock Holmes': 'Elementary! The 2019 50p hides a mystery.',
+};
+
+const isNightTime = () => {
+  const hour = new Date().getHours();
+  return hour >= 20 || hour < 6; // 8 PM to 6 AM
 };
 
 const DEFAULT_MISSIONS: Mission[] = [
@@ -266,6 +281,7 @@ export default function App() {
         missions: parsed.missions ?? DEFAULT_MISSIONS,
         badges: parsed.badges ?? DEFAULT_BADGES,
         lastSpinDate: parsed.lastSpinDate ?? 0,
+        unlockedMilestones: parsed.unlockedMilestones ?? [],
         preferences: {
           sortBy: parsed.preferences?.sortBy ?? 'added',
           theme: parsed.preferences?.theme ?? 'system',
@@ -279,6 +295,7 @@ export default function App() {
           performanceMode: parsed.preferences?.performanceMode ?? false,
           experimentalFeatures: parsed.preferences?.experimentalFeatures ?? false,
           focusMode: parsed.preferences?.focusMode ?? false,
+          nightBonusEnabled: parsed.preferences?.nightBonusEnabled ?? true,
         }
       };
     }
@@ -290,6 +307,7 @@ export default function App() {
       missions: DEFAULT_MISSIONS,
       badges: DEFAULT_BADGES,
       lastSpinDate: 0,
+      unlockedMilestones: [],
       preferences: { 
         sortBy: 'added',
         theme: 'system',
@@ -303,6 +321,7 @@ export default function App() {
         performanceMode: false,
         experimentalFeatures: false,
         focusMode: false,
+        nightBonusEnabled: true,
       }
     };
   });
@@ -330,6 +349,8 @@ export default function App() {
   const [showTimeline, setShowTimeline] = useState(false);
   const [showCollectorCard, setShowCollectorCard] = useState(false);
   const [discoveryTip, setDiscoveryTip] = useState('');
+  const [showFusionModal, setShowFusionModal] = useState(false);
+  const [fusionSelection, setFusionSelection] = useState<string[]>([]);
 
   const COIN_FACTS = [
     "The 1933 double eagle is one of the world's rarest coins.",
@@ -469,6 +490,22 @@ export default function App() {
     if (changed) {
       setProfile(prev => ({ ...prev, badges: newBadges }));
     }
+
+    // Milestone Unlock Logic
+    const milestones = [
+      { count: 20, id: 'milestone-20', name: 'Advanced Stats' },
+      { count: 50, id: 'milestone-50', name: 'Secret Themes' },
+    ];
+
+    milestones.forEach(m => {
+      if (coins.length >= m.count && !profile.unlockedMilestones.includes(m.id)) {
+        setProfile(prev => ({
+          ...prev,
+          unlockedMilestones: [...prev.unlockedMilestones, m.id]
+        }));
+        setFeedback({ message: `🔓 Milestone Reached: ${m.name} Unlocked!`, type: 'success' });
+      }
+    });
   }, [coins.length, profile.streak.current]);
 
   useEffect(() => {
@@ -628,7 +665,15 @@ export default function App() {
       setCoins(coins.map(c => c.id === isEditing.id ? { ...c, ...coinData } : c));
       setFeedback({ message: 'Coin updated!', type: 'success' });
     } else {
-      const points = RARITY_POINTS[newRarity];
+      let points = RARITY_POINTS[newRarity];
+      
+      // Night Bonus Mode
+      const isNight = isNightTime();
+      if (isNight && profile.preferences.nightBonusEnabled) {
+        points = Math.round(points * 1.5);
+        setFeedback({ message: `🌙 Night Bonus Active! (+50% XP)`, type: 'success' });
+      }
+
       const newCoin: Coin = {
         id: crypto.randomUUID(),
         ...coinData,
@@ -650,7 +695,8 @@ export default function App() {
       setProfile(prev => ({ 
         ...prev, 
         points: prev.points + points + bonusPoints,
-        missions: updatedMissions
+        missions: updatedMissions,
+        unlockedMilestones: prev.unlockedMilestones ?? []
       }));
       setXpGain(points + bonusPoints);
       setTimeout(() => setXpGain(null), 2000);
@@ -658,6 +704,51 @@ export default function App() {
     }
 
     resetForm();
+  };
+
+  const handleFusion = (ids: string[]) => {
+    if (ids.length !== 3) return;
+    
+    const selected = coins.filter(c => ids.includes(c.id));
+    const first = selected[0];
+    
+    const allSame = selected.every(c => 
+      c.name === first.name && 
+      c.year === first.year && 
+      c.type === first.type && 
+      c.rarity === first.rarity
+    );
+    
+    if (!allSame) {
+      setFeedback({ message: 'Coins must be identical to fuse!', type: 'info' });
+      return;
+    }
+    
+    if (first.rarity === 'Very Rare') {
+      setFeedback({ message: 'Cannot fuse Very Rare coins further!', type: 'info' });
+      return;
+    }
+    
+    const nextRarity: Rarity = first.rarity === 'Common' ? 'Rare' : 'Very Rare';
+    
+    const fusedCoin: Coin = {
+      ...first,
+      id: crypto.randomUUID(),
+      rarity: nextRarity,
+      dateAdded: Date.now(),
+      lastOpened: Date.now(),
+      summary: `Fused from 3 ${first.rarity} duplicates. ${first.summary}`,
+    };
+    
+    setCoins(prev => [...prev.filter(c => !ids.includes(c.id)), fusedCoin]);
+    setFusionSelection([]);
+    setShowFusionModal(false);
+    setFeedback({ message: `Fusion Success! Created a ${nextRarity} ${first.name}!`, type: 'success' });
+    
+    const bonus = nextRarity === 'Rare' ? 150 : 300;
+    setProfile(prev => ({ ...prev, points: prev.points + bonus }));
+    setXpGain(bonus);
+    setTimeout(() => setXpGain(null), 2000);
   };
 
   const resetForm = () => {
@@ -1970,6 +2061,55 @@ export default function App() {
                   </button>
                 </div>
 
+                {/* Hidden Settings (Unlocked via Milestones) */}
+                {profile.unlockedMilestones && profile.unlockedMilestones.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] px-2 flex items-center gap-2">
+                      <Unlock size={12} /> Special Settings
+                    </h3>
+                    <div className="bg-white dark:bg-gray-900 rounded-3xl border border-blue-100 dark:border-blue-900/30 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm shadow-blue-100 dark:shadow-none">
+                      {profile.unlockedMilestones.includes('milestone-20') && (
+                        <div className="p-5 flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700 dark:text-gray-300">Night Bonus Mode</span>
+                            <span className="text-[10px] text-gray-400 font-medium">Earn +50% XP during night hours (8PM-6AM)</span>
+                          </div>
+                          <button 
+                            onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, nightBonusEnabled: !profile.preferences.nightBonusEnabled } })}
+                            className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.nightBonusEnabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                          >
+                            <motion.div 
+                              animate={{ x: profile.preferences.nightBonusEnabled ? 28 : 4 }}
+                              className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                            />
+                          </button>
+                        </div>
+                      )}
+                      {profile.unlockedMilestones.includes('milestone-50') && (
+                        <div className="p-5 flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700 dark:text-gray-300">Experimental Fusion</span>
+                            <span className="text-[10px] text-gray-400 font-medium">Allow fusing 3 duplicates into a rarer coin</span>
+                          </div>
+                          <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-600">
+                            <Zap size={18} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {profile.unlockedMilestones && profile.unlockedMilestones.includes('milestone-50') && (
+                  <button 
+                    onClick={() => setShowFusionModal(true)}
+                    className="w-full p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-3xl font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform"
+                  >
+                    <Zap size={20} />
+                    <span>Open Coin Fusion Lab</span>
+                  </button>
+                )}
+
                 {/* Display Section */}
                 <div className="space-y-4">
                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Display</h3>
@@ -2389,6 +2529,21 @@ export default function App() {
                   
                   <h2 className="text-4xl font-black mb-6 leading-tight tracking-tight text-gray-900 dark:text-white">{selectedCoin.name}</h2>
                   
+                  {CLUE_MAP[selectedCoin.name] && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-[2rem] mb-8 border border-amber-100 dark:border-amber-800 relative group"
+                    >
+                      <div className="absolute -top-2 -left-2 w-8 h-8 bg-amber-600 rounded-lg flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
+                        <Lightbulb size={16} />
+                      </div>
+                      <p className="text-amber-800 dark:text-amber-400 leading-relaxed font-bold italic text-sm">
+                        "Clue: {CLUE_MAP[selectedCoin.name]}"
+                      </p>
+                    </motion.div>
+                  )}
+
                   {selectedCoin.tags && selectedCoin.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-6">
                       {selectedCoin.tags.map(tag => (
@@ -2408,6 +2563,20 @@ export default function App() {
                       "{selectedCoin.summary || 'No summary provided.'}"
                     </p>
                   </div>
+
+                  {/* Clue Display */}
+                  {CLUE_MAP[selectedCoin.name] && (
+                    <div className="mb-8 p-6 bg-amber-50 dark:bg-amber-900/20 rounded-[2rem] border border-amber-100 dark:border-amber-900/30 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-amber-400/10 rounded-full -mr-10 -mt-10 blur-2xl" />
+                      <div className="flex items-center gap-3 text-amber-800 dark:text-amber-400 font-black text-xs uppercase tracking-widest mb-3">
+                        <Search size={14} />
+                        <span>Hidden Clue Found</span>
+                      </div>
+                      <p className="text-amber-900 dark:text-amber-300 font-bold italic leading-relaxed">
+                        "{CLUE_MAP[selectedCoin.name]}"
+                      </p>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4 mb-10">
                     <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
@@ -2893,6 +3062,93 @@ export default function App() {
                   Side-by-side comparison
                 </p>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Coin Fusion Modal */}
+        <AnimatePresence>
+          {showFusionModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md z-[120] flex items-center justify-center p-6"
+              onClick={() => setShowFusionModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[80vh]"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="text-2xl font-black tracking-tight">Fusion Lab</h3>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Combine 3 identical coins</p>
+                  </div>
+                  <button onClick={() => setShowFusionModal(false)} className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar mb-6">
+                  {Object.entries(
+                    coins.reduce((acc, coin) => {
+                      const key = `${coin.name}-${coin.year}-${coin.type}-${coin.rarity}`;
+                      if (!acc[key]) acc[key] = [];
+                      acc[key].push(coin);
+                      return acc;
+                    }, {} as Record<string, Coin[]>)
+                  )
+                  .filter(([_, group]) => (group as Coin[]).length >= 3 && (group as Coin[])[0].rarity !== 'Very Rare')
+                  .map(([key, group]) => {
+                    const coinGroup = group as Coin[];
+                    return (
+                      <div key={key} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-3xl border border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-white dark:bg-gray-900 rounded-2xl flex items-center justify-center text-xs font-black text-gray-400 border border-gray-100 dark:border-gray-800 shadow-sm">
+                              {coinGroup[0].type}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-800 dark:text-gray-200">{coinGroup[0].name}</p>
+                              <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{coinGroup[0].rarity} × {coinGroup.length}</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const ids = coinGroup.slice(0, 3).map(c => c.id);
+                              handleFusion(ids);
+                            }}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-xl font-black text-xs shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform"
+                          >
+                            Fuse 3
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400 font-medium italic">Result: 1 {coinGroup[0].rarity === 'Common' ? 'Rare' : 'Very Rare'} Coin</p>
+                      </div>
+                    );
+                  })}
+                  
+                  {coins.length === 0 && (
+                    <div className="text-center py-20">
+                      <p className="text-gray-400 font-bold italic">No duplicates found...</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-3xl border border-blue-100 dark:border-blue-900/30">
+                  <div className="flex items-center gap-2 text-blue-800 dark:text-blue-400 font-bold mb-1">
+                    <Info size={16} />
+                    <span className="text-xs uppercase tracking-widest">Fusion Rules</span>
+                  </div>
+                  <p className="text-[10px] text-blue-700 dark:text-blue-500 leading-relaxed">
+                    Fusing 3 identical coins consumes them and creates 1 coin of the next rarity level. You also gain a massive XP bonus!
+                  </p>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
