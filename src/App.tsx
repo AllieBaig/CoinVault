@@ -10,7 +10,8 @@ import {
   Folder as FolderIcon, Image as ImageIcon, Download, Upload, 
   Settings, User, ChevronRight, X, ArrowLeft, Search, Clock,
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
-  Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp
+  Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp,
+  Share2, Columns, History, Lightbulb
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 import LZString from 'lz-string';
@@ -92,6 +93,7 @@ interface Profile {
     quickAddMode: boolean;
     performanceMode: boolean;
     experimentalFeatures: boolean;
+    focusMode: boolean;
   };
 }
 
@@ -276,6 +278,7 @@ export default function App() {
           quickAddMode: parsed.preferences?.quickAddMode ?? false,
           performanceMode: parsed.preferences?.performanceMode ?? false,
           experimentalFeatures: parsed.preferences?.experimentalFeatures ?? false,
+          focusMode: parsed.preferences?.focusMode ?? false,
         }
       };
     }
@@ -299,6 +302,7 @@ export default function App() {
         quickAddMode: false,
         performanceMode: false,
         experimentalFeatures: false,
+        focusMode: false,
       }
     };
   });
@@ -322,6 +326,29 @@ export default function App() {
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [inputModal, setInputModal] = useState<{ title: string; placeholder: string; onConfirm: (value: string) => void } | null>(null);
   const [modalInputValue, setModalInputValue] = useState('');
+  const [compareCoins, setCompareCoins] = useState<string[]>([]);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [showCollectorCard, setShowCollectorCard] = useState(false);
+  const [discoveryTip, setDiscoveryTip] = useState('');
+
+  const COIN_FACTS = [
+    "The 1933 double eagle is one of the world's rarest coins.",
+    "The first coins were made in Lydia (modern-day Turkey) around 600 BC.",
+    "A coin's 'obverse' is the heads side, and the 'reverse' is the tails side.",
+    "Numismatics is the study or collection of currency.",
+    "The edge of a coin is called the 'third side'.",
+    "Many early coins were made of electrum, a natural alloy of gold and silver.",
+    "The largest gold coin ever made weighs over 1,000 kilograms.",
+    "The 50p coin was the world's first seven-sided coin.",
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDiscoveryTip(COIN_FACTS[Math.floor(Math.random() * COIN_FACTS.length)]);
+    }, 30000);
+    setDiscoveryTip(COIN_FACTS[Math.floor(Math.random() * COIN_FACTS.length)]);
+    return () => clearInterval(interval);
+  }, []);
 
   // Form state
   const [newName, setNewName] = useState('');
@@ -959,41 +986,64 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight leading-none">Coinly</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <motion.div 
-                  whileHover={{ scale: 1.05 }}
-                  className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-800/50"
-                >
-                  <Flame size={10} className="text-orange-500" />
-                  <span className="text-[10px] font-black text-orange-600 dark:text-orange-400">{profile.streak.current}</span>
-                </motion.div>
-                <div className="w-1 h-1 bg-gray-300 rounded-full" />
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{currentLevel.name}</p>
-              </div>
+              {!profile.preferences.focusMode && (
+                <div className="flex items-center gap-2 mt-1">
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-800/50"
+                  >
+                    <Flame size={10} className="text-orange-500" />
+                    <span className="text-[10px] font-black text-orange-600 dark:text-orange-400">{profile.streak.current}</span>
+                  </motion.div>
+                  <div className="w-1 h-1 bg-gray-300 rounded-full" />
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{currentLevel.name}</p>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={handleLuckySpin}
-              disabled={isSpinning}
-              className={`p-2 rounded-full transition-all ${
-                isSpinning ? 'bg-gray-100 text-gray-400 animate-spin' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100'
-              }`}
-              title="Daily Lucky Spin"
-            >
-              <Gift size={20} />
-            </motion.button>
+            {!profile.preferences.focusMode && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={handleLuckySpin}
+                disabled={isSpinning}
+                className={`p-2 rounded-full transition-all ${
+                  isSpinning ? 'bg-gray-100 text-gray-400 animate-spin' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100'
+                }`}
+                title="Daily Lucky Spin"
+              >
+                <Gift size={20} />
+              </motion.button>
+            )}
             <div className="flex gap-1">
-              <motion.button whileTap={{ scale: 0.9 }} id="refresh-app-btn" onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Refresh App">
-                <Clock size={20} />
-              </motion.button>
-              <motion.button whileTap={{ scale: 0.9 }} id="export-data-btn" onClick={exportData} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Export Data">
-                <Download size={20} />
-              </motion.button>
+              {!profile.preferences.focusMode && (
+                <>
+                  <motion.button whileTap={{ scale: 0.9 }} id="refresh-app-btn" onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Refresh App">
+                    <Clock size={20} />
+                  </motion.button>
+                  <motion.button whileTap={{ scale: 0.9 }} id="export-data-btn" onClick={exportData} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Export Data">
+                    <Download size={20} />
+                  </motion.button>
+                </>
+              )}
             </div>
           </div>
         </div>
+
+        {!profile.preferences.focusMode && discoveryTip && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-2xl flex items-center gap-3 mb-4 border border-blue-100/50 dark:border-blue-800/20"
+          >
+            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600">
+              <Lightbulb size={16} />
+            </div>
+            <p className="text-[10px] font-bold text-blue-800 dark:text-blue-300 italic leading-tight">
+              "{discoveryTip}"
+            </p>
+          </motion.div>
+        )}
 
         {/* Hero Stats Section */}
         <div className={`rounded-[2.5rem] p-6 text-white relative overflow-hidden ${
@@ -1603,9 +1653,34 @@ export default function App() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1">
-                            {profile.preferences.showPrice && (
-                              <span className="text-sm font-black text-gray-800 dark:text-gray-200">£{coin.amountPaid?.toFixed(2)}</span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {!profile.preferences.focusMode && (
+                                <motion.button
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (compareCoins.includes(coin.id)) {
+                                      setCompareCoins(compareCoins.filter(id => id !== coin.id));
+                                    } else if (compareCoins.length < 2) {
+                                      setCompareCoins([...compareCoins, coin.id]);
+                                    } else {
+                                      setCompareCoins([compareCoins[1], coin.id]);
+                                    }
+                                  }}
+                                  className={`p-2 rounded-xl transition-all ${
+                                    compareCoins.includes(coin.id) 
+                                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
+                                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 hover:text-blue-600'
+                                  }`}
+                                  title="Compare Coin"
+                                >
+                                  <Columns size={16} />
+                                </motion.button>
+                              )}
+                              {profile.preferences.showPrice && (
+                                <span className="text-sm font-black text-gray-800 dark:text-gray-200">£{coin.amountPaid?.toFixed(2)}</span>
+                              )}
+                            </div>
                             <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                           </div>
                         </motion.div>
@@ -1877,6 +1952,24 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Collector Identity & Timeline Section */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setShowCollectorCard(true)}
+                    className="p-5 bg-blue-600 text-white rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform"
+                  >
+                    <User size={24} />
+                    <span>Identity Card</span>
+                  </button>
+                  <button 
+                    onClick={() => setShowTimeline(true)}
+                    className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
+                  >
+                    <History size={24} className="text-blue-600" />
+                    <span>Timeline</span>
+                  </button>
+                </div>
+
                 {/* Display Section */}
                 <div className="space-y-4">
                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Display</h3>
@@ -1937,6 +2030,18 @@ export default function App() {
                       >
                         <motion.div 
                           animate={{ x: profile.preferences.purchaseMode ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Focus Mode</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, focusMode: !profile.preferences.focusMode } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.focusMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.focusMode ? 28 : 4 }}
                           className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
                         />
                       </button>
@@ -2575,6 +2680,249 @@ export default function App() {
                   </button>
                 </div>
               </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Collector Identity Card Modal */}
+        <AnimatePresence>
+          {showCollectorCard && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-6"
+              onClick={() => setShowCollectorCard(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="bg-gradient-to-br from-blue-600 to-indigo-700 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-white relative overflow-hidden"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-400/20 rounded-full -ml-16 -mb-16 blur-2xl" />
+                
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-8">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30">
+                      <Star size={32} className="fill-white" />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Collector ID</p>
+                      <p className="text-xl font-black tracking-tighter">#{profile.recoveryCode}</p>
+                    </div>
+                  </div>
+
+                  <div className="mb-8">
+                    <h3 className="text-3xl font-black tracking-tight mb-1">{profile.name}</h3>
+                    <p className="text-blue-200 font-bold uppercase tracking-widest text-xs">{currentLevel.name} Rank</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6 mb-8">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Collection</p>
+                      <p className="text-2xl font-black">{stats.total} Coins</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">XP Points</p>
+                      <p className="text-2xl font-black">{profile.points}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Est. Value</p>
+                      <p className="text-2xl font-black">£{stats.totalSpend.toFixed(0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Streak</p>
+                      <p className="text-2xl font-black">{profile.streak.current} Days</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => {
+                        setFeedback({ message: 'Card saved to library!', type: 'success' });
+                        setShowCollectorCard(false);
+                      }}
+                      className="flex-1 py-4 bg-white text-blue-600 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2"
+                    >
+                      <Download size={18} />
+                      Save Card
+                    </button>
+                    <button 
+                      onClick={() => setShowCollectorCard(false)}
+                      className="w-14 h-14 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Collection Timeline Modal */}
+        <AnimatePresence>
+          {showTimeline && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-end justify-center"
+              onClick={() => setShowTimeline(false)}
+            >
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="bg-gray-50 dark:bg-gray-900 w-full max-w-md h-[80vh] rounded-t-[3rem] p-8 shadow-2xl flex flex-col"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full mx-auto mb-8" />
+                
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h3 className="text-2xl font-black tracking-tight">Collection Timeline</h3>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">History of your finds</p>
+                  </div>
+                  <button onClick={() => setShowTimeline(false)} className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                  {[...coins].sort((a, b) => b.dateAdded - a.dateAdded).map((coin, idx) => (
+                    <div key={coin.id} className="relative pl-8">
+                      {idx !== coins.length - 1 && (
+                        <div className="absolute left-[11px] top-6 bottom-[-24px] w-0.5 bg-gray-100 dark:bg-gray-800" />
+                      )}
+                      <div className="absolute left-0 top-1.5 w-6 h-6 bg-blue-600 rounded-full border-4 border-white dark:border-gray-900 shadow-sm" />
+                      <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                          {new Date(coin.dateAdded).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gray-50 dark:bg-gray-900 rounded-xl flex items-center justify-center text-xs font-black text-gray-400">
+                              {coin.type}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-800 dark:text-gray-200">{coin.name}</p>
+                              <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{coin.rarity}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {coins.length === 0 && (
+                    <div className="text-center py-20">
+                      <p className="text-gray-400 font-bold italic">Your timeline is empty...</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Compare Mode Modal */}
+        <AnimatePresence>
+          {compareCoins.length === 2 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[110] flex items-center justify-center p-4"
+            >
+              <div className="w-full max-w-2xl">
+                <div className="flex justify-between items-center mb-8 px-4">
+                  <h3 className="text-white text-2xl font-black tracking-tight">Quick Compare</h3>
+                  <button 
+                    onClick={() => setCompareCoins([])}
+                    className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {compareCoins.map(id => {
+                    const coin = coins.find(c => c.id === id);
+                    if (!coin) return null;
+                    return (
+                      <motion.div 
+                        key={id}
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white dark:bg-gray-900 rounded-[2.5rem] p-6 flex flex-col items-center text-center"
+                      >
+                        <div className="w-32 h-32 bg-gray-50 dark:bg-gray-800 rounded-3xl mb-6 flex items-center justify-center overflow-hidden shadow-inner">
+                          {coin.image ? (
+                            <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-4xl font-black text-gray-300">{coin.type}</span>
+                          )}
+                        </div>
+                        <h4 className="text-xl font-black mb-1">{coin.name}</h4>
+                        <p className="text-xs font-black text-blue-600 uppercase tracking-widest mb-6">{coin.rarity}</p>
+                        
+                        <div className="w-full space-y-4">
+                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-2xl">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Year</p>
+                            <p className="font-black">{coin.year}</p>
+                          </div>
+                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-2xl">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Type</p>
+                            <p className="font-black">{coin.type}</p>
+                          </div>
+                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-2xl">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Paid</p>
+                            <p className="font-black">£{coin.amountPaid?.toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+                
+                <p className="text-center text-white/40 text-[10px] font-black uppercase tracking-[0.3em] mt-8">
+                  Side-by-side comparison
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Compare Selection Floating Bar */}
+        <AnimatePresence>
+          {compareCoins.length === 1 && (
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-xs px-4"
+            >
+              <div className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 p-4 rounded-3xl shadow-2xl flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+                    <Columns size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest">Compare Mode</p>
+                    <p className="text-[10px] font-bold opacity-60">Select 1 more coin</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setCompareCoins([])}
+                  className="p-2 hover:bg-white/10 dark:hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
