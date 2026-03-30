@@ -10,7 +10,7 @@ import {
   Folder as FolderIcon, Image as ImageIcon, Download, Upload, 
   Settings, User, ChevronRight, X, ArrowLeft, Search, Clock,
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
-  Zap, Target, Gift, RefreshCw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp
+  Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 import LZString from 'lz-string';
@@ -90,6 +90,8 @@ interface Profile {
     purchaseMode: boolean;
     showPrice: boolean;
     quickAddMode: boolean;
+    performanceMode: boolean;
+    experimentalFeatures: boolean;
   };
 }
 
@@ -272,6 +274,8 @@ export default function App() {
           purchaseMode: parsed.preferences?.purchaseMode ?? false,
           showPrice: parsed.preferences?.showPrice ?? true,
           quickAddMode: parsed.preferences?.quickAddMode ?? false,
+          performanceMode: parsed.preferences?.performanceMode ?? false,
+          experimentalFeatures: parsed.preferences?.experimentalFeatures ?? false,
         }
       };
     }
@@ -293,6 +297,8 @@ export default function App() {
         purchaseMode: false,
         showPrice: true,
         quickAddMode: false,
+        performanceMode: false,
+        experimentalFeatures: false,
       }
     };
   });
@@ -1912,18 +1918,6 @@ export default function App() {
                       </button>
                     </div>
                     <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Purchase Mode</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, purchaseMode: !profile.preferences.purchaseMode } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.purchaseMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.purchaseMode ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
                       <span className="font-bold text-gray-700 dark:text-gray-300">Show Coin Price</span>
                       <button 
                         onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
@@ -1931,6 +1925,18 @@ export default function App() {
                       >
                         <motion.div 
                           animate={{ x: profile.preferences.showPrice ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Purchase Mode</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, purchaseMode: !profile.preferences.purchaseMode } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.purchaseMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.purchaseMode ? 28 : 4 }}
                           className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
                         />
                       </button>
@@ -1979,6 +1985,18 @@ export default function App() {
                       </button>
                     </div>
                     <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Performance Mode</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, performanceMode: !profile.preferences.performanceMode } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.performanceMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.performanceMode ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
                       <span className="font-bold text-gray-700 dark:text-gray-300">Sort By</span>
                       <select 
                         value={profile.preferences.sortBy}
@@ -1988,6 +2006,15 @@ export default function App() {
                         <option value="added">Recently Added</option>
                         <option value="opened">Recently Opened</option>
                       </select>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Refresh App</span>
+                      <button 
+                        onClick={() => window.location.reload()}
+                        className="p-2 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
+                      >
+                        <RefreshCw size={18} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -2072,7 +2099,46 @@ export default function App() {
                       <span>Restore</span>
                     </button>
                     <button 
-                      id="clear-cache-btn"
+                      onClick={() => {
+                        // Data conversion logic is already integrated in import, 
+                        // but we can add a manual trigger if needed.
+                        // For now, let's just show a message.
+                        setFeedback({ message: 'Auto-conversion is active on import.', type: 'info' });
+                      }}
+                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
+                    >
+                      <RefreshCcw size={24} className="text-blue-600" />
+                      <span>Convert</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Advanced Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Advanced</h3>
+                  <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
+                    <div className="p-5 flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-gray-700 dark:text-gray-300">Safe Mode</span>
+                        <span className="text-[10px] text-gray-400 font-medium">Load last working backup on crash</span>
+                      </div>
+                      <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-600">
+                        <Zap size={18} />
+                      </div>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Experimental Features</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, experimentalFeatures: !profile.preferences.experimentalFeatures } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.experimentalFeatures ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.experimentalFeatures ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <button 
                       onClick={() => {
                         setConfirmModal({
                           title: 'Clear Cache',
@@ -2083,10 +2149,10 @@ export default function App() {
                           }
                         });
                       }}
-                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 text-red-600 shadow-sm active:scale-95 transition-transform"
+                      className="w-full p-5 flex items-center justify-between text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                     >
-                      <Trash2 size={24} />
-                      <span>Clear Cache</span>
+                      <span className="font-bold">Clear All Data</span>
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 </div>
