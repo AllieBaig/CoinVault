@@ -10,7 +10,7 @@ import {
   Folder as FolderIcon, Image as ImageIcon, Download, Upload, 
   Settings, User, ChevronRight, X, ArrowLeft, Search, Clock,
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
-  Zap, Target, Gift, RefreshCw, Eye, EyeOff, Check
+  Zap, Target, Gift, RefreshCw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 import LZString from 'lz-string';
@@ -32,12 +32,23 @@ interface Coin {
   dateAdded: number;
   lastOpened: number;
   amountPaid: number;
+  tags?: string[];
 }
 
 interface Folder {
   id: string;
   name: string;
   isDefault?: boolean;
+  isLocked?: boolean;
+}
+
+interface Goal {
+  id: string;
+  title: string;
+  target: number;
+  current: number;
+  type: 'count' | 'value' | 'rarity' | 'type';
+  isCompleted: boolean;
 }
 
 interface Mission {
@@ -78,6 +89,7 @@ interface Profile {
     autoRemoveBackground: boolean;
     purchaseMode: boolean;
     showPrice: boolean;
+    quickAddMode: boolean;
   };
 }
 
@@ -259,6 +271,7 @@ export default function App() {
           autoRemoveBackground: parsed.preferences?.autoRemoveBackground ?? true,
           purchaseMode: parsed.preferences?.purchaseMode ?? false,
           showPrice: parsed.preferences?.showPrice ?? true,
+          quickAddMode: parsed.preferences?.quickAddMode ?? false,
         }
       };
     }
@@ -279,11 +292,15 @@ export default function App() {
         autoRemoveBackground: true,
         purchaseMode: false,
         showPrice: true,
+        quickAddMode: false,
       }
     };
   });
 
   const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'stats' | 'profile'>('collection');
+  const [unlockedFolders, setUnlockedFolders] = useState<string[]>([]);
+  const [newTags, setNewTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
   const [showSpinModal, setShowSpinModal] = useState(false);
@@ -571,6 +588,7 @@ export default function App() {
       image: newImage,
       folderId: newFolderId,
       amountPaid: parseFloat(newAmountPaid) || 0,
+      tags: newTags,
     };
 
     if (isEditing) {
@@ -778,8 +796,13 @@ export default function App() {
 
   const sortedCoins = useMemo(() => {
     let filtered = coins;
+    
+    // Filter out coins in locked folders unless unlocked
+    const lockedFolderIds = folders.filter(f => f.isLocked && !unlockedFolders.includes(f.id)).map(f => f.id);
+    filtered = filtered.filter(c => !lockedFolderIds.includes(c.folderId));
+
     if (selectedFolderId !== 'all') {
-      filtered = coins.filter(c => c.folderId === selectedFolderId);
+      filtered = filtered.filter(c => c.folderId === selectedFolderId);
     }
 
     if (searchQuery.trim()) {
@@ -788,7 +811,8 @@ export default function App() {
         c.name.toLowerCase().includes(query) || 
         c.year.includes(query) || 
         c.type.toLowerCase().includes(query) ||
-        c.summary.toLowerCase().includes(query)
+        c.summary.toLowerCase().includes(query) ||
+        (c.tags && c.tags.some(t => t.toLowerCase().includes(query)))
       );
     }
 
@@ -798,7 +822,7 @@ export default function App() {
       }
       return b.dateAdded - a.dateAdded;
     });
-  }, [coins, selectedFolderId, profile.preferences.sortBy]);
+  }, [coins, selectedFolderId, profile.preferences.sortBy, searchQuery, folders, unlockedFolders]);
 
   const stats = useMemo(() => {
     const counts = {
@@ -837,7 +861,61 @@ export default function App() {
       .filter(d => d.count > 1)
       .sort((a, b) => b.count - a.count);
 
-    return { counts, total, completion, totalSpend, monthlyTotals, duplicateList };
+    // Pattern Insights
+    const mostCollectedType = Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0] as CoinType;
+    const rarestCoin = [...coins].sort((a, b) => {
+      const rarityMap = { 'Very Rare': 3, 'Rare': 2, 'Common': 1 };
+      return rarityMap[b.rarity] - rarityMap[a.rarity];
+    })[0] || null;
+    
+    const yearCounts: { [key: string]: number } = {};
+    coins.forEach(c => yearCounts[c.year] = (yearCounts[c.year] || 0) + 1);
+    const mostCollectedYear = Object.entries(yearCounts).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0])[0];
+
+    const insights = {
+      mostCollectedType,
+      rarestCoin,
+      mostCollectedYear,
+      averagePaid: total > 0 ? totalSpend / total : 0,
+    };
+
+    // Smart Goals
+    const goals: Goal[] = [
+      {
+        id: 'goal-count-10',
+        title: 'Reach 10 Coins',
+        target: 10,
+        current: total,
+        type: 'count',
+        isCompleted: total >= 10
+      },
+      {
+        id: 'goal-value-100',
+        title: 'Collection Value £100',
+        target: 100,
+        current: totalSpend,
+        type: 'value',
+        isCompleted: totalSpend >= 100
+      },
+      {
+        id: 'goal-rare-5',
+        title: 'Collect 5 Rare Coins',
+        target: 5,
+        current: coins.filter(c => c.rarity !== 'Common').length,
+        type: 'rarity',
+        isCompleted: coins.filter(c => c.rarity !== 'Common').length >= 5
+      },
+      {
+        id: 'goal-type-50p-10',
+        title: 'Collect 10 50p Coins',
+        target: 10,
+        current: counts['50p'],
+        type: 'type',
+        isCompleted: counts['50p'] >= 10
+      }
+    ];
+
+    return { counts, total, completion, totalSpend, monthlyTotals, duplicateList, insights, goals };
   }, [coins]);
 
   const currentLevel = useMemo(() => {
@@ -1169,15 +1247,42 @@ export default function App() {
                     All Coins
                   </button>
                   {folders.map(folder => (
-                    <button
-                      key={folder.id}
-                      onClick={() => setSelectedFolderId(folder.id)}
-                      className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
-                        selectedFolderId === folder.id ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
-                      }`}
-                    >
-                      {folder.name}
-                    </button>
+                    <div key={folder.id} className="relative flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          if (folder.isLocked && !unlockedFolders.includes(folder.id)) {
+                            const code = prompt('Enter Vault Passcode (Default: 1234):');
+                            if (code === '1234') {
+                              setUnlockedFolders([...unlockedFolders, folder.id]);
+                              setSelectedFolderId(folder.id);
+                            } else {
+                              setFeedback({ message: 'Incorrect passcode', type: 'error' });
+                            }
+                          } else {
+                            setSelectedFolderId(folder.id);
+                          }
+                        }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setConfirmModal({
+                            title: folder.isLocked ? 'Unlock Folder Permanently?' : 'Lock this Folder?',
+                            message: folder.isLocked ? 'This will remove the passcode protection.' : 'This will hide coins in this folder until unlocked with a passcode.',
+                            onConfirm: () => {
+                              setFolders(folders.map(f => f.id === folder.id ? { ...f, isLocked: !f.isLocked } : f));
+                              setFeedback({ message: `Folder ${folder.isLocked ? 'unlocked' : 'locked'}!`, type: 'success' });
+                            }
+                          });
+                        }}
+                        className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
+                          selectedFolderId === folder.id ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
+                        }`}
+                      >
+                        {folder.isLocked && (
+                          unlockedFolders.includes(folder.id) ? <Unlock size={12} /> : <Lock size={12} />
+                        )}
+                        {folder.name}
+                      </button>
+                    </div>
                   ))}
                 </div>
 
@@ -1194,7 +1299,7 @@ export default function App() {
                       }}
                       className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 dark:shadow-none"
                     >
-                      <Plus size={20} /> Add New Coin
+                      <Plus size={20} /> {profile.preferences.quickAddMode ? 'Quick Add' : 'Add New Coin'}
                     </motion.button>
                 ) : (
                   <motion.form
@@ -1205,30 +1310,32 @@ export default function App() {
                     className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-bold text-lg">{isEditing ? 'Edit Coin' : 'New Coin'}</h3>
+                      <h3 className="font-bold text-lg">{isEditing ? 'Edit Coin' : (profile.preferences.quickAddMode ? 'Quick Add' : 'New Coin')}</h3>
                       <button type="button" onClick={resetForm} className="text-gray-400"><X size={20} /></button>
                     </div>
 
-                    {/* Image Upload */}
-                    <div 
-                      onClick={() => !isProcessingImage && fileInputRef.current?.click()}
-                      className="w-full aspect-video bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative"
-                    >
-                      {isProcessingImage ? (
-                        <div className="flex flex-col items-center gap-2 p-4 text-center">
-                          <Loader2 size={32} className="text-blue-600 animate-spin" />
-                          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Removing Background...</span>
-                        </div>
-                      ) : newImage ? (
-                        <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
-                      ) : (
-                        <>
-                          <ImageIcon className="text-gray-300 mb-2" size={32} />
-                          <span className="text-xs font-bold text-gray-400">Add Coin Image</span>
-                        </>
-                      )}
-                      <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-                    </div>
+                    {/* Image Upload - Hidden in Quick Add unless editing */}
+                    {(!profile.preferences.quickAddMode || isEditing) && (
+                      <div 
+                        onClick={() => !isProcessingImage && fileInputRef.current?.click()}
+                        className="w-full aspect-video bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative"
+                      >
+                        {isProcessingImage ? (
+                          <div className="flex flex-col items-center gap-2 p-4 text-center">
+                            <Loader2 size={32} className="text-blue-600 animate-spin" />
+                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Removing Background...</span>
+                          </div>
+                        ) : newImage ? (
+                          <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <>
+                            <ImageIcon className="text-gray-300 mb-2" size={32} />
+                            <span className="text-xs font-bold text-gray-400">Add Coin Image</span>
+                          </>
+                        )}
+                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Coin Name</label>
@@ -1253,19 +1360,6 @@ export default function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Amount Paid (£)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={newAmountPaid}
-                          onChange={(e) => setNewAmountPaid(e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
                         <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Type</label>
                         <select
                           value={newType}
@@ -1277,34 +1371,77 @@ export default function App() {
                           <option value="£2">£2</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Rarity</label>
-                        <select
-                          value={newRarity}
-                          onChange={(e) => setNewRarity(e.target.value as Rarity)}
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
-                        >
-                          <option value="Common">Common</option>
-                          <option value="Rare">Rare</option>
-                          <option value="Very Rare">Very Rare</option>
-                        </select>
-                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Summary (Max 100 chars)</label>
-                      <textarea
-                        rows={2}
-                        maxLength={100}
-                        value={newSummary}
-                        onChange={(e) => setNewSummary(e.target.value)}
-                        placeholder="Brief description of the coin..."
-                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all resize-none text-sm font-medium"
-                      />
-                      <div className="flex justify-end mt-1">
-                        <span className="text-[10px] font-bold text-gray-400">{newSummary.length}/100</span>
-                      </div>
-                    </div>
+                    {(!profile.preferences.quickAddMode || isEditing) && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Amount Paid (£)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={newAmountPaid}
+                              onChange={(e) => setNewAmountPaid(e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Rarity</label>
+                            <select
+                              value={newRarity}
+                              onChange={(e) => setNewRarity(e.target.value as Rarity)}
+                              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
+                            >
+                              <option value="Common">Common</option>
+                              <option value="Rare">Rare</option>
+                              <option value="Very Rare">Very Rare</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Tags (comma separated)</label>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {newTags.map(tag => (
+                              <span key={tag} className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1">
+                                {tag}
+                                <button type="button" onClick={() => setNewTags(newTags.filter(t => t !== tag))}><X size={10} /></button>
+                              </span>
+                            ))}
+                          </div>
+                          <input
+                            type="text"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ',') {
+                                e.preventDefault();
+                                const tag = tagInput.trim().replace(',', '');
+                                if (tag && !newTags.includes(tag)) {
+                                  setNewTags([...newTags, tag]);
+                                  setTagInput('');
+                                }
+                              }
+                            }}
+                            placeholder="Add tags..."
+                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Summary (Max 100 chars)</label>
+                          <textarea
+                            rows={2}
+                            maxLength={100}
+                            value={newSummary}
+                            onChange={(e) => setNewSummary(e.target.value)}
+                            placeholder="Brief description..."
+                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all resize-none text-sm font-medium"
+                          />
+                        </div>
+                      </>
+                    )}
 
                     <div>
                       <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Folder</label>
@@ -1528,6 +1665,53 @@ export default function App() {
                   <div className="relative z-10">
                     <p className="text-blue-100 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Daily Suggestion</p>
                     <h3 className="text-2xl font-black leading-tight italic">"{suggestion}"</h3>
+                  </div>
+                </div>
+
+                {/* Pattern Insights */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200">Pattern Insights</h3>
+                    <TrendingUp size={18} className="text-blue-600" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Most Collected</p>
+                      <p className="text-xl font-black text-gray-800 dark:text-gray-200">{stats.insights.mostCollectedType}</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Peak Year</p>
+                      <p className="text-xl font-black text-gray-800 dark:text-gray-200">{stats.insights.mostCollectedYear || 'N/A'}</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm col-span-2">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Avg. Paid per Coin</p>
+                      <p className="text-xl font-black text-green-600 dark:text-green-400">£{stats.insights.averagePaid.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Smart Goals */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Collection Goals</h3>
+                  <div className="grid gap-4">
+                    {stats.goals.map(goal => (
+                      <div key={goal.id} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+                        {goal.isCompleted && (
+                          <div className="absolute top-0 right-0 bg-green-500 text-white px-3 py-1 rounded-bl-xl text-[8px] font-black uppercase tracking-widest">Completed</div>
+                        )}
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="font-bold text-gray-800 dark:text-gray-200">{goal.title}</span>
+                          <span className="text-xs font-black text-gray-400">{Math.round(goal.current)} / {goal.target}</span>
+                        </div>
+                        <div className="h-2 bg-gray-50 dark:bg-gray-800 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min((goal.current / goal.target) * 100, 100)}%` }}
+                            className={`h-full rounded-full ${goal.isCompleted ? 'bg-green-500' : 'bg-blue-500'}`}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -1766,6 +1950,18 @@ export default function App() {
                       >
                         <motion.div 
                           animate={{ x: profile.preferences.showBottomMenu ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Quick Add Mode</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, quickAddMode: !profile.preferences.quickAddMode } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.quickAddMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.quickAddMode ? 28 : 4 }}
                           className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
                         />
                       </button>
@@ -2022,6 +2218,17 @@ export default function App() {
                   
                   <h2 className="text-4xl font-black mb-6 leading-tight tracking-tight text-gray-900 dark:text-white">{selectedCoin.name}</h2>
                   
+                  {selectedCoin.tags && selectedCoin.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      {selectedCoin.tags.map(tag => (
+                        <span key={tag} className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-blue-100 dark:border-blue-800/50">
+                          <Tag size={10} />
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2rem] mb-8 border border-gray-100 dark:border-gray-800 relative group">
                     <div className="absolute -top-2 -left-2 w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
                       <Info size={16} />
