@@ -11,7 +11,7 @@ import {
   Settings, User, ChevronRight, X, ArrowLeft, Search, Clock,
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
   Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp,
-  Share2, Columns, History, Lightbulb
+  Share2, Columns, History, Lightbulb, Coins
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 import LZString from 'lz-string';
@@ -663,7 +663,7 @@ export default function App() {
 
     if (isEditing) {
       setCoins(coins.map(c => c.id === isEditing.id ? { ...c, ...coinData } : c));
-      setFeedback({ message: 'Coin updated!', type: 'success' });
+      setFeedback({ message: 'Coin updated successfully!', type: 'success' });
     } else {
       let points = RARITY_POINTS[newRarity];
       
@@ -672,6 +672,8 @@ export default function App() {
       if (isNight && profile.preferences.nightBonusEnabled) {
         points = Math.round(points * 1.5);
         setFeedback({ message: `🌙 Night Bonus Active! (+50% XP)`, type: 'success' });
+      } else {
+        setFeedback({ message: 'Coin added to collection!', type: 'success' });
       }
 
       const newCoin: Coin = {
@@ -1067,133 +1069,188 @@ export default function App() {
 
   // --- Render Helpers ---
 
-  const renderHeader = () => (
-    <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 pt-12 pb-6 sticky top-0 z-10 transition-colors">
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200 dark:shadow-none">
-              <Star size={20} className="fill-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight leading-none">Coinly</h1>
-              {!profile.preferences.focusMode && (
-                <div className="flex items-center gap-2 mt-1">
-                  <motion.div 
-                    whileHover={{ scale: 1.05 }}
-                    className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-800/50"
-                  >
-                    <Flame size={10} className="text-orange-500" />
-                    <span className="text-[10px] font-black text-orange-600 dark:text-orange-400">{profile.streak.current}</span>
-                  </motion.div>
-                  <div className="w-1 h-1 bg-gray-300 rounded-full" />
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{currentLevel.name}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {!profile.preferences.focusMode && (
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={handleLuckySpin}
-                disabled={isSpinning}
-                className={`p-2 rounded-full transition-all ${
-                  isSpinning ? 'bg-gray-100 text-gray-400 animate-spin' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100'
-                }`}
-                title="Daily Lucky Spin"
-              >
-                <Gift size={20} />
-              </motion.button>
-            )}
-            <div className="flex gap-1">
-              {!profile.preferences.focusMode && (
-                <>
-                  <motion.button whileTap={{ scale: 0.9 }} id="refresh-app-btn" onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Refresh App">
-                    <Clock size={20} />
-                  </motion.button>
-                  <motion.button whileTap={{ scale: 0.9 }} id="export-data-btn" onClick={exportData} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Export Data">
-                    <Download size={20} />
-                  </motion.button>
-                </>
-              )}
-            </div>
-          </div>
+  const renderSummaryBar = () => (
+    <motion.div 
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="bg-gray-900 dark:bg-black text-white py-2 px-6 sticky top-0 z-[60] border-b border-white/10 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.15em]"
+    >
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5 group">
+          <Coins size={12} className="text-blue-400 group-hover:scale-110 transition-transform" />
+          <span>{stats.total} <span className="text-gray-500">Coins</span></span>
         </div>
-
-        {!profile.preferences.focusMode && discoveryTip && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-2xl flex items-center gap-3 mb-4 border border-blue-100/50 dark:border-blue-800/20"
-          >
-            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600">
-              <Lightbulb size={16} />
-            </div>
-            <p className="text-[10px] font-bold text-blue-800 dark:text-blue-300 italic leading-tight">
-              "{discoveryTip}"
-            </p>
-          </motion.div>
-        )}
-
-        {/* Hero Stats Section */}
-        <div className={`rounded-[2.5rem] p-6 text-white relative overflow-hidden ${
-          profile.preferences.textMode 
-            ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700' 
-            : 'bg-gray-900 dark:bg-gray-800 shadow-2xl shadow-blue-100 dark:shadow-none'
-        }`}>
-          {!profile.preferences.textMode && (
-            <>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full -mr-16 -mt-16 blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/20 rounded-full -ml-12 -mb-12 blur-2xl" />
-            </>
-          )}
-          
-          <div className="relative z-10">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400'}`}>Current Level</p>
-                <h2 className={`text-3xl font-black ${profile.preferences.textMode ? '' : 'italic'}`}>{currentLevel.name}</h2>
-              </div>
-              <div className="text-right">
-                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400'}`}>Total Coins</p>
-                <p className="text-3xl font-black">{stats.total}</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-end">
-                <p className={`text-xs font-bold ${profile.preferences.textMode ? 'text-gray-500' : 'text-gray-400'}`}>{profile.points} XP</p>
-                <p className={`text-xs font-bold ${profile.preferences.textMode ? 'text-blue-600' : 'text-blue-400'}`}>{progressToNextLevel}% to {nextLevel?.name || 'Max'}</p>
-              </div>
-              <div className={`h-2.5 rounded-full overflow-hidden ${profile.preferences.textMode ? 'bg-gray-200 dark:bg-gray-700' : 'bg-white/10'}`}>
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressToNextLevel}%` }}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                  className={`h-full rounded-full ${profile.preferences.textMode ? 'bg-blue-600' : 'bg-gradient-to-r from-blue-500 to-indigo-400'}`}
-                />
-              </div>
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {xpGain && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.5 }}
-                animate={{ opacity: 1, y: -40, scale: 1.2 }}
-                exit={{ opacity: 0, scale: 1.5 }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none"
-              >
-                <span className="text-4xl font-black text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                  +{xpGain} XP
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="flex items-center gap-1.5 group">
+          <Zap size={12} className="text-amber-400 group-hover:scale-110 transition-transform" />
+          <span>{profile.points} <span className="text-gray-500">XP</span></span>
         </div>
       </div>
-    </header>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${progressToNextLevel}%` }}
+              className="h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+            />
+          </div>
+          <span className="text-blue-400">{progressToNextLevel}%</span>
+        </div>
+        <div className="w-[1px] h-3 bg-white/10" />
+        <span className="text-gray-400">{currentLevel.name}</span>
+      </div>
+    </motion.div>
+  );
+
+  const renderHeader = () => (
+    <>
+      {renderSummaryBar()}
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 pt-8 pb-6 sticky top-[33px] z-10 transition-colors">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <motion.div 
+                whileHover={{ rotate: 5 }}
+                whileTap={{ scale: 0.9 }}
+                className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 dark:shadow-none"
+              >
+                <Star size={24} className="fill-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl font-black tracking-tight leading-none text-gray-900 dark:text-white">Coinly</h1>
+                {!profile.preferences.focusMode && (
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <motion.div 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-800/50 cursor-default"
+                    >
+                      <Flame size={10} className="text-orange-500" />
+                      <span className="text-[10px] font-black text-orange-600 dark:text-orange-400">{profile.streak.current}</span>
+                    </motion.div>
+                    <div className="w-1 h-1 bg-gray-300 dark:bg-gray-700 rounded-full" />
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{currentLevel.name}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {!profile.preferences.focusMode && (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handleLuckySpin}
+                  disabled={isSpinning}
+                  className={`p-2.5 rounded-2xl transition-all ${
+                    isSpinning ? 'bg-gray-100 text-gray-400 animate-spin' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                  }`}
+                  title="Daily Lucky Spin"
+                >
+                  <Gift size={20} />
+                </motion.button>
+              )}
+              <div className="flex gap-1">
+                {!profile.preferences.focusMode && (
+                  <>
+                    <motion.button 
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }} 
+                      id="refresh-app-btn" 
+                      onClick={() => window.location.reload()} 
+                      className="p-2.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" 
+                      title="Refresh App"
+                    >
+                      <Clock size={20} />
+                    </motion.button>
+                    <motion.button 
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }} 
+                      id="export-data-btn" 
+                      onClick={exportData} 
+                      className="p-2.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" 
+                      title="Export Data"
+                    >
+                      <Download size={20} />
+                    </motion.button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {!profile.preferences.focusMode && discoveryTip && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-[1.5rem] flex items-center gap-4 mb-6 border border-blue-100/50 dark:border-blue-800/20"
+            >
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex-shrink-0 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <Lightbulb size={20} />
+              </div>
+              <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300 italic leading-snug">
+                "{discoveryTip}"
+              </p>
+            </motion.div>
+          )}
+
+          {/* Hero Stats Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl ${
+              profile.preferences.textMode 
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-none' 
+                : 'bg-gray-900 dark:bg-gray-800 shadow-blue-100/50 dark:shadow-none'
+            }`}
+          >
+            {!profile.preferences.textMode && (
+              <>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full -mr-32 -mt-32 blur-3xl animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-600/10 rounded-full -ml-24 -mb-24 blur-3xl" />
+              </>
+            )}
+            
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.25em] mb-2 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400'}`}>Current Rank</p>
+                  <h2 className={`text-4xl font-black tracking-tight ${profile.preferences.textMode ? '' : 'italic'}`}>{currentLevel.name}</h2>
+                </div>
+                <div className="text-right">
+                  <p className={`text-[10px] font-black uppercase tracking-[0.25em] mb-2 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400'}`}>Total Coins</p>
+                  <p className="text-4xl font-black tracking-tight">{stats.total}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-end">
+                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-200'}`}>Level Progress</p>
+                  <p className="text-xs font-black">{progressToNextLevel}%</p>
+                </div>
+                <div className={`h-3 rounded-full overflow-hidden ${profile.preferences.textMode ? 'bg-gray-200 dark:bg-gray-700' : 'bg-white/10'}`}>
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressToNextLevel}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    className={`h-full rounded-full ${profile.preferences.textMode ? 'bg-blue-600' : 'bg-gradient-to-r from-blue-400 to-blue-600 shadow-[0_0_15px_rgba(96,165,250,0.5)]'}`}
+                  />
+                </div>
+                <div className="flex justify-between items-center pt-1">
+                  <p className={`text-[9px] font-bold uppercase tracking-widest ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-300'}`}>
+                    {profile.points} XP Total
+                  </p>
+                  {nextLevel && (
+                    <p className={`text-[9px] font-bold uppercase tracking-widest ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-300'}`}>
+                      Next: {nextLevel.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </header>
+    </>
   );
 
   const renderTabs = () => {
@@ -1358,9 +1415,9 @@ export default function App() {
             {activeTab === 'collection' && (
               <motion.div
                 key="collection"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
                 className="space-y-4"
               >
                 {/* Search Bar */}
@@ -1630,25 +1687,38 @@ export default function App() {
 
                 {/* List */}
                 {sortedCoins.length === 0 ? (
-                  <div className="py-20 text-center">
-                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                      {searchQuery ? <Search className="text-gray-400" /> : <Info className="text-gray-400" />}
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="py-24 text-center bg-gray-50/50 dark:bg-gray-800/20 rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="w-20 h-20 bg-white dark:bg-gray-900 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-gray-100 dark:shadow-none">
+                      {searchQuery ? <Search size={32} className="text-blue-500" /> : <Coins size={32} className="text-blue-500" />}
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                      {searchQuery ? 'No Match Found' : 'No Coins Found'}
+                    <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
+                      {searchQuery ? 'No Match Found' : 'Your Collection is Empty'}
                     </h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {searchQuery ? `We couldn't find anything for "${searchQuery}"` : 'Try adding a coin or checking another folder.'}
+                    <p className="text-gray-500 dark:text-gray-400 font-medium max-w-[200px] mx-auto leading-relaxed">
+                      {searchQuery ? `We couldn't find anything for "${searchQuery}"` : 'Start your journey by adding your first coin!'}
                     </p>
-                    {searchQuery && (
-                      <button 
+                    {searchQuery ? (
+                      <motion.button 
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => setSearchQuery('')}
-                        className="mt-4 text-blue-600 dark:text-blue-400 font-bold text-sm"
+                        className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 dark:shadow-none"
                       >
                         Clear Search
-                      </button>
+                      </motion.button>
+                    ) : (
+                      <motion.button 
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setIsAdding(true)}
+                        className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 dark:shadow-none"
+                      >
+                        Add First Coin
+                      </motion.button>
                     )}
-                  </div>
+                  </motion.div>
                 ) : (
                   profile.preferences.purchaseMode ? (
                     <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] border-2 border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden">
@@ -1784,9 +1854,10 @@ export default function App() {
 
             {activeTab === 'library' && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
+                key="library"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
                 className="space-y-6 pb-24"
               >
                 <div className="flex items-center justify-between px-2">
@@ -1795,13 +1866,19 @@ export default function App() {
                 </div>
 
                 {coins.filter(c => c.image).length === 0 ? (
-                  <div className="py-20 text-center bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
-                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <ImageIcon className="text-gray-400" />
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="py-24 text-center bg-white dark:bg-gray-900 rounded-[3rem] border border-gray-100 dark:border-gray-800 shadow-sm"
+                  >
+                    <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                      <ImageIcon size={32} className="text-gray-300" />
                     </div>
-                    <p className="text-gray-500 font-bold">No coin images yet</p>
-                    <p className="text-xs text-gray-400 mt-1">Add photos to your coins to see them here</p>
-                  </div>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">Visual Gallery Empty</h3>
+                    <p className="text-gray-500 dark:text-gray-400 font-medium text-sm max-w-[220px] mx-auto leading-relaxed">
+                      Add photos to your coins to build your visual library.
+                    </p>
+                  </motion.div>
                 ) : (
                   <div className="grid grid-cols-3 gap-3">
                     {coins.filter(c => c.image).map(coin => (
@@ -1826,9 +1903,9 @@ export default function App() {
             {activeTab === 'stats' && (
               <motion.div
                 key="stats"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
                 className="space-y-8"
               >
                 {/* Suggestion */}
@@ -1995,9 +2072,9 @@ export default function App() {
             {activeTab === 'profile' && (
               <motion.div
                 key="profile"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
                 className="space-y-6"
               >
                 {/* Profile Card */}
@@ -2742,15 +2819,18 @@ export default function App() {
         <AnimatePresence>
           {feedback && (
             <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
-              className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50"
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100]"
             >
-              <div className={`px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-bold text-white ${
-                feedback.type === 'success' ? 'bg-green-500' : 'bg-gray-800'
+              <div className={`px-8 py-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] flex items-center gap-4 font-black text-sm tracking-tight text-white border border-white/10 backdrop-blur-md ${
+                feedback.type === 'success' ? 'bg-green-600/90' : 
+                feedback.type === 'error' ? 'bg-red-600/90' : 'bg-gray-900/90'
               }`}>
-                <CheckCircle2 size={18} />
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  {feedback.type === 'success' ? <CheckCircle2 size={18} /> : <Info size={18} />}
+                </div>
                 {feedback.message}
               </div>
             </motion.div>
