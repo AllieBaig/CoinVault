@@ -8,10 +8,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Trash2, PieChart, LayoutGrid, Info, CheckCircle2, Star, 
   Folder as FolderIcon, Image as ImageIcon, Download, Upload, 
-  Settings, User, ChevronRight, X, ArrowLeft, Search, Clock,
+  Settings, User, ChevronRight, ChevronDown, X, ArrowLeft, Search, Clock,
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
   Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp,
-  Share2, Columns, History, Lightbulb, Coins
+  Share2, Columns, History, Lightbulb, Coins, Shield, Database, Layout
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 import LZString from 'lz-string';
@@ -371,6 +371,54 @@ export default function App() {
   const [discoveryTip, setDiscoveryTip] = useState('');
   const [showFusionModal, setShowFusionModal] = useState(false);
   const [fusionSelection, setFusionSelection] = useState<string[]>([]);
+  const [expandedSections, setExpandedSections] = useState<string[]>(['display']);
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => 
+      prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
+    );
+  };
+
+  const SettingsSection = ({ id, title, icon: Icon, children, badge }: { id: string, title: string, icon: any, children: React.ReactNode, badge?: string }) => {
+    const isExpanded = expandedSections.includes(id);
+    return (
+      <div className="space-y-2">
+        <button 
+          onClick={() => toggleSection(id)}
+          className={`w-full flex items-center justify-between p-4 rounded-3xl transition-all ${
+            isExpanded ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800'
+          } border shadow-sm`}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-2xl ${isExpanded ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
+              <Icon size={18} />
+            </div>
+            <div className="flex flex-col items-start">
+              <span className={`font-black uppercase tracking-widest text-[10px] ${isExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>{title}</span>
+              {badge && <span className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">{badge}</span>}
+            </div>
+          </div>
+          <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
+            <ChevronDown size={18} className={isExpanded ? 'text-blue-600' : 'text-gray-300'} />
+          </motion.div>
+        </button>
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
+                {children}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   const COIN_FACTS = [
     "The 1933 double eagle is one of the world's rarest coins.",
@@ -2199,58 +2247,9 @@ export default function App() {
                 </div>
 
                 {/* Hidden Settings (Unlocked via Milestones) */}
-                {profile.unlockedMilestones && profile.unlockedMilestones.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] px-2 flex items-center gap-2">
-                      <Unlock size={12} /> Special Settings
-                    </h3>
-                    <div className="bg-white dark:bg-gray-900 rounded-3xl border border-blue-100 dark:border-blue-900/30 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm shadow-blue-100 dark:shadow-none">
-                      {profile.unlockedMilestones.includes('milestone-20') && (
-                        <div className="p-5 flex items-center justify-between">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-gray-700 dark:text-gray-300">Night Bonus Mode</span>
-                            <span className="text-[10px] text-gray-400 font-medium">Earn +50% XP during night hours (8PM-6AM)</span>
-                          </div>
-                          <button 
-                            onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, nightBonusEnabled: !profile.preferences.nightBonusEnabled } })}
-                            className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.nightBonusEnabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                          >
-                            <motion.div 
-                              animate={{ x: profile.preferences.nightBonusEnabled ? 28 : 4 }}
-                              className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                            />
-                          </button>
-                        </div>
-                      )}
-                      {profile.unlockedMilestones.includes('milestone-50') && (
-                        <div className="p-5 flex items-center justify-between">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-gray-700 dark:text-gray-300">Experimental Fusion</span>
-                            <span className="text-[10px] text-gray-400 font-medium">Allow fusing 3 duplicates into a rarer coin</span>
-                          </div>
-                          <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-600">
-                            <Zap size={18} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {profile.unlockedMilestones && profile.unlockedMilestones.includes('milestone-50') && (
-                  <button 
-                    onClick={() => setShowFusionModal(true)}
-                    className="w-full p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-3xl font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform"
-                  >
-                    <Zap size={20} />
-                    <span>Open Coin Fusion Lab</span>
-                  </button>
-                )}
-
-                {/* Display Section */}
+                {/* Settings Categories */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Display</h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
+                  <SettingsSection id="display" title="Display" icon={Layout}>
                     <div className="p-5 flex items-center justify-between">
                       <span className="font-bold text-gray-700 dark:text-gray-300">Theme Mode</span>
                       <select 
@@ -2328,25 +2327,6 @@ export default function App() {
                         />
                       </button>
                     </div>
-                  </div>
-                </div>
-
-                {/* App Section */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">App</h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Show Collector Card</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showCollectorCard: !profile.preferences.showCollectorCard } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showCollectorCard ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.showCollectorCard ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
                     <div className="p-5 flex items-center justify-between">
                       <span className="font-bold text-gray-700 dark:text-gray-300">Show Top Summary</span>
                       <button 
@@ -2367,6 +2347,33 @@ export default function App() {
                       >
                         <motion.div 
                           animate={{ x: profile.preferences.showBottomMenu ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Performance Mode</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, performanceMode: !profile.preferences.performanceMode } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.performanceMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.performanceMode ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                  </SettingsSection>
+
+                  <SettingsSection id="coins" title="Coin Management" icon={Database}>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Show Collector Card</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showCollectorCard: !profile.preferences.showCollectorCard } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showCollectorCard ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.showCollectorCard ? 28 : 4 }}
                           className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
                         />
                       </button>
@@ -2396,13 +2403,13 @@ export default function App() {
                       </button>
                     </div>
                     <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Performance Mode</span>
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Experimental Features</span>
                       <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, performanceMode: !profile.preferences.performanceMode } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.performanceMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, experimentalFeatures: !profile.preferences.experimentalFeatures } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.experimentalFeatures ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
                       >
                         <motion.div 
-                          animate={{ x: profile.preferences.performanceMode ? 28 : 4 }}
+                          animate={{ x: profile.preferences.experimentalFeatures ? 28 : 4 }}
                           className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
                         />
                       </button>
@@ -2418,116 +2425,151 @@ export default function App() {
                         <option value="opened">Recently Opened</option>
                       </select>
                     </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Refresh App</span>
+                    <div className="p-5 space-y-4">
+                      <span className="font-bold text-gray-700 dark:text-gray-300 block">Folders</span>
+                      <div className="space-y-2">
+                        {folders.map(folder => (
+                          <div key={folder.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                            <div className="flex items-center gap-3">
+                              <FolderIcon size={16} className="text-gray-400" />
+                              <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{folder.name}</span>
+                            </div>
+                            {!folder.isDefault && (
+                              <button 
+                                onClick={() => setFolders(folders.filter(f => f.id !== folder.id))}
+                                className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button 
+                          onClick={() => {
+                            setModalInputValue('');
+                            setInputModal({
+                              title: 'New Folder',
+                              placeholder: 'Folder Name',
+                              onConfirm: (name) => setFolders([...folders, { id: crypto.randomUUID(), name }])
+                            });
+                          }}
+                          className="w-full p-3 text-blue-600 dark:text-blue-400 font-black text-xs flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors rounded-2xl border border-dashed border-blue-200 dark:border-blue-900/30"
+                        >
+                          <Plus size={14} /> Add New Folder
+                        </button>
+                      </div>
+                    </div>
+                  </SettingsSection>
+
+                  <SettingsSection id="game" title="Gamification" icon={Trophy}>
+                    {profile.unlockedMilestones?.includes('milestone-20') && (
+                      <div className="p-5 flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-700 dark:text-gray-300">Night Bonus Mode</span>
+                          <span className="text-[10px] text-gray-400 font-medium">Earn +50% XP during night hours (8PM-6AM)</span>
+                        </div>
+                        <button 
+                          onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, nightBonusEnabled: !profile.preferences.nightBonusEnabled } })}
+                          className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.nightBonusEnabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        >
+                          <motion.div 
+                            animate={{ x: profile.preferences.nightBonusEnabled ? 28 : 4 }}
+                            className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                          />
+                        </button>
+                      </div>
+                    )}
+                    <div className="p-5 space-y-3">
+                      <span className="font-bold text-gray-700 dark:text-gray-300 block">Daily Missions</span>
+                      <div className="space-y-2">
+                        {profile.missions.map(mission => (
+                          <div key={mission.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                            <div className="flex-1">
+                              <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{mission.name}</p>
+                              <p className="text-[10px] text-gray-400">{mission.description}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black text-blue-600 dark:text-blue-400">+{mission.points} XP</span>
+                              {mission.isCompleted ? (
+                                <Check size={14} className="text-green-600" />
+                              ) : (
+                                <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-5 space-y-3">
+                      <span className="font-bold text-gray-700 dark:text-gray-300 block">Achievements</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {profile.badges.map(badge => (
+                          <div 
+                            key={badge.id} 
+                            className={`p-3 rounded-2xl border flex flex-col items-center text-center gap-1 transition-all ${
+                              badge.isUnlocked 
+                                ? 'bg-white dark:bg-gray-900 border-blue-100 dark:border-blue-900/30 shadow-sm' 
+                                : 'bg-gray-50 dark:bg-gray-800/50 border-transparent grayscale opacity-50'
+                            }`}
+                          >
+                            <div className={`p-2 rounded-xl ${badge.isUnlocked ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
+                              {badge.icon === 'Trophy' && <Trophy size={16} />}
+                              {badge.icon === 'Star' && <Star size={16} />}
+                              {badge.icon === 'FolderIcon' && <FolderIcon size={16} />}
+                              {badge.icon === 'Zap' && <Zap size={16} />}
+                              {badge.icon === 'Flame' && <Flame size={16} />}
+                            </div>
+                            <p className="text-[8px] font-black uppercase tracking-tighter leading-tight">{badge.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </SettingsSection>
+
+                  <SettingsSection id="data" title="Import/Export" icon={RefreshCcw}>
+                    <div className="grid grid-cols-2 gap-px bg-gray-50 dark:bg-gray-800">
                       <button 
-                        onClick={() => window.location.reload()}
-                        className="p-2 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
+                        onClick={exportData}
+                        className="p-5 bg-white dark:bg-gray-900 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                       >
-                        <RefreshCw size={18} />
+                        <Download size={20} className="text-blue-600" />
+                        <span className="text-xs font-bold">Export</span>
+                      </button>
+                      <button 
+                        onClick={() => importInputRef.current?.click()}
+                        className="p-5 bg-white dark:bg-gray-900 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      >
+                        <Upload size={20} className="text-blue-600" />
+                        <span className="text-xs font-bold">Import</span>
+                      </button>
+                      <button 
+                        onClick={loadRecentData}
+                        className="p-5 bg-white dark:bg-gray-900 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      >
+                        <Clock size={20} className="text-blue-600" />
+                        <span className="text-xs font-bold">Restore</span>
+                      </button>
+                      <button 
+                        onClick={() => setFeedback({ message: 'Auto-conversion is active on import.', type: 'info' })}
+                        className="p-5 bg-white dark:bg-gray-900 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      >
+                        <RefreshCcw size={20} className="text-blue-600" />
+                        <span className="text-xs font-bold">Convert</span>
                       </button>
                     </div>
-                  </div>
-                </div>
+                  </SettingsSection>
 
-                {/* Missions Section */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Daily Missions</h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
-                    {profile.missions.map(mission => (
-                      <div key={mission.id} className="p-5 flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-bold text-gray-700 dark:text-gray-300">{mission.name}</p>
-                          <p className="text-xs text-gray-400">{mission.description}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-black text-blue-600 dark:text-blue-400">+{mission.points} XP</span>
-                          {mission.isCompleted ? (
-                            <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-600">
-                              <Check size={14} />
-                            </div>
-                          ) : (
-                            <div className="w-6 h-6 bg-gray-100 dark:bg-gray-800 rounded-full" />
-                          )}
-                        </div>
+                  <SettingsSection id="backup" title="Backup" icon={Shield}>
+                    <div className="p-5 space-y-3">
+                      <div className="flex items-center gap-2 text-amber-600 font-bold">
+                        <Info size={16} />
+                        <span className="text-xs uppercase tracking-widest">Recovery Code</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Achievements Section */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Achievements</h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {profile.badges.map(badge => (
-                      <div 
-                        key={badge.id} 
-                        className={`p-4 rounded-3xl border flex flex-col items-center text-center gap-2 transition-all ${
-                          badge.isUnlocked 
-                            ? 'bg-white dark:bg-gray-900 border-blue-100 dark:border-blue-900/30 shadow-sm' 
-                            : 'bg-gray-50 dark:bg-gray-800/50 border-transparent grayscale opacity-50'
-                        }`}
-                      >
-                        <div className={`p-3 rounded-2xl ${badge.isUnlocked ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
-                          {badge.icon === 'Trophy' && <Trophy size={24} />}
-                          {badge.icon === 'Star' && <Star size={24} />}
-                          {badge.icon === 'FolderIcon' && <FolderIcon size={24} />}
-                          {badge.icon === 'Zap' && <Zap size={24} />}
-                          {badge.icon === 'Flame' && <Flame size={24} />}
-                        </div>
-                        <p className="text-[10px] font-black uppercase tracking-tighter leading-tight">{badge.name}</p>
+                      <p className="text-[10px] text-gray-400 leading-relaxed">Save this code to recover your data if you lose access to this device.</p>
+                      <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl text-center font-mono text-lg font-bold tracking-widest border border-amber-100 dark:border-amber-900/30 text-amber-800 dark:text-amber-400">
+                        {profile.recoveryCode}
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Data Section */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Data</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      id="profile-export-btn"
-                      onClick={exportData}
-                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
-                    >
-                      <Download size={24} className="text-blue-600" />
-                      <span>Export</span>
-                    </button>
-                    <button 
-                      id="profile-import-btn"
-                      onClick={() => importInputRef.current?.click()}
-                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
-                    >
-                      <Upload size={24} className="text-blue-600" />
-                      <span>Import</span>
-                    </button>
-                    <button 
-                      id="profile-restore-btn"
-                      onClick={loadRecentData}
-                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
-                    >
-                      <Clock size={24} className="text-blue-600" />
-                      <span>Restore</span>
-                    </button>
-                    <button 
-                      onClick={() => {
-                        // Data conversion logic is already integrated in import, 
-                        // but we can add a manual trigger if needed.
-                        // For now, let's just show a message.
-                        setFeedback({ message: 'Auto-conversion is active on import.', type: 'info' });
-                      }}
-                      className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
-                    >
-                      <RefreshCcw size={24} className="text-blue-600" />
-                      <span>Convert</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Advanced Section */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Advanced</h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
+                    </div>
                     <div className="p-5 flex items-center justify-between">
                       <div className="flex flex-col">
                         <span className="font-bold text-gray-700 dark:text-gray-300">Safe Mode</span>
@@ -2536,18 +2578,6 @@ export default function App() {
                       <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-600">
                         <Zap size={18} />
                       </div>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Experimental Features</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, experimentalFeatures: !profile.preferences.experimentalFeatures } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.experimentalFeatures ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.experimentalFeatures ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
                     </div>
                     <button 
                       onClick={() => {
@@ -2560,61 +2590,23 @@ export default function App() {
                           }
                         });
                       }}
-                      className="w-full p-5 flex items-center justify-between text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                      className="w-full p-5 flex items-center justify-between text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors border-t border-gray-50 dark:border-gray-800"
                     >
-                      <span className="font-bold">Clear All Data</span>
+                      <span className="font-bold text-sm">Clear All Data</span>
                       <Trash2 size={18} />
                     </button>
-                  </div>
+                  </SettingsSection>
                 </div>
 
-                {/* Recovery Code */}
-                <div className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-3xl border border-amber-100 dark:border-amber-900/30">
-                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400 font-bold mb-2">
-                    <Info size={18} />
-                    <span>Recovery Code</span>
-                  </div>
-                  <p className="text-sm text-amber-700 dark:text-amber-500 mb-4">Save this code to recover your data if you lose access to this device.</p>
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl text-center font-mono text-xl font-bold tracking-widest border border-amber-200 dark:border-amber-900/50">
-                    {profile.recoveryCode}
-                  </div>
-                </div>
-
-                {/* Folders Management */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">Folders</h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
-                    {folders.map(folder => (
-                      <div key={folder.id} className="p-5 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <FolderIcon size={18} className="text-gray-400" />
-                          <span className="font-bold text-gray-700 dark:text-gray-300">{folder.name}</span>
-                        </div>
-                        {!folder.isDefault && (
-                          <button 
-                            onClick={() => setFolders(folders.filter(f => f.id !== folder.id))}
-                            className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <button 
-                      onClick={() => {
-                        setModalInputValue('');
-                        setInputModal({
-                          title: 'New Folder',
-                          placeholder: 'Folder Name',
-                          onConfirm: (name) => setFolders([...folders, { id: crypto.randomUUID(), name }])
-                        });
-                      }}
-                      className="w-full p-5 text-blue-600 dark:text-blue-400 font-black text-sm flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                    >
-                      <Plus size={18} /> Add New Folder
-                    </button>
-                  </div>
-                </div>
+                {profile.unlockedMilestones && profile.unlockedMilestones.includes('milestone-50') && (
+                  <button 
+                    onClick={() => setShowFusionModal(true)}
+                    className="w-full p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-3xl font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform"
+                  >
+                    <Zap size={20} />
+                    <span>Open Coin Fusion Lab</span>
+                  </button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
