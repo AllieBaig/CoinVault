@@ -11,7 +11,8 @@ import {
   Settings, User, ChevronRight, ChevronDown, X, ArrowLeft, Search, Clock,
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
   Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp,
-  Share2, Columns, History, Lightbulb, Coins, Shield, Database, Layout
+  Share2, Columns, History, Lightbulb, Coins, Shield, Database, Layout,
+  Monitor, Smartphone, Activity, Award, Palette, Gauge, Layers, Moon
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 import LZString from 'lz-string';
@@ -98,6 +99,8 @@ interface Profile {
     nightBonusEnabled: boolean;
     showCollectorCard: boolean;
     showTopSummary: boolean;
+    showRankSystem: boolean;
+    showProgressCard: boolean;
   };
 }
 
@@ -300,6 +303,8 @@ export default function App() {
           nightBonusEnabled: parsed.preferences?.nightBonusEnabled ?? true,
           showCollectorCard: parsed.preferences?.showCollectorCard ?? true,
           showTopSummary: parsed.preferences?.showTopSummary ?? true,
+          showRankSystem: parsed.preferences?.showRankSystem ?? true,
+          showProgressCard: parsed.preferences?.showProgressCard ?? true,
         }
       };
     }
@@ -328,6 +333,8 @@ export default function App() {
         nightBonusEnabled: true,
         showCollectorCard: true,
         showTopSummary: true,
+        showRankSystem: true,
+        showProgressCard: true,
       }
     };
   });
@@ -419,6 +426,76 @@ export default function App() {
       </div>
     );
   };
+
+  const SettingToggle = ({ 
+    label, 
+    icon: Icon, 
+    value, 
+    onChange, 
+    description,
+    badge
+  }: { 
+    label: string, 
+    icon: any, 
+    value: boolean, 
+    onChange: () => void, 
+    description?: string,
+    badge?: string
+  }) => (
+    <div className={`p-4 flex items-center justify-between transition-colors ${value ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}>
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-xl transition-colors ${value ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
+          <Icon size={16} />
+        </div>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-gray-700 dark:text-gray-300 text-sm">{label}</span>
+            {badge && <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest leading-none">{badge}</span>}
+          </div>
+          {description && <span className="text-[10px] text-gray-400 font-medium leading-tight mt-0.5">{description}</span>}
+        </div>
+      </div>
+      <button 
+        onClick={onChange}
+        className={`w-12 h-6 rounded-full transition-colors relative flex-shrink-0 ${value ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+      >
+        <motion.div 
+          animate={{ x: value ? 26 : 2 }}
+          className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-md"
+        />
+      </button>
+    </div>
+  );
+
+  const SettingSelect = ({ 
+    label, 
+    icon: Icon, 
+    value, 
+    onChange, 
+    options 
+  }: { 
+    label: string, 
+    icon: any, 
+    value: string, 
+    onChange: (val: string) => void, 
+    options: { value: string, label: string }[] 
+  }) => (
+    <div className="p-4 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400">
+          <Icon size={16} />
+        </div>
+        <span className="font-bold text-gray-700 dark:text-gray-300 text-sm">{label}</span>
+      </div>
+      <select 
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-xl text-xs font-black border-none focus:ring-2 focus:ring-blue-500"
+      >
+        {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+      </select>
+    </div>
+  );
 
   const COIN_FACTS = [
     "The 1933 double eagle is one of the world's rarest coins.",
@@ -1462,6 +1539,24 @@ export default function App() {
     );
   }
 
+  const SettingAction = ({ icon: Icon, title, description, onClick, color = "text-blue-600" }: { icon: any, title: string, description: string, onClick: () => void, color?: string }) => (
+    <button 
+      onClick={onClick}
+      className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+    >
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center ${color} group-hover:scale-110 transition-transform`}>
+          <Icon size={20} />
+        </div>
+        <div className="flex flex-col items-start">
+          <span className="font-bold text-sm text-gray-700 dark:text-gray-300">{title}</span>
+          <span className="text-[10px] text-gray-400 font-medium">{description}</span>
+        </div>
+      </div>
+      <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
+    </button>
+  );
+
   return (
     <ErrorBoundary onExport={exportData}>
       <div className={`min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans transition-colors ${profile.preferences.showBottomMenu ? 'pb-24' : 'pb-12'}`}>
@@ -2182,35 +2277,41 @@ export default function App() {
                 className="space-y-6"
               >
                 {/* Profile Card */}
-                <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-5 mb-2">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-blue-200 dark:shadow-none">
-                    <User size={40} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-black tracking-tight">{profile.name}</h3>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{currentLevel.name} Collector</p>
-                      {nextLevel && (
-                        <span className="text-[10px] font-bold text-gray-400">Level {LEVELS.indexOf(currentLevel) + 1}</span>
+                {profile.preferences.showProgressCard && (
+                  <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-5 mb-2">
+                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-blue-200 dark:shadow-none">
+                      <User size={40} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-black tracking-tight">{profile.name}</h3>
+                      {profile.preferences.showRankSystem && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{currentLevel.name} Collector</p>
+                            {nextLevel && (
+                              <span className="text-[10px] font-bold text-gray-400">Level {LEVELS.indexOf(currentLevel) + 1}</span>
+                            )}
+                          </div>
+                          {nextLevel && (
+                            <div className="mt-2">
+                              <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">
+                                <span>Progress to {nextLevel.name}</span>
+                                <span>{Math.round(progressToNextLevel)}%</span>
+                              </div>
+                              <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${progressToNextLevel}%` }}
+                                  className="h-full bg-blue-500 rounded-full"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
-                    {nextLevel && (
-                      <div className="mt-2">
-                        <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">
-                          <span>Progress to {nextLevel.name}</span>
-                          <span>{Math.round(progressToNextLevel)}%</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progressToNextLevel}%` }}
-                            className="h-full bg-blue-500 rounded-full"
-                          />
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </div>
+                )}
 
                 {/* Collector Stats Grid */}
                 <div className="grid grid-cols-2 gap-4">
@@ -2250,181 +2351,129 @@ export default function App() {
                 {/* Settings Categories */}
                 <div className="space-y-4">
                   <SettingsSection id="display" title="Display" icon={Layout}>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Theme Mode</span>
-                      <select 
-                        value={profile.preferences.theme}
-                        onChange={(e) => setProfile({ ...profile, preferences: { ...profile.preferences, theme: e.target.value as any } })}
-                        className="bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-xl text-sm font-black border-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="system">System</option>
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                      </select>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-gray-700 dark:text-gray-300">Compact UI</span>
-                        {windowWidth < 380 && (
-                          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Auto-Active (Small Screen)</span>
-                        )}
-                      </div>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, compactUI: !profile.preferences.compactUI } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${isCompact ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: isCompact ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Text Mode UI</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, textMode: !profile.preferences.textMode } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.textMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.textMode ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Show Coin Price</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showPrice ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.showPrice ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Purchase Mode</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, purchaseMode: !profile.preferences.purchaseMode } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.purchaseMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.purchaseMode ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Focus Mode</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, focusMode: !profile.preferences.focusMode } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.focusMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.focusMode ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Show Top Summary</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showTopSummary: !profile.preferences.showTopSummary } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showTopSummary ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.showTopSummary ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Bottom Menu</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showBottomMenu: !profile.preferences.showBottomMenu } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showBottomMenu ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.showBottomMenu ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Performance Mode</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, performanceMode: !profile.preferences.performanceMode } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.performanceMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.performanceMode ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
+                    <SettingSelect 
+                      label="Theme Mode" 
+                      icon={Palette} 
+                      value={profile.preferences.theme}
+                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, theme: val as any } })}
+                      options={[
+                        { value: 'system', label: 'System' },
+                        { value: 'light', label: 'Light' },
+                        { value: 'dark', label: 'Dark' }
+                      ]}
+                    />
+                    <SettingToggle 
+                      label="Compact UI" 
+                      icon={Smartphone} 
+                      value={isCompact}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, compactUI: !profile.preferences.compactUI } })}
+                      badge={windowWidth < 380 ? "Auto-Active" : undefined}
+                      description="Denser layout for more content"
+                    />
+                    <SettingToggle 
+                      label="Text Mode UI" 
+                      icon={ListIcon} 
+                      value={profile.preferences.textMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, textMode: !profile.preferences.textMode } })}
+                      description="Minimal text-only interface"
+                    />
+                    <SettingToggle 
+                      label="Show Coin Price" 
+                      icon={Coins} 
+                      value={profile.preferences.showPrice}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
+                      description="Display estimated value on coins"
+                    />
+                    <SettingToggle 
+                      label="Purchase Mode" 
+                      icon={TrendingUp} 
+                      value={profile.preferences.purchaseMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, purchaseMode: !profile.preferences.purchaseMode } })}
+                      description="Enable price tracking for additions"
+                    />
+                    <SettingToggle 
+                      label="Focus Mode" 
+                      icon={Target} 
+                      value={profile.preferences.focusMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, focusMode: !profile.preferences.focusMode } })}
+                      description="Hide non-essential UI elements"
+                    />
+                    <SettingToggle 
+                      label="Show Top Summary" 
+                      icon={Layout} 
+                      value={profile.preferences.showTopSummary}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showTopSummary: !profile.preferences.showTopSummary } })}
+                      description="Quick stats at the top of the screen"
+                    />
+                    <SettingToggle 
+                      label="Bottom Menu" 
+                      icon={Columns} 
+                      value={profile.preferences.showBottomMenu}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showBottomMenu: !profile.preferences.showBottomMenu } })}
+                      description="Toggle main navigation visibility"
+                    />
+                    <SettingToggle 
+                      label="Performance Mode" 
+                      icon={Gauge} 
+                      value={profile.preferences.performanceMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, performanceMode: !profile.preferences.performanceMode } })}
+                      description="Reduce animations for speed"
+                    />
+                    <SettingToggle 
+                      label="Progress Card" 
+                      icon={User} 
+                      value={profile.preferences.showProgressCard}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showProgressCard: !profile.preferences.showProgressCard } })}
+                      description="Show/Hide top profile header"
+                    />
+                    <SettingToggle 
+                      label="Rank System" 
+                      icon={Award} 
+                      value={profile.preferences.showRankSystem}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showRankSystem: !profile.preferences.showRankSystem } })}
+                      description="Show/Hide collector level & XP"
+                    />
                   </SettingsSection>
 
                   <SettingsSection id="coins" title="Coin Management" icon={Database}>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Show Collector Card</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showCollectorCard: !profile.preferences.showCollectorCard } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showCollectorCard ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.showCollectorCard ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Quick Add Mode</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, quickAddMode: !profile.preferences.quickAddMode } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.quickAddMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.quickAddMode ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Background Removal</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, autoRemoveBackground: !profile.preferences.autoRemoveBackground } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.autoRemoveBackground ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.autoRemoveBackground ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Experimental Features</span>
-                      <button 
-                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, experimentalFeatures: !profile.preferences.experimentalFeatures } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.experimentalFeatures ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: profile.preferences.experimentalFeatures ? 28 : 4 }}
-                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                        />
-                      </button>
-                    </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Sort By</span>
-                      <select 
-                        value={profile.preferences.sortBy}
-                        onChange={(e) => setProfile({ ...profile, preferences: { ...profile.preferences, sortBy: e.target.value as 'added' | 'opened' } })}
-                        className="bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-xl text-sm font-black border-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="added">Recently Added</option>
-                        <option value="opened">Recently Opened</option>
-                      </select>
-                    </div>
+                    <SettingToggle 
+                      label="Show Collector Card" 
+                      icon={User} 
+                      value={profile.preferences.showCollectorCard}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showCollectorCard: !profile.preferences.showCollectorCard } })}
+                      description="Quick access to identity card"
+                    />
+                    <SettingToggle 
+                      label="Quick Add Mode" 
+                      icon={Zap} 
+                      value={profile.preferences.quickAddMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, quickAddMode: !profile.preferences.quickAddMode } })}
+                      description="Skip details when adding coins"
+                    />
+                    <SettingToggle 
+                      label="Background Removal" 
+                      icon={Layers} 
+                      value={profile.preferences.autoRemoveBackground}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, autoRemoveBackground: !profile.preferences.autoRemoveBackground } })}
+                      description="Auto-clean coin photos (AI)"
+                    />
+                    <SettingToggle 
+                      label="Experimental Features" 
+                      icon={Lightbulb} 
+                      value={profile.preferences.experimentalFeatures}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, experimentalFeatures: !profile.preferences.experimentalFeatures } })}
+                      description="Try out new unreleased tools"
+                    />
+                    <SettingSelect 
+                      label="Sort By" 
+                      icon={Clock} 
+                      value={profile.preferences.sortBy}
+                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, sortBy: val as any } })}
+                      options={[
+                        { value: 'added', label: 'Recently Added' },
+                        { value: 'opened', label: 'Recently Opened' }
+                      ]}
+                    />
                     <div className="p-5 space-y-4">
                       <span className="font-bold text-gray-700 dark:text-gray-300 block">Folders</span>
                       <div className="space-y-2">
@@ -2461,52 +2510,54 @@ export default function App() {
                     </div>
                   </SettingsSection>
 
-                  <SettingsSection id="game" title="Gamification" icon={Trophy}>
+                  <SettingsSection id="game" title="Gamification" icon={Award}>
                     {profile.unlockedMilestones?.includes('milestone-20') && (
-                      <div className="p-5 flex items-center justify-between">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-gray-700 dark:text-gray-300">Night Bonus Mode</span>
-                          <span className="text-[10px] text-gray-400 font-medium">Earn +50% XP during night hours (8PM-6AM)</span>
-                        </div>
-                        <button 
-                          onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, nightBonusEnabled: !profile.preferences.nightBonusEnabled } })}
-                          className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.nightBonusEnabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-                        >
-                          <motion.div 
-                            animate={{ x: profile.preferences.nightBonusEnabled ? 28 : 4 }}
-                            className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                          />
-                        </button>
-                      </div>
+                      <SettingToggle 
+                        icon={Moon}
+                        label="Night Bonus Mode"
+                        description="Earn +50% XP during night hours (8PM-6AM)"
+                        value={profile.preferences.nightBonusEnabled}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, nightBonusEnabled: !profile.preferences.nightBonusEnabled } })}
+                      />
                     )}
-                    <div className="p-5 space-y-3">
-                      <span className="font-bold text-gray-700 dark:text-gray-300 block">Daily Missions</span>
+                    
+                    <div className="p-5 space-y-4">
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <Target size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Daily Missions</span>
+                      </div>
                       <div className="space-y-2">
                         {profile.missions.map(mission => (
-                          <div key={mission.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                          <div key={mission.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-transparent hover:border-blue-100 dark:hover:border-blue-900/30 transition-colors">
                             <div className="flex-1">
                               <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{mission.name}</p>
                               <p className="text-[10px] text-gray-400">{mission.description}</p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                               <span className="text-[10px] font-black text-blue-600 dark:text-blue-400">+{mission.points} XP</span>
                               {mission.isCompleted ? (
-                                <Check size={14} className="text-green-600" />
+                                <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center">
+                                  <Check size={14} />
+                                </div>
                               ) : (
-                                <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                                <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full" />
                               )}
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="p-5 space-y-3">
-                      <span className="font-bold text-gray-700 dark:text-gray-300 block">Achievements</span>
+
+                    <div className="p-5 space-y-4">
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <Award size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Achievements</span>
+                      </div>
                       <div className="grid grid-cols-3 gap-2">
                         {profile.badges.map(badge => (
                           <div 
                             key={badge.id} 
-                            className={`p-3 rounded-2xl border flex flex-col items-center text-center gap-1 transition-all ${
+                            className={`p-3 rounded-2xl border flex flex-col items-center text-center gap-2 transition-all ${
                               badge.isUnlocked 
                                 ? 'bg-white dark:bg-gray-900 border-blue-100 dark:border-blue-900/30 shadow-sm' 
                                 : 'bg-gray-50 dark:bg-gray-800/50 border-transparent grayscale opacity-50'
@@ -2519,7 +2570,7 @@ export default function App() {
                               {badge.icon === 'Zap' && <Zap size={16} />}
                               {badge.icon === 'Flame' && <Flame size={16} />}
                             </div>
-                            <p className="text-[8px] font-black uppercase tracking-tighter leading-tight">{badge.name}</p>
+                            <p className="text-[8px] font-black uppercase tracking-tighter leading-tight text-gray-700 dark:text-gray-300">{badge.name}</p>
                           </div>
                         ))}
                       </div>
@@ -2527,74 +2578,80 @@ export default function App() {
                   </SettingsSection>
 
                   <SettingsSection id="data" title="Import/Export" icon={RefreshCcw}>
-                    <div className="grid grid-cols-2 gap-px bg-gray-50 dark:bg-gray-800">
-                      <button 
+                    <div className="divide-y divide-gray-50 dark:divide-gray-800">
+                      <SettingAction 
+                        icon={Download}
+                        title="Export Data"
+                        description="Download your collection as a JSON file"
                         onClick={exportData}
-                        className="p-5 bg-white dark:bg-gray-900 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                      >
-                        <Download size={20} className="text-blue-600" />
-                        <span className="text-xs font-bold">Export</span>
-                      </button>
-                      <button 
+                      />
+                      <SettingAction 
+                        icon={Upload}
+                        title="Import Data"
+                        description="Upload a previously exported JSON file"
                         onClick={() => importInputRef.current?.click()}
-                        className="p-5 bg-white dark:bg-gray-900 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                      >
-                        <Upload size={20} className="text-blue-600" />
-                        <span className="text-xs font-bold">Import</span>
-                      </button>
-                      <button 
+                      />
+                      <SettingAction 
+                        icon={Clock}
+                        title="Restore Backup"
+                        description="Load the most recent local backup"
                         onClick={loadRecentData}
-                        className="p-5 bg-white dark:bg-gray-900 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                      >
-                        <Clock size={20} className="text-blue-600" />
-                        <span className="text-xs font-bold">Restore</span>
-                      </button>
-                      <button 
+                      />
+                      <SettingAction 
+                        icon={RefreshCcw}
+                        title="Convert Format"
+                        description="Ensure data is in the latest app format"
                         onClick={() => setFeedback({ message: 'Auto-conversion is active on import.', type: 'info' })}
-                        className="p-5 bg-white dark:bg-gray-900 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                      >
-                        <RefreshCcw size={20} className="text-blue-600" />
-                        <span className="text-xs font-bold">Convert</span>
-                      </button>
+                      />
                     </div>
                   </SettingsSection>
 
                   <SettingsSection id="backup" title="Backup" icon={Shield}>
-                    <div className="p-5 space-y-3">
-                      <div className="flex items-center gap-2 text-amber-600 font-bold">
-                        <Info size={16} />
-                        <span className="text-xs uppercase tracking-widest">Recovery Code</span>
+                    <div className="p-5 space-y-4">
+                      <div className="flex items-center gap-2 text-amber-600">
+                        <Info size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Recovery Code</span>
                       </div>
                       <p className="text-[10px] text-gray-400 leading-relaxed">Save this code to recover your data if you lose access to this device.</p>
-                      <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl text-center font-mono text-lg font-bold tracking-widest border border-amber-100 dark:border-amber-900/30 text-amber-800 dark:text-amber-400">
+                      <div className="bg-amber-50 dark:bg-amber-900/20 p-5 rounded-3xl text-center font-mono text-xl font-black tracking-[0.2em] border border-amber-100 dark:border-amber-900/30 text-amber-800 dark:text-amber-400 shadow-inner">
                         {profile.recoveryCode}
                       </div>
                     </div>
-                    <div className="p-5 flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-gray-700 dark:text-gray-300">Safe Mode</span>
-                        <span className="text-[10px] text-gray-400 font-medium">Load last working backup on crash</span>
-                      </div>
-                      <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-600">
-                        <Zap size={18} />
-                      </div>
+
+                    <SettingToggle 
+                      icon={Zap}
+                      label="Safe Mode"
+                      description="Load last working backup on crash"
+                      value={true}
+                      onChange={() => {}}
+                    />
+
+                    <div className="p-4">
+                      <button 
+                        onClick={() => {
+                          setConfirmModal({
+                            title: 'Clear All Data',
+                            message: 'Are you sure? This will delete all your coins and settings permanently!',
+                            onConfirm: () => {
+                              localStorage.clear();
+                              window.location.reload();
+                            }
+                          });
+                        }}
+                        className="w-full p-4 flex items-center justify-between text-red-600 bg-red-50/50 dark:bg-red-900/10 rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Trash2 size={20} />
+                          </div>
+                          <div className="flex flex-col items-start">
+                            <span className="font-bold text-sm">Clear All Data</span>
+                            <span className="text-[10px] text-red-400 font-medium">Permanently delete everything</span>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="text-red-300 group-hover:translate-x-1 transition-transform" />
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => {
-                        setConfirmModal({
-                          title: 'Clear Cache',
-                          message: 'Are you sure? This will delete all your coins and settings permanently!',
-                          onConfirm: () => {
-                            localStorage.clear();
-                            window.location.reload();
-                          }
-                        });
-                      }}
-                      className="w-full p-5 flex items-center justify-between text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors border-t border-gray-50 dark:border-gray-800"
-                    >
-                      <span className="font-bold text-sm">Clear All Data</span>
-                      <Trash2 size={18} />
-                    </button>
                   </SettingsSection>
                 </div>
 
