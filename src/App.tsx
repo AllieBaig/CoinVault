@@ -1218,21 +1218,21 @@ export default function App() {
     <motion.div 
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="bg-gray-900 dark:bg-black text-white py-2 px-[var(--spacing-fluid)] sticky top-0 z-[60] border-b border-white/10 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.15em]"
+      className={`bg-gray-900 dark:bg-black text-white ${isCompact ? 'py-1.5' : 'py-2'} px-[var(--spacing-fluid)] relative z-[60] border-b border-white/10 flex items-center justify-between ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-black uppercase tracking-[0.15em]`}
     >
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5 group">
-          <Coins size={12} className="text-blue-400 group-hover:scale-110 transition-transform" />
+          <Coins size={isCompact ? 10 : 12} className="text-blue-400 group-hover:scale-110 transition-transform" />
           <span>{stats.total} <span className="text-gray-500">Coins</span></span>
         </div>
         <div className="flex items-center gap-1.5 group">
-          <Zap size={12} className="text-amber-400 group-hover:scale-110 transition-transform" />
+          <Zap size={isCompact ? 10 : 12} className="text-amber-400 group-hover:scale-110 transition-transform" />
           <span>{profile.points} <span className="text-gray-500">XP</span></span>
         </div>
       </div>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
+          <div className={`${isCompact ? 'w-12' : 'w-16'} h-1 bg-white/10 rounded-full overflow-hidden`}>
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${progressToNextLevel}%` }}
@@ -1250,7 +1250,7 @@ export default function App() {
   const renderHeader = () => (
     <>
       {profile.preferences.showTopSummary && renderSummaryBar()}
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-[var(--spacing-fluid)] pt-8 pb-6 sticky top-[33px] z-10 transition-colors">
+      <header className={`bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-[var(--spacing-fluid)] ${isCompact ? 'pt-4 pb-3' : 'pt-8 pb-6'} relative z-10 transition-colors`}>
         <div className="max-w-md mx-auto">
           <div className={`flex items-center justify-between ${isCompact ? 'mb-4' : 'mb-6'}`}>
             <div className="flex items-center gap-3">
