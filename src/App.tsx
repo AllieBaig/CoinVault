@@ -348,6 +348,20 @@ export default function App() {
   const [importProgress, setImportProgress] = useState<number | null>(null);
   const [xpGain, setXpGain] = useState<number | null>(null);
   const [spinResult, setSpinResult] = useState<number | null>(null);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isCompact = useMemo(() => {
+    // Automatically use compact layout for small screens (iPhone mini threshold)
+    if (windowWidth < 380) return true;
+    return profile.preferences.compactUI;
+  }, [windowWidth, profile.preferences.compactUI]);
+
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [inputModal, setInputModal] = useState<{ title: string; placeholder: string; onConfirm: (value: string) => void } | null>(null);
   const [modalInputValue, setModalInputValue] = useState('');
@@ -1079,7 +1093,7 @@ export default function App() {
     <motion.div 
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="bg-gray-900 dark:bg-black text-white py-2 px-6 sticky top-0 z-[60] border-b border-white/10 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.15em]"
+      className="bg-gray-900 dark:bg-black text-white py-2 px-[var(--spacing-fluid)] sticky top-0 z-[60] border-b border-white/10 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.15em]"
     >
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5 group">
@@ -1111,19 +1125,19 @@ export default function App() {
   const renderHeader = () => (
     <>
       {profile.preferences.showTopSummary && renderSummaryBar()}
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 pt-8 pb-6 sticky top-[33px] z-10 transition-colors">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-[var(--spacing-fluid)] pt-8 pb-6 sticky top-[33px] z-10 transition-colors">
         <div className="max-w-md mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className={`flex items-center justify-between ${isCompact ? 'mb-4' : 'mb-6'}`}>
             <div className="flex items-center gap-3">
               <motion.div 
                 whileHover={{ rotate: 5 }}
                 whileTap={{ scale: 0.9 }}
-                className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 dark:shadow-none"
+                className={`${isCompact ? 'w-10 h-10' : 'w-12 h-12'} bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 dark:shadow-none`}
               >
-                <Star size={24} className="fill-white" />
+                <Star size={isCompact ? 20 : 24} className="fill-white" />
               </motion.div>
               <div>
-                <h1 className="text-2xl font-black tracking-tight leading-none text-gray-900 dark:text-white">Coinly</h1>
+                <h1 className={`${isCompact ? 'text-xl' : 'text-2xl'} font-black tracking-tight leading-none text-gray-900 dark:text-white`}>Coinly</h1>
                 {!profile.preferences.focusMode && (
                   <div className="flex items-center gap-2 mt-1.5">
                     <motion.div 
@@ -1147,7 +1161,7 @@ export default function App() {
                   whileTap={{ scale: 0.9 }}
                   onClick={handleLuckySpin}
                   disabled={isSpinning}
-                  className={`p-2.5 rounded-2xl transition-all ${
+                  className={`${isCompact ? 'p-2' : 'p-2.5'} rounded-2xl transition-all ${
                     isSpinning ? 'bg-gray-100 text-gray-400 animate-spin' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40'
                   }`}
                   title="Daily Lucky Spin"
@@ -1306,14 +1320,14 @@ export default function App() {
   const renderBottomMenu = () => {
     if (!profile.preferences.showBottomMenu) return null;
     return (
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 px-6 py-4 z-40 flex items-center justify-around pb-8 sm:pb-4">
+      <nav className={`fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 px-6 ${isCompact ? 'py-2 pb-4' : 'py-4 pb-8 sm:pb-4'} z-40 flex items-center justify-around`}>
         <button
           onClick={() => setActiveTab('collection')}
           className={`flex flex-col items-center gap-1 transition-all ${
             activeTab === 'collection' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
           }`}
         >
-          <LayoutGrid size={24} />
+          <LayoutGrid size={isCompact ? 20 : 24} />
           <span className="text-[10px] font-bold uppercase tracking-widest">Home</span>
         </button>
         <button
@@ -1322,7 +1336,7 @@ export default function App() {
             activeTab === 'library' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
           }`}
         >
-          <ImageIcon size={24} />
+          <ImageIcon size={isCompact ? 20 : 24} />
           <span className="text-[10px] font-bold uppercase tracking-widest">Library</span>
         </button>
         <button
@@ -1331,7 +1345,7 @@ export default function App() {
             activeTab === 'stats' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
           }`}
         >
-          <PieChart size={24} />
+          <PieChart size={isCompact ? 20 : 24} />
           <span className="text-[10px] font-bold uppercase tracking-widest">Stats</span>
         </button>
         <button
@@ -1340,7 +1354,7 @@ export default function App() {
             activeTab === 'profile' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
           }`}
         >
-          <User size={24} />
+          <User size={isCompact ? 20 : 24} />
           <span className="text-[10px] font-bold uppercase tracking-widest">Profile</span>
         </button>
       </nav>
@@ -1413,7 +1427,7 @@ export default function App() {
 
         {renderHeader()}
 
-        <main className="max-w-md mx-auto px-6 pt-4">
+        <main className="max-w-md mx-auto px-[var(--spacing-fluid)] pt-4">
           {renderTabs()}
           {renderBottomMenu()}
 
@@ -1424,7 +1438,7 @@ export default function App() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
-                className="space-y-4"
+                className={isCompact ? 'space-y-3' : 'space-y-4'}
               >
                 {/* Search Bar */}
                 <div className="relative">
@@ -1434,7 +1448,7 @@ export default function App() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search collection..."
-                    className="w-full pl-11 pr-4 py-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+                    className={`w-full pl-11 pr-4 ${isCompact ? 'py-2.5' : 'py-3'} bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 transition-all shadow-sm`}
                   />
                   {searchQuery && (
                     <button 
@@ -1799,7 +1813,7 @@ export default function App() {
                       </table>
                     </div>
                   ) : (
-                    <div className={profile.preferences.compactUI ? 'space-y-2' : 'space-y-4'}>
+                    <div className={isCompact ? 'space-y-2' : 'space-y-4'}>
                       {sortedCoins.map((coin) => (
                         <motion.div
                           layout
@@ -1810,7 +1824,7 @@ export default function App() {
                           whileTap={{ scale: 0.98 }}
                           onClick={() => openCoin(coin)}
                           className={`bg-white dark:bg-gray-900 rounded-3xl border transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden ${
-                            profile.preferences.compactUI ? 'p-2' : 'p-4'
+                            isCompact ? 'p-2' : 'p-4'
                           } ${
                             coin.rarity === 'Very Rare' ? 'border-amber-400/50 bg-amber-50/30 dark:bg-amber-900/10 shadow-lg shadow-amber-100 dark:shadow-none' : 
                             coin.rarity === 'Rare' ? 'border-blue-400/50 bg-blue-50/30 dark:bg-blue-900/10 shadow-lg shadow-blue-100 dark:shadow-none' : 'border-gray-100 dark:border-gray-800 shadow-sm'
@@ -1821,11 +1835,11 @@ export default function App() {
                           )}
                           <div className="flex items-center gap-4">
                             {!profile.preferences.textMode && (
-                              <div className={`${profile.preferences.compactUI ? 'w-12 h-12' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner`}>
+                              <div className={`${isCompact ? 'w-12 h-12' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner`}>
                                 {coin.image ? (
                                   <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" />
                                 ) : (
-                                  <span className={`${profile.preferences.compactUI ? 'text-sm' : 'text-2xl'} font-black ${
+                                  <span className={`${isCompact ? 'text-fluid-sm' : 'text-fluid-2xl'} font-black ${
                                     coin.rarity === 'Very Rare' ? 'text-amber-600' :
                                     coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-300'
                                   }`}>
@@ -1836,7 +1850,7 @@ export default function App() {
                             )}
                             <div>
                               <div className="flex items-center gap-2 mb-0.5">
-                                <h4 className={`font-black text-gray-800 dark:text-gray-100 ${profile.preferences.compactUI ? 'text-sm' : 'text-lg'}`}>
+                                <h4 className={`font-black text-gray-800 dark:text-gray-100 ${isCompact ? 'text-fluid-sm' : 'text-fluid-lg'}`}>
                                   {coin.name}
                                 </h4>
                                 {!profile.preferences.textMode && coin.rarity !== 'Common' && (
@@ -1881,10 +1895,10 @@ export default function App() {
                                 </motion.button>
                               )}
                               {profile.preferences.showPrice && (
-                                <span className="text-sm font-black text-gray-800 dark:text-gray-200">£{coin.amountPaid?.toFixed(2)}</span>
+                                <span className={`font-black text-gray-800 dark:text-gray-200 ${isCompact ? 'text-fluid-sm' : 'text-fluid-lg'}`}>£{coin.amountPaid?.toFixed(2)}</span>
                               )}
                             </div>
-                            <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                            <ChevronRight size={isCompact ? 16 : 20} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                           </div>
                         </motion.div>
                       ))}
@@ -2250,13 +2264,18 @@ export default function App() {
                       </select>
                     </div>
                     <div className="p-5 flex items-center justify-between">
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Compact UI</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-gray-700 dark:text-gray-300">Compact UI</span>
+                        {windowWidth < 380 && (
+                          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Auto-Active (Small Screen)</span>
+                        )}
+                      </div>
                       <button 
                         onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, compactUI: !profile.preferences.compactUI } })}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.compactUI ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${isCompact ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
                       >
                         <motion.div 
-                          animate={{ x: profile.preferences.compactUI ? 28 : 4 }}
+                          animate={{ x: isCompact ? 28 : 4 }}
                           className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
                         />
                       </button>

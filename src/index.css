@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @layer utilities {
@@ -13,12 +12,18 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", sans-serif;
-  
-  --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-  --shadow-premium-hover: 0 20px 40px -15px rgba(0, 0, 0, 0.1);
+  /* Fluid spacing and font sizes for better responsiveness */
+  --spacing-fluid: clamp(1rem, 5vw, 1.5rem);
+  --text-fluid-xs: clamp(0.65rem, 2vw, 0.75rem);
+  --text-fluid-sm: clamp(0.75rem, 2.5vw, 0.875rem);
+  --text-fluid-base: clamp(0.875rem, 3vw, 1rem);
+  --text-fluid-lg: clamp(1rem, 3.5vw, 1.125rem);
+  --text-fluid-xl: clamp(1.125rem, 4vw, 1.25rem);
+  --text-fluid-2xl: clamp(1.25rem, 5vw, 1.5rem);
+  --text-fluid-3xl: clamp(1.5rem, 6vw, 1.875rem);
+  --text-fluid-4xl: clamp(1.875rem, 8vw, 2.25rem);
 }
 
 body {
-  @apply antialiased selection:bg-blue-100 selection:text-blue-900 bg-gray-50 dark:bg-[#050505] text-gray-900 dark:text-gray-100;
+  @apply antialiased selection:bg-blue-100 selection:text-blue-900;
 }
