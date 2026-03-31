@@ -96,6 +96,8 @@ interface Profile {
     experimentalFeatures: boolean;
     focusMode: boolean;
     nightBonusEnabled: boolean;
+    showCollectorCard: boolean;
+    showTopSummary: boolean;
   };
 }
 
@@ -296,6 +298,8 @@ export default function App() {
           experimentalFeatures: parsed.preferences?.experimentalFeatures ?? false,
           focusMode: parsed.preferences?.focusMode ?? false,
           nightBonusEnabled: parsed.preferences?.nightBonusEnabled ?? true,
+          showCollectorCard: parsed.preferences?.showCollectorCard ?? true,
+          showTopSummary: parsed.preferences?.showTopSummary ?? true,
         }
       };
     }
@@ -322,6 +326,8 @@ export default function App() {
         experimentalFeatures: false,
         focusMode: false,
         nightBonusEnabled: true,
+        showCollectorCard: true,
+        showTopSummary: true,
       }
     };
   });
@@ -1104,7 +1110,7 @@ export default function App() {
 
   const renderHeader = () => (
     <>
-      {renderSummaryBar()}
+      {profile.preferences.showTopSummary && renderSummaryBar()}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 pt-8 pb-6 sticky top-[33px] z-10 transition-colors">
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-6">
@@ -1649,6 +1655,34 @@ export default function App() {
 
                     <div>
                       <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Folder</label>
+                      <div className="flex gap-2 mb-2 overflow-x-auto no-scrollbar pb-1">
+                        {['50p', '£1', '£2'].map(denom => {
+                          const exists = folders.find(f => f.name === denom);
+                          return (
+                            <button
+                              key={denom}
+                              type="button"
+                              onClick={() => {
+                                if (exists) {
+                                  setNewFolderId(exists.id);
+                                } else {
+                                  const id = crypto.randomUUID();
+                                  setFolders(prev => [...prev, { id, name: denom, isDefault: false }]);
+                                  setNewFolderId(id);
+                                  setFeedback({ message: `Created ${denom} folder`, type: 'success' });
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                                folders.find(f => f.id === newFolderId)?.name === denom
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                              }`}
+                            >
+                              {denom}
+                            </button>
+                          );
+                        })}
+                      </div>
                       <select
                         value={newFolderId}
                         onChange={(e) => {
@@ -1657,10 +1691,18 @@ export default function App() {
                               title: 'New Folder',
                               placeholder: 'Folder name...',
                               onConfirm: (name) => {
-                                if (name.trim()) {
-                                  const id = crypto.randomUUID();
-                                  setFolders(prev => [...prev, { id, name: name.trim(), isDefault: false }]);
-                                  setNewFolderId(id);
+                                const trimmedName = name.trim();
+                                if (trimmedName) {
+                                  const existing = folders.find(f => f.name.toLowerCase() === trimmedName.toLowerCase());
+                                  if (existing) {
+                                    setNewFolderId(existing.id);
+                                    setFeedback({ message: 'Using existing folder', type: 'info' });
+                                  } else {
+                                    const id = crypto.randomUUID();
+                                    setFolders(prev => [...prev, { id, name: trimmedName, isDefault: false }]);
+                                    setNewFolderId(id);
+                                    setFeedback({ message: 'New folder created', type: 'success' });
+                                  }
                                 }
                               }
                             });
@@ -2122,16 +2164,20 @@ export default function App() {
 
                 {/* Collector Identity & Timeline Section */}
                 <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => setShowCollectorCard(true)}
-                    className="p-5 bg-blue-600 text-white rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform"
-                  >
-                    <User size={24} />
-                    <span>Identity Card</span>
-                  </button>
+                  {profile.preferences.showCollectorCard && (
+                    <button 
+                      onClick={() => setShowCollectorCard(true)}
+                      className="p-5 bg-blue-600 text-white rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform"
+                    >
+                      <User size={24} />
+                      <span>Identity Card</span>
+                    </button>
+                  )}
                   <button 
                     onClick={() => setShowTimeline(true)}
-                    className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
+                    className={`p-5 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform ${
+                      profile.preferences.showCollectorCard ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 shadow-sm' : 'col-span-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 shadow-sm'
+                    }`}
                   >
                     <History size={24} className="text-blue-600" />
                     <span>Timeline</span>
@@ -2270,6 +2316,30 @@ export default function App() {
                 <div className="space-y-4">
                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] px-2">App</h3>
                   <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden">
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Show Collector Card</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showCollectorCard: !profile.preferences.showCollectorCard } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showCollectorCard ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.showCollectorCard ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
+                    <div className="p-5 flex items-center justify-between">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">Show Top Summary</span>
+                      <button 
+                        onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, showTopSummary: !profile.preferences.showTopSummary } })}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${profile.preferences.showTopSummary ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <motion.div 
+                          animate={{ x: profile.preferences.showTopSummary ? 28 : 4 }}
+                          className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
+                        />
+                      </button>
+                    </div>
                     <div className="p-5 flex items-center justify-between">
                       <span className="font-bold text-gray-700 dark:text-gray-300">Bottom Menu</span>
                       <button 
