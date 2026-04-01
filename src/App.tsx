@@ -500,6 +500,103 @@ export default function App() {
   const [compareCoins, setCompareCoins] = useState<string[]>([]);
   const [showTimeline, setShowTimeline] = useState(false);
   const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
+  const [expandedEventIdx, setExpandedEventIdx] = useState<number | null>(null);
+
+  const generateMyCoinStory = useMemo((): Timeline => {
+    const events: TimelineEvent[] = [];
+    
+    if (coins.length === 0) {
+      return {
+        id: 'my-coin-story',
+        title: 'My Coin Story',
+        description: 'Your personal journey as a collector. Add coins to start your story.',
+        category: 'Popular',
+        events: [
+          { year: 'Today', event: 'The Blank Page', note: 'Start your collection to begin your story!' }
+        ]
+      };
+    }
+
+    // 1. First coin added
+    const sortedByDate = [...coins].sort((a, b) => a.dateAdded - b.dateAdded);
+    const firstCoin = sortedByDate[0];
+    events.push({
+      year: new Date(firstCoin.dateAdded).getFullYear().toString(),
+      event: `The Journey Begins: ${firstCoin.name}`,
+      note: `You added your very first coin to the collection. A ${firstCoin.rarity} ${firstCoin.type} find!`
+    });
+
+    // 2. Rare coins
+    const rareCoins = coins.filter(c => c.rarity === 'Rare' || c.rarity === 'Very Rare');
+    rareCoins.forEach(coin => {
+      events.push({
+        year: new Date(coin.dateAdded).getFullYear().toString(),
+        event: `Rare Find: ${coin.name}`,
+        note: `A significant discovery! This ${coin.rarity} coin was added to your collection.`
+      });
+    });
+
+    // 3. Most collected type
+    const typeCounts = coins.reduce((acc, coin) => {
+      acc[coin.type] = (acc[coin.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const mostCollectedType = (Object.entries(typeCounts) as [string, number][]).sort((a, b) => b[1] - a[1])[0];
+    if (mostCollectedType && mostCollectedType[1] >= 5) {
+      events.push({
+        year: 'Milestone',
+        event: `${mostCollectedType[0]} Specialist`,
+        note: `You've collected ${mostCollectedType[1]} ${mostCollectedType[0]} coins. You're becoming an expert in this denomination!`
+      });
+    }
+
+    // 4. Monthly milestones
+    const months = coins.reduce((acc, coin) => {
+      const month = new Date(coin.dateAdded).toLocaleString('default', { month: 'long', year: 'numeric' });
+      acc[month] = (acc[month] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    (Object.entries(months) as [string, number][]).forEach(([month, count]) => {
+      if (count >= 5) {
+        events.push({
+          year: month,
+          event: 'Productive Month',
+          note: `You added ${count} coins in ${month}. A truly busy time for your collection!`
+        });
+      }
+    });
+
+    // 5. Gamification Milestones
+    if (coins.length >= 10) {
+      events.push({
+        year: 'Achievement',
+        event: 'The Decadent Collector',
+        note: 'Milestone reached: 10 coins in your collection! You are now a recognized Collector.'
+      });
+    }
+    if (coins.length >= 50) {
+      events.push({
+        year: 'Achievement',
+        event: 'Half-Century Mark',
+        note: 'Milestone reached: 50 coins in your collection! Your expertise is growing.'
+      });
+    }
+
+    return {
+      id: 'my-coin-story',
+      title: 'My Coin Story',
+      description: 'Your personal journey as a collector, generated from your collection.',
+      category: 'Popular',
+      events: events
+    };
+  }, [coins]);
+
+  const allAvailableTimelines = useMemo(() => {
+    return [generateMyCoinStory, ...TIMELINES];
+  }, [generateMyCoinStory]);
+
   const [showCollectorCard, setShowCollectorCard] = useState(false);
   const [discoveryTip, setDiscoveryTip] = useState('');
   const [showFusionModal, setShowFusionModal] = useState(false);
@@ -524,53 +621,62 @@ export default function App() {
   };
 
   const renderTimelineHub = () => {
-    const popularTimelines = TIMELINES.filter(t => t.category === 'Popular');
-    const newTimelines = TIMELINES.filter(t => t.category === 'New');
-    const allTimelines = TIMELINES;
+    const popularTimelines = allAvailableTimelines.filter(t => t.category === 'Popular');
+    const newTimelines = allAvailableTimelines.filter(t => t.category === 'New');
+    const allTimelines = allAvailableTimelines;
 
     const continueExploring = profile.lastTimelineId 
-      ? TIMELINES.find(t => t.id === profile.lastTimelineId) 
+      ? allAvailableTimelines.find(t => t.id === profile.lastTimelineId) 
       : null;
 
     const renderTimelineCard = (timeline: Timeline) => {
       const progress = profile.timelineProgress[timeline.id] || 0;
       const total = timeline.events.length;
-      const percent = Math.round((progress / (total - 1)) * 100);
+      const percent = total > 1 ? Math.round((progress / (total - 1)) * 100) : (progress === 0 ? 0 : 100);
       const isActive = profile.lastTimelineId === timeline.id;
+      const isPersonal = timeline.id === 'my-coin-story';
 
       return (
         <motion.button
           key={timeline.id}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => setSelectedTimelineId(timeline.id)}
+          onClick={() => {
+            setSelectedTimelineId(timeline.id);
+            setExpandedEventIdx(null);
+          }}
           className={`flex-shrink-0 w-64 p-5 rounded-[2rem] text-left transition-all relative overflow-hidden ${
             isActive 
               ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20' 
-              : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700 shadow-sm'
+              : isPersonal
+                ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-lg'
+                : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700 shadow-sm'
           }`}
         >
           <div className="relative z-10">
-            <h4 className="font-black text-lg leading-tight mb-2">{timeline.title}</h4>
-            <p className={`text-[10px] font-medium leading-relaxed line-clamp-2 mb-4 ${isActive ? 'text-blue-100' : 'text-gray-400'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <h4 className="font-black text-lg leading-tight">{timeline.title}</h4>
+              {isPersonal && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
+            </div>
+            <p className={`text-[10px] font-medium leading-relaxed line-clamp-2 mb-4 ${isActive || isPersonal ? 'text-blue-100' : 'text-gray-400'}`}>
               {timeline.description}
             </p>
             <div className="flex items-center justify-between mt-auto">
               <div className="flex flex-col">
-                <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
+                <span className={`text-[9px] font-black uppercase tracking-widest ${isActive || isPersonal ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
                   {percent}% Complete
                 </span>
-                <div className={`h-1 w-24 rounded-full mt-1 overflow-hidden ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                <div className={`h-1 w-24 rounded-full mt-1 overflow-hidden ${isActive || isPersonal ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
                   <div 
-                    className={`h-full rounded-full ${isActive ? 'bg-white' : 'bg-blue-600'}`} 
+                    className={`h-full rounded-full ${isActive || isPersonal ? 'bg-white' : 'bg-blue-600'}`} 
                     style={{ width: `${percent}%` }} 
                   />
                 </div>
               </div>
-              <ChevronRight size={16} className={isActive ? 'text-white' : 'text-gray-300'} />
+              <ChevronRight size={16} className={isActive || isPersonal ? 'text-white' : 'text-gray-300'} />
             </div>
           </div>
-          {isActive && (
+          {(isActive || isPersonal) && (
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
           )}
         </motion.button>
@@ -613,30 +719,37 @@ export default function App() {
   };
 
   const renderTimelineDetail = (timelineId: string) => {
-    const timeline = TIMELINES.find(t => t.id === timelineId);
+    const timeline = allAvailableTimelines.find(t => t.id === timelineId);
     if (!timeline) return null;
 
     const currentProgress = profile.timelineProgress[timelineId] || 0;
+    const isPersonal = timelineId === 'my-coin-story';
 
     return (
       <div className="flex-1 flex flex-col h-full">
         <div className="flex items-center gap-4 mb-8">
           <button 
-            onClick={() => setSelectedTimelineId(null)}
+            onClick={() => {
+              setSelectedTimelineId(null);
+              setExpandedEventIdx(null);
+            }}
             className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors"
           >
             <ChevronLeft size={20} />
           </button>
           <div>
             <h3 className="text-xl font-black tracking-tight">{timeline.title}</h3>
-            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Story Mode</p>
+            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+              {isPersonal ? 'Personal Journey' : 'Story Mode'}
+            </p>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-8 pb-10">
           {timeline.events.map((event, idx) => {
-            const isUnlocked = idx <= currentProgress;
-            const isNext = idx === currentProgress + 1;
+            const isUnlocked = isPersonal || idx <= currentProgress;
+            const isNext = !isPersonal && idx === currentProgress + 1;
+            const isExpanded = expandedEventIdx === idx;
 
             return (
               <motion.div 
@@ -656,14 +769,20 @@ export default function App() {
                 </div>
 
                 <div 
-                  onClick={() => isNext && updateTimelineProgress(timelineId, idx)}
+                  onClick={() => {
+                    if (isNext) {
+                      updateTimelineProgress(timelineId, idx);
+                    } else if (isUnlocked) {
+                      setExpandedEventIdx(isExpanded ? null : idx);
+                    }
+                  }}
                   className={`p-6 rounded-[2rem] border transition-all ${
                     isUnlocked 
-                      ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm' 
+                      ? 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 shadow-sm' 
                       : isNext 
                         ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200/50 dark:border-blue-800/30 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20'
                         : 'bg-gray-50/50 dark:bg-gray-900/50 border-transparent opacity-50 grayscale'
-                  }`}
+                  } ${isUnlocked ? 'cursor-pointer active:scale-[0.99]' : ''}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className={`text-[10px] font-black uppercase tracking-widest ${isUnlocked ? 'text-blue-600' : 'text-gray-400'}`}>
@@ -676,9 +795,25 @@ export default function App() {
                     )}
                   </div>
                   <h4 className="font-black text-gray-900 dark:text-white mb-2">{event.event}</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-medium">
-                    {event.note}
-                  </p>
+                  
+                  <AnimatePresence>
+                    {(isExpanded || !isPersonal) && (
+                      <motion.p 
+                        initial={isPersonal ? { height: 0, opacity: 0 } : { height: 'auto', opacity: 1 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-medium overflow-hidden"
+                      >
+                        {event.note}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+
+                  {isPersonal && !isExpanded && (
+                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mt-2">
+                      Tap to read story
+                    </p>
+                  )}
                 </div>
               </motion.div>
             );
