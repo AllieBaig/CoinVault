@@ -83,6 +83,11 @@ interface Timeline {
   description: string;
   category: 'Popular' | 'New' | 'All';
   events: TimelineEvent[];
+  unlockCriteria?: {
+    coins?: number;
+    xp?: number;
+    timelineId?: string;
+  };
 }
 
 interface AppVersion {
@@ -105,6 +110,8 @@ interface Profile {
   unlockedMilestones: string[];
   lastTimelineId?: string;
   timelineProgress: { [timelineId: string]: number };
+  timelineStreak: number;
+  lastTimelineExplorationDate: number;
   preferences: {
     sortBy: 'added' | 'opened';
     theme: 'light' | 'dark' | 'system' | 'paper' | 'glass' | 'wood' | 'metal' | 'fabric';
@@ -203,7 +210,8 @@ const TIMELINES: Timeline[] = [
       { year: '1933', event: 'The Double Eagle Mystery', note: 'The gold coin that was never supposed to exist, yet some escaped the mint.' },
       { year: '1943', event: 'Copper Penny Legend', note: 'A few copper pennies were accidentally struck during WWII when steel was the norm.' },
       { year: '1974', event: 'The Aluminum Cent', note: 'A prototype cent that was never released, with most being destroyed.' }
-    ]
+    ],
+    unlockCriteria: { coins: 5 }
   },
   {
     id: 'time-loop-collector',
@@ -214,7 +222,8 @@ const TIMELINES: Timeline[] = [
       { year: '2026', event: 'The First Loop', note: 'You find a coin that shouldn\'t exist yet.' },
       { year: '1926', event: 'The Echo', note: 'The same coin appears in a vintage collection, but older.' },
       { year: '2126', event: 'The Resolution', note: 'The loop closes as you return the coin to its origin.' }
-    ]
+    ],
+    unlockCriteria: { xp: 200 }
   },
   {
     id: 'design-evolution',
@@ -226,7 +235,8 @@ const TIMELINES: Timeline[] = [
       { year: 'Renaissance', event: 'Realism Returns', note: 'Detailed portraits of monarchs and intricate heraldry.' },
       { year: 'Art Nouveau', event: 'Flowing Lines', note: 'The early 20th century brings organic shapes to coin design.' },
       { year: 'Modern Era', event: 'Minimalism', note: 'Clean lines and abstract concepts dominate modern commemoratives.' }
-    ]
+    ],
+    unlockCriteria: { timelineId: 'numismatic-journey' }
   },
   {
     id: 'mint-mark-detective',
@@ -267,6 +277,8 @@ const DEFAULT_BADGES: Badge[] = [
   { id: 'expert-50', name: 'Expert', description: 'Collected 50 coins', icon: 'Zap', isUnlocked: false },
   { id: 'master-100', name: 'Master', description: 'Collected 100 coins', icon: 'Trophy', isUnlocked: false },
   { id: 'streak-7', name: 'Week Streak', description: 'Maintained a 7-day streak', icon: 'Flame', isUnlocked: false },
+  { id: 'mint-master', name: 'Mint Master', description: 'Explored 50 timeline events', icon: 'Award', isUnlocked: false },
+  { id: 'history-explorer', name: 'History Explorer', description: 'Completed 3 full timelines', icon: 'History', isUnlocked: false },
 ];
 
 // --- Error Boundary ---
@@ -411,6 +423,8 @@ export default function App() {
         unlockedMilestones: parsed.unlockedMilestones ?? [],
         lastTimelineId: parsed.lastTimelineId,
         timelineProgress: parsed.timelineProgress ?? {},
+        timelineStreak: parsed.timelineStreak ?? 0,
+        lastTimelineExplorationDate: parsed.lastTimelineExplorationDate ?? 0,
         preferences: {
           sortBy: parsed.preferences?.sortBy ?? 'added',
           theme: parsed.preferences?.theme ?? 'system',
@@ -442,6 +456,8 @@ export default function App() {
       lastSpinDate: 0,
       unlockedMilestones: [],
       timelineProgress: {},
+      timelineStreak: 0,
+      lastTimelineExplorationDate: 0,
       preferences: { 
         sortBy: 'added',
         theme: 'system',
@@ -610,17 +626,57 @@ export default function App() {
   };
 
   const updateTimelineProgress = (timelineId: string, eventIndex: number) => {
-    setProfile(prev => ({
-      ...prev,
-      lastTimelineId: timelineId,
-      timelineProgress: {
+    const isNewUnlock = (profile.timelineProgress[timelineId] || 0) < eventIndex;
+    const pointsEarned = isNewUnlock ? 10 : 0;
+    
+    // Streak logic
+    const today = new Date().setHours(0, 0, 0, 0);
+    const lastExploration = profile.lastTimelineExplorationDate || 0;
+    let newStreak = profile.timelineStreak || 0;
+    
+    if (lastExploration !== today) {
+      if (lastExploration === today - 86400000) {
+        newStreak += 1;
+      } else {
+        newStreak = 1;
+      }
+    }
+
+    setProfile(prev => {
+      const newProgress = {
         ...prev.timelineProgress,
         [timelineId]: Math.max(prev.timelineProgress[timelineId] || 0, eventIndex)
-      }
-    }));
-  };
+      };
+      
+      // Check for badges
+      let updatedBadges = [...prev.badges];
+      const totalEventsExplored = (Object.values(newProgress) as number[]).reduce((a, b) => a + b, 0);
+      const completedTimelines = allAvailableTimelines.filter(t => (newProgress[t.id] as number || 0) >= t.events.length - 1).length;
 
-  const renderTimelineHub = () => {
+      if (totalEventsExplored >= 50 && !updatedBadges.find(b => b.id === 'mint-master')?.isUnlocked) {
+        updatedBadges = updatedBadges.map(b => b.id === 'mint-master' ? { ...b, isUnlocked: true, unlockedAt: Date.now() } : b);
+        setFeedback({ message: 'Badge Unlocked: Mint Master!', type: 'success' });
+      }
+      if (completedTimelines >= 3 && !updatedBadges.find(b => b.id === 'history-explorer')?.isUnlocked) {
+        updatedBadges = updatedBadges.map(b => b.id === 'history-explorer' ? { ...b, isUnlocked: true, unlockedAt: Date.now() } : b);
+        setFeedback({ message: 'Badge Unlocked: History Explorer!', type: 'success' });
+      }
+
+      return {
+        ...prev,
+        points: prev.points + pointsEarned,
+        lastTimelineId: timelineId,
+        timelineProgress: newProgress,
+        timelineStreak: newStreak,
+        lastTimelineExplorationDate: today,
+        badges: updatedBadges
+      };
+    });
+    
+    if (pointsEarned > 0) {
+      setFeedback({ message: `+${pointsEarned} XP for exploring!`, type: 'success' });
+    }
+  };  const renderTimelineHub = () => {
     const popularTimelines = allAvailableTimelines.filter(t => t.category === 'Popular');
     const newTimelines = allAvailableTimelines.filter(t => t.category === 'New');
     const allTimelines = allAvailableTimelines;
@@ -629,54 +685,90 @@ export default function App() {
       ? allAvailableTimelines.find(t => t.id === profile.lastTimelineId) 
       : null;
 
+    const isTimelineLocked = (timeline: Timeline) => {
+      if (!timeline.unlockCriteria) return false;
+      const { coins: reqCoins, xp: reqXp, timelineId: reqTimelineId } = timeline.unlockCriteria;
+      
+      if (reqCoins && coins.length < reqCoins) return true;
+      if (reqXp && profile.points < reqXp) return true;
+      if (reqTimelineId) {
+        const targetTimeline = allAvailableTimelines.find(t => t.id === reqTimelineId);
+        const progress = profile.timelineProgress[reqTimelineId] || 0;
+        if (!targetTimeline || progress < targetTimeline.events.length - 1) return true;
+      }
+      return false;
+    };
+
+    const getUnlockMessage = (timeline: Timeline) => {
+      if (!timeline.unlockCriteria) return '';
+      const { coins: reqCoins, xp: reqXp, timelineId: reqTimelineId } = timeline.unlockCriteria;
+      if (reqCoins && coins.length < reqCoins) return `Add ${reqCoins} coins to unlock`;
+      if (reqXp && profile.points < reqXp) return `Reach ${reqXp} XP to unlock`;
+      if (reqTimelineId) {
+        const target = allAvailableTimelines.find(t => t.id === reqTimelineId);
+        return `Complete "${target?.title}" to unlock`;
+      }
+      return 'Locked';
+    };
+
     const renderTimelineCard = (timeline: Timeline) => {
       const progress = profile.timelineProgress[timeline.id] || 0;
       const total = timeline.events.length;
       const percent = total > 1 ? Math.round((progress / (total - 1)) * 100) : (progress === 0 ? 0 : 100);
       const isActive = profile.lastTimelineId === timeline.id;
       const isPersonal = timeline.id === 'my-coin-story';
+      const locked = isTimelineLocked(timeline);
 
       return (
         <motion.button
           key={timeline.id}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={locked ? {} : { scale: 1.02 }}
+          whileTap={locked ? {} : { scale: 0.98 }}
           onClick={() => {
+            if (locked) {
+              setFeedback({ message: getUnlockMessage(timeline), type: 'info' });
+              return;
+            }
             setSelectedTimelineId(timeline.id);
             setExpandedEventIdx(null);
           }}
           className={`flex-shrink-0 w-64 p-5 rounded-[2rem] text-left transition-all relative overflow-hidden ${
-            isActive 
-              ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20' 
-              : isPersonal
-                ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-lg'
-                : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700 shadow-sm'
+            locked
+              ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+              : isActive 
+                ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20' 
+                : isPersonal
+                  ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-lg'
+                  : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700 shadow-sm'
           }`}
         >
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-black text-lg leading-tight">{timeline.title}</h4>
-              {isPersonal && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <h4 className="font-black text-lg leading-tight line-clamp-1">{timeline.title}</h4>
+                {isPersonal && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
+              </div>
+              {locked && <Lock size={14} className="text-gray-400" />}
             </div>
-            <p className={`text-[10px] font-medium leading-relaxed line-clamp-2 mb-4 ${isActive || isPersonal ? 'text-blue-100' : 'text-gray-400'}`}>
-              {timeline.description}
+            <p className={`text-[10px] font-medium leading-relaxed line-clamp-2 mb-4 ${locked ? 'text-gray-400' : isActive || isPersonal ? 'text-blue-100' : 'text-gray-400'}`}>
+              {locked ? getUnlockMessage(timeline) : timeline.description}
             </p>
             <div className="flex items-center justify-between mt-auto">
               <div className="flex flex-col">
-                <span className={`text-[9px] font-black uppercase tracking-widest ${isActive || isPersonal ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
+                <span className={`text-[9px] font-black uppercase tracking-widest ${locked ? 'text-gray-400' : isActive || isPersonal ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
                   {percent}% Complete
                 </span>
-                <div className={`h-1 w-24 rounded-full mt-1 overflow-hidden ${isActive || isPersonal ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                <div className={`h-1 w-24 rounded-full mt-1 overflow-hidden ${locked ? 'bg-gray-200 dark:bg-gray-700' : isActive || isPersonal ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
                   <div 
-                    className={`h-full rounded-full ${isActive || isPersonal ? 'bg-white' : 'bg-blue-600'}`} 
+                    className={`h-full rounded-full ${locked ? 'bg-gray-300' : isActive || isPersonal ? 'bg-white' : 'bg-blue-600'}`} 
                     style={{ width: `${percent}%` }} 
                   />
                 </div>
               </div>
-              <ChevronRight size={16} className={isActive || isPersonal ? 'text-white' : 'text-gray-300'} />
+              {!locked && <ChevronRight size={16} className={isActive || isPersonal ? 'text-white' : 'text-gray-300'} />}
             </div>
           </div>
-          {(isActive || isPersonal) && (
+          {(isActive || isPersonal) && !locked && (
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
           )}
         </motion.button>
@@ -685,9 +777,33 @@ export default function App() {
 
     return (
       <div className="flex-1 overflow-y-auto custom-scrollbar space-y-10 pb-10">
+        <div className="flex items-center justify-between px-1 mb-2">
+          <div>
+            <h2 className="text-3xl font-black tracking-tighter text-gray-900 dark:text-white">Timeline Hub</h2>
+            <p className="text-gray-500 text-sm">Explore the history of numismatics</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="flex items-center gap-1 justify-end text-orange-500 font-black">
+                <Flame size={16} />
+                <span>{profile.timelineStreak}</span>
+              </div>
+              <p className="text-[8px] uppercase tracking-widest font-bold text-gray-400">Streak</p>
+            </div>
+            <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-800" />
+            <div className="text-right">
+              <p className="text-lg font-black text-blue-600 dark:text-blue-400">{profile.points}</p>
+              <p className="text-[8px] uppercase tracking-widest font-bold text-gray-400">Total XP</p>
+            </div>
+          </div>
+        </div>
+
         {continueExploring && (
           <section>
-            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-4 px-1">Continue Exploring</h3>
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <RefreshCw size={14} className="text-blue-600" />
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em]">Continue Exploring</h3>
+            </div>
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
               {renderTimelineCard(continueExploring)}
             </div>
@@ -717,6 +833,7 @@ export default function App() {
       </div>
     );
   };
+;
 
   const renderTimelineDetail = (timelineId: string) => {
     const timeline = allAvailableTimelines.find(t => t.id === timelineId);
@@ -782,37 +899,48 @@ export default function App() {
                       : isNext 
                         ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200/50 dark:border-blue-800/30 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20'
                         : 'bg-gray-50/50 dark:bg-gray-900/50 border-transparent opacity-50 grayscale'
-                  } ${isUnlocked ? 'cursor-pointer active:scale-[0.99]' : ''}`}
+                  } ${isUnlocked || isNext ? 'cursor-pointer active:scale-[0.99]' : ''}`}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${isUnlocked ? 'text-blue-600' : 'text-gray-400'}`}>
-                      {event.year}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${isUnlocked ? 'text-blue-600' : 'text-gray-400'}`}>
+                        {event.year}
+                      </span>
+                      {isUnlocked && !isPersonal && (
+                        <span className="text-[8px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1">
+                          <CheckCircle2 size={10} /> Discovered
+                        </span>
+                      )}
+                    </div>
                     {isNext && (
                       <span className="bg-blue-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
-                        Next
+                        Unlock +10 XP
                       </span>
                     )}
                   </div>
-                  <h4 className="font-black text-gray-900 dark:text-white mb-2">{event.event}</h4>
+                  <h4 className={`font-bold text-lg mb-2 ${isUnlocked ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
+                    {isUnlocked || isNext ? event.event : 'Locked Event'}
+                  </h4>
                   
                   <AnimatePresence>
-                    {(isExpanded || !isPersonal) && (
-                      <motion.p 
-                        initial={isPersonal ? { height: 0, opacity: 0 } : { height: 'auto', opacity: 1 }}
+                    {(isExpanded || isNext || (!isPersonal && isUnlocked)) && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-medium overflow-hidden"
+                        className="overflow-hidden"
                       >
-                        {event.note}
-                      </motion.p>
+                        <p className={`text-sm leading-relaxed ${isUnlocked ? 'text-gray-600 dark:text-gray-400' : 'text-blue-600/60 font-medium italic'}`}>
+                          {isUnlocked ? event.note : 'Tap to discover this historical milestone...'}
+                        </p>
+                      </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {isPersonal && !isExpanded && (
-                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mt-2">
-                      Tap to read story
-                    </p>
+                  {isUnlocked && !isExpanded && isPersonal && (
+                    <div className="mt-2 flex items-center gap-1 text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                      <Info size={10} /> Tap to read story
+                    </div>
                   )}
                 </div>
               </motion.div>
