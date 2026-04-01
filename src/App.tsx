@@ -85,7 +85,7 @@ interface Profile {
   unlockedMilestones: string[];
   preferences: {
     sortBy: 'added' | 'opened';
-    theme: 'light' | 'dark' | 'system';
+    theme: 'light' | 'dark' | 'system' | 'paper' | 'glass' | 'wood' | 'metal' | 'fabric';
     compactUI: boolean;
     showBottomMenu: boolean;
     textMode: boolean;
@@ -722,7 +722,12 @@ export default function App() {
 
   useEffect(() => {
     const root = window.document.documentElement;
+    const body = window.document.body;
     const theme = profile.preferences.theme;
+    
+    // Remove all theme classes
+    const themeClasses = ['theme-paper', 'theme-glass', 'theme-wood', 'theme-metal', 'theme-fabric'];
+    body.classList.remove(...themeClasses);
     
     const applyTheme = (isDark: boolean) => {
       root.classList.toggle('dark', isDark);
@@ -735,8 +740,13 @@ export default function App() {
       const listener = (e: MediaQueryListEvent) => applyTheme(e.matches);
       mediaQuery.addEventListener('change', listener);
       return () => mediaQuery.removeEventListener('change', listener);
-    } else {
+    } else if (theme === 'light' || theme === 'dark') {
       applyTheme(theme === 'dark');
+    } else {
+      // Texture themes
+      body.classList.add(`theme-${theme}`);
+      // Texture themes are designed as light themes for readability
+      applyTheme(false);
     }
   }, [profile.preferences.theme]);
 
@@ -2355,7 +2365,12 @@ export default function App() {
                       options={[
                         { value: 'system', label: 'System' },
                         { value: 'light', label: 'Light' },
-                        { value: 'dark', label: 'Dark' }
+                        { value: 'dark', label: 'Dark' },
+                        { value: 'paper', label: 'Paper' },
+                        { value: 'glass', label: 'Glass' },
+                        { value: 'wood', label: 'Wood' },
+                        { value: 'metal', label: 'Metal' },
+                        { value: 'fabric', label: 'Fabric' }
                       ]}
                     />
                     <SettingToggle 
