@@ -90,6 +90,32 @@ interface Timeline {
   };
 }
 
+interface GameMode {
+  id: string;
+  title: string;
+  description: string;
+  icon: any;
+  isLocked?: boolean;
+  unlockCriteria?: string;
+}
+
+interface Challenge {
+  id: string;
+  description: string;
+  target: number;
+  type: 'count' | 'rarity';
+  rarity?: Rarity;
+}
+
+interface Era {
+  id: string;
+  name: string;
+  years: [number, number];
+  challenges: Challenge[];
+  loreCard: string;
+  badgeId: string;
+}
+
 interface AppVersion {
   version: string;
   date: string;
@@ -112,6 +138,10 @@ interface Profile {
   timelineProgress: { [timelineId: string]: number };
   timelineStreak: number;
   lastTimelineExplorationDate: number;
+  gameModeProgress: {
+    eraConquest: { [eraId: string]: { completedChallenges: string[], loreUnlocked: boolean } };
+    mintMarkDetective: { discoveredMarks: string[] };
+  };
   preferences: {
     sortBy: 'added' | 'opened';
     theme: 'light' | 'dark' | 'system' | 'paper' | 'glass' | 'wood' | 'metal' | 'fabric';
@@ -248,6 +278,62 @@ const TIMELINES: Timeline[] = [
       { year: '1838', event: 'New Orleans Mint', note: 'The "O" mint mark becomes a symbol of Southern numismatics.' },
       { year: '1968', event: 'San Francisco Returns', note: 'The "S" mark returns to US proof sets after a brief hiatus.' }
     ]
+  }
+];
+
+const GAME_MODES: GameMode[] = [
+  { id: 'era-conquest', title: 'Era Conquest Mode', description: 'Conquer history by collecting coins from every era.', icon: History },
+  { id: 'timeline-explorer', title: 'Timeline Explorer', description: 'Journey through historical and fictional coin stories.', icon: Clock },
+  { id: 'mint-mark-detective', title: 'Mint Mark Detective', description: 'Decode the secret language of mint marks.', icon: Search },
+  { id: 'my-coin-story', title: 'My Coin Story', description: 'Generate a personal timeline from your own collection.', icon: User },
+];
+
+const ERAS: Era[] = [
+  {
+    id: '1800s',
+    name: 'The Victorian Era',
+    years: [1800, 1899],
+    challenges: [
+      { id: 'v-1', description: 'Collect 1 coin from the 1800s', target: 1, type: 'count' },
+      { id: 'v-2', description: 'Collect 3 coins from the 1800s', target: 3, type: 'count' },
+      { id: 'v-3', description: 'Find a Rare 1800s coin', target: 1, type: 'rarity', rarity: 'Rare' }
+    ],
+    loreCard: 'The 19th century saw the transition from hand-struck to machine-made coins, with Queen Victoria\'s long reign dominating the numismatic landscape.',
+    badgeId: 'era-1800s'
+  },
+  {
+    id: '1900s',
+    name: 'Early 20th Century',
+    years: [1900, 1919],
+    challenges: [
+      { id: 'e-1', description: 'Collect 2 coins from 1900-1919', target: 2, type: 'count' },
+      { id: 'e-2', description: 'Find a Very Rare early 1900s coin', target: 1, type: 'rarity', rarity: 'Very Rare' }
+    ],
+    loreCard: 'The Edwardian era and WWI brought changes in metal composition and design, reflecting the global shifts of the time.',
+    badgeId: 'era-1900s'
+  },
+  {
+    id: '1920s',
+    name: 'The Roaring Twenties',
+    years: [1920, 1929],
+    challenges: [
+      { id: 't-1', description: 'Collect 3 coins from the 1920s', target: 3, type: 'count' },
+      { id: 't-2', description: 'Collect 5 coins from the 1920s', target: 5, type: 'count' }
+    ],
+    loreCard: 'Post-war recovery led to a boom in trade and a high demand for new coinage, featuring iconic designs of the 1920s.',
+    badgeId: 'era-1920s'
+  },
+  {
+    id: 'modern',
+    name: 'Modern Age',
+    years: [1930, 2026],
+    challenges: [
+      { id: 'm-1', description: 'Collect 10 modern coins', target: 10, type: 'count' },
+      { id: 'm-2', description: 'Collect 20 modern coins', target: 20, type: 'count' },
+      { id: 'm-3', description: 'Find 5 Rare modern coins', target: 5, type: 'rarity', rarity: 'Rare' }
+    ],
+    loreCard: 'The modern era is defined by decimalization and the introduction of complex commemorative designs.',
+    badgeId: 'era-modern'
   }
 ];
 
@@ -425,6 +511,10 @@ export default function App() {
         timelineProgress: parsed.timelineProgress ?? {},
         timelineStreak: parsed.timelineStreak ?? 0,
         lastTimelineExplorationDate: parsed.lastTimelineExplorationDate ?? 0,
+        gameModeProgress: parsed.gameModeProgress ?? {
+          eraConquest: {},
+          mintMarkDetective: { discoveredMarks: [] }
+        },
         preferences: {
           sortBy: parsed.preferences?.sortBy ?? 'added',
           theme: parsed.preferences?.theme ?? 'system',
@@ -458,6 +548,10 @@ export default function App() {
       timelineProgress: {},
       timelineStreak: 0,
       lastTimelineExplorationDate: 0,
+      gameModeProgress: {
+        eraConquest: {},
+        mintMarkDetective: { discoveredMarks: [] }
+      },
       preferences: { 
         sortBy: 'added',
         theme: 'system',
@@ -480,7 +574,8 @@ export default function App() {
     };
   });
 
-  const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'stats' | 'profile'>('collection');
+  const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'modes' | 'stats' | 'profile'>('collection');
+  const [activeGameMode, setActiveGameMode] = useState<string | null>(null);
   const [unlockedFolders, setUnlockedFolders] = useState<string[]>([]);
   const [newTags, setNewTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -2112,6 +2207,7 @@ export default function App() {
     if (profile.preferences.showBottomMenu) return null;
     const tabs = [
       { id: 'collection', label: 'Collection', icon: LayoutGrid },
+      { id: 'modes', label: 'Modes', icon: Trophy },
       { id: 'library', label: 'Library', icon: ImageIcon },
       { id: 'stats', label: 'Stats', icon: PieChart },
       { id: 'profile', label: 'Profile', icon: User },
@@ -2152,6 +2248,7 @@ export default function App() {
     if (!profile.preferences.showBottomMenu) return null;
     const menuItems = [
       { id: 'collection', label: 'Home', icon: LayoutGrid },
+      { id: 'modes', label: 'Modes', icon: Trophy },
       { id: 'library', label: 'Library', icon: ImageIcon },
       { id: 'stats', label: 'Stats', icon: PieChart },
       { id: 'profile', label: 'Profile', icon: User },
@@ -2254,6 +2351,182 @@ export default function App() {
     );
   }
 
+  const getEraProgress = (era: Era) => {
+    const eraCoins = coins.filter(c => {
+      const year = parseInt(c.year);
+      return year >= era.years[0] && year <= era.years[1];
+    });
+    
+    const completedChallenges = era.challenges.filter(challenge => {
+      if (challenge.type === 'count') {
+        return eraCoins.length >= challenge.target;
+      }
+      if (challenge.type === 'rarity') {
+        return eraCoins.filter(c => c.rarity === challenge.rarity).length >= challenge.target;
+      }
+      return false;
+    });
+
+    return {
+      percent: Math.round((completedChallenges.length / era.challenges.length) * 100),
+      completedCount: completedChallenges.length,
+      totalCount: era.challenges.length,
+      eraCoins
+    };
+  };
+
+  const renderEraConquest = () => {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="max-w-md mx-auto px-4 pb-24"
+      >
+        <div className="flex items-center gap-4 mb-10">
+          <motion.button 
+            whileHover={{ scale: 1.1, x: -4 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setActiveGameMode(null)}
+            className="w-12 h-12 glass-button rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors premium-border border border-white/20 dark:border-gray-800/50"
+          >
+            <ChevronLeft size={24} />
+          </motion.button>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight text-gradient-blue leading-tight">Era Conquest</h2>
+            <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-1">Conquer the timeline</p>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          {ERAS.map((era) => {
+            const { percent, completedCount, totalCount } = getEraProgress(era);
+            return (
+              <motion.div
+                key={era.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-8 rounded-[3rem] premium-shadow premium-border border inner-glow relative overflow-hidden"
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h3 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">{era.name}</h3>
+                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1">{era.years[0]} - {era.years[1]}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{percent}%</span>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">{completedCount}/{totalCount} Challenges</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 mb-8">
+                  {era.challenges.map((challenge) => {
+                    const eraCoins = coins.filter(c => {
+                      const year = parseInt(c.year);
+                      return year >= era.years[0] && year <= era.years[1];
+                    });
+                    let isDone = false;
+                    if (challenge.type === 'count') isDone = eraCoins.length >= challenge.target;
+                    if (challenge.type === 'rarity') isDone = eraCoins.filter(c => c.rarity === challenge.rarity).length >= challenge.target;
+
+                    return (
+                      <div key={challenge.id} className="flex items-center gap-4">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-300'}`}>
+                          {isDone ? <Check size={14} strokeWidth={4} /> : <div className="w-2 h-2 bg-current rounded-full" />}
+                        </div>
+                        <p className={`text-xs font-bold ${isDone ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400'}`}>{challenge.description}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="h-2 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden shadow-inner mb-8">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percent}%` }}
+                    className="h-full bg-gradient-to-r from-blue-400 to-blue-600 shadow-[0_0_12px_rgba(59,130,246,0.4)]"
+                  />
+                </div>
+
+                {percent === 100 && (
+                  <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="p-6 rounded-[2rem] bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <Award className="text-blue-600 dark:text-blue-400" size={20} />
+                      <h4 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Era Lore Unlocked</h4>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed italic">"{era.loreCard}"</p>
+                  </motion.div>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const renderGameModesHub = () => {
+    if (activeGameMode === 'era-conquest') return renderEraConquest();
+    
+    return (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        className="max-w-md mx-auto px-4 pb-24"
+      >
+        <div className="mb-10">
+          <h2 className="text-4xl font-black tracking-tighter text-gradient-blue leading-none">Game Modes</h2>
+          <p className="text-gray-400 dark:text-gray-500 text-[11px] font-bold uppercase tracking-widest mt-2">New ways to explore your collection</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6">
+          {GAME_MODES.map((mode) => {
+            const Icon = mode.icon;
+            return (
+              <motion.button
+                key={mode.id}
+                whileHover={{ scale: 1.02, y: -4 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (mode.id === 'timeline-explorer') {
+                    setShowTimeline(true);
+                    setSelectedTimelineId(null);
+                  } else if (mode.id === 'my-coin-story') {
+                    setShowTimeline(true);
+                    setSelectedTimelineId('my-coin-story');
+                  } else {
+                    setActiveGameMode(mode.id);
+                  }
+                }}
+                className="glass-card p-8 rounded-[3rem] text-left transition-all relative overflow-hidden premium-shadow premium-border border inner-glow group"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-blue-500/10 transition-colors" />
+                
+                <div className="flex items-start gap-6 relative z-10">
+                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-[1.5rem] flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-inner group-hover:scale-110 transition-transform">
+                    <Icon size={32} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white mb-2">{mode.title}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{mode.description}</p>
+                  </div>
+                  <div className="self-center">
+                    <ChevronRight size={24} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors" />
+                  </div>
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+      </motion.div>
+    );
+  };
+
   const SettingAction = ({ icon: Icon, title, description, onClick, color = "text-blue-600" }: { icon: any, title: string, description: string, onClick: () => void, color?: string }) => (
     <button 
       onClick={onClick}
@@ -2293,6 +2566,8 @@ export default function App() {
           {renderBottomMenu()}
 
           <AnimatePresence mode="wait">
+            {activeTab === 'modes' && renderGameModesHub()}
+            
             {activeTab === 'collection' && (
               <motion.div
                 key="collection"
