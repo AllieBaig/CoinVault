@@ -85,6 +85,12 @@ interface Timeline {
   events: TimelineEvent[];
 }
 
+interface AppVersion {
+  version: string;
+  date: string;
+  notes: string;
+}
+
 interface Profile {
   name: string;
   recoveryCode: string;
@@ -134,6 +140,34 @@ const RARITY_POINTS = {
   'Rare': 50,
   'Very Rare': 100,
 };
+
+const APP_VERSION_HISTORY: AppVersion[] = [
+  { 
+    version: '2.1.0', 
+    date: '2026-04-01', 
+    notes: 'Introduced the Timeline Hub with 6 historical and fictional coin stories. Added App Version History to settings.' 
+  },
+  { 
+    version: '2.0.5', 
+    date: '2026-03-25', 
+    notes: 'Improved background removal AI and added support for custom folder icons.' 
+  },
+  { 
+    version: '2.0.0', 
+    date: '2026-03-10', 
+    notes: 'Major redesign with new Glass and Metal themes. Introduced the Rank System and XP rewards.' 
+  },
+  { 
+    version: '1.5.0', 
+    date: '2026-02-15', 
+    notes: 'Added data import/export functionality and local backup system.' 
+  },
+  { 
+    version: '1.0.0', 
+    date: '2026-01-01', 
+    notes: 'Initial release of the Coin Collector app.' 
+  }
+];
 
 const TIMELINES: Timeline[] = [
   {
@@ -2972,6 +3006,28 @@ export default function App() {
                         </div>
                         <ChevronRight size={16} className="text-red-300 group-hover:translate-x-1 transition-transform" />
                       </button>
+                    </div>
+                  </SettingsSection>
+
+                  <SettingsSection id="version" title="App Version History" icon={History}>
+                    <div className="p-5 space-y-6">
+                      {APP_VERSION_HISTORY.map((item, idx) => (
+                        <div key={item.version} className="relative pl-6">
+                          {idx !== APP_VERSION_HISTORY.length - 1 && (
+                            <div className="absolute left-[7px] top-4 bottom-[-24px] w-0.5 bg-gray-100 dark:bg-gray-800" />
+                          )}
+                          <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 bg-blue-600 shadow-sm" />
+                          <div className="flex flex-col">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-black text-gray-900 dark:text-white">v{item.version}</span>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.date}</span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed font-medium">
+                              {item.notes}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </SettingsSection>
                 </div>
