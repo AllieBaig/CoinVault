@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Trash2, PieChart, LayoutGrid, Info, CheckCircle2, Star, 
   Folder as FolderIcon, Image as ImageIcon, Download, Upload, 
-  Settings, User, ChevronRight, ChevronDown, X, ArrowLeft, Search, Clock,
+  Settings, User, ChevronRight, ChevronLeft, ChevronDown, X, ArrowLeft, Search, Clock,
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
   Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp,
   Share2, Columns, History, Lightbulb, Coins, Shield, Database, Layout,
@@ -71,6 +71,20 @@ interface Badge {
   unlockedAt?: number;
 }
 
+interface TimelineEvent {
+  year: string;
+  event: string;
+  note: string;
+}
+
+interface Timeline {
+  id: string;
+  title: string;
+  description: string;
+  category: 'Popular' | 'New' | 'All';
+  events: TimelineEvent[];
+}
+
 interface Profile {
   name: string;
   recoveryCode: string;
@@ -83,6 +97,8 @@ interface Profile {
   badges: Badge[];
   lastSpinDate: number;
   unlockedMilestones: string[];
+  lastTimelineId?: string;
+  timelineProgress: { [timelineId: string]: number };
   preferences: {
     sortBy: 'added' | 'opened';
     theme: 'light' | 'dark' | 'system' | 'paper' | 'glass' | 'wood' | 'metal' | 'fabric';
@@ -118,6 +134,78 @@ const RARITY_POINTS = {
   'Rare': 50,
   'Very Rare': 100,
 };
+
+const TIMELINES: Timeline[] = [
+  {
+    id: 'numismatic-journey',
+    title: 'Numismatic Journey',
+    description: 'The history of coin collecting from ancient kings to modern enthusiasts.',
+    category: 'Popular',
+    events: [
+      { year: '600 BC', event: 'First Lydian Coins', note: 'The birth of standardized coinage in Lydia (modern Turkey).' },
+      { year: '1300s', event: 'Petrarch\'s Collection', note: 'The famous poet Petrarch becomes one of the first recorded coin collectors.' },
+      { year: '1858', event: 'American Numismatic Society', note: 'Founded in New York, marking a new era for organized collecting.' },
+      { year: '2026', event: 'Digital Numismatics', note: 'The integration of blockchain and AI into the world of coin collecting.' }
+    ]
+  },
+  {
+    id: 'coin-evolution',
+    title: 'Coin Evolution',
+    description: 'Witness the transformation of currency from raw metal to precision engineering.',
+    category: 'Popular',
+    events: [
+      { year: '7th Century BC', event: 'Electrum Coins', note: 'Early coins made from a natural alloy of gold and silver.' },
+      { year: '1792', event: 'US Mint Established', note: 'Standardized modern minting processes begin in the United States.' },
+      { year: '1965', event: 'Clad Coinage', note: 'Silver is removed from common circulation coins due to rising costs.' },
+      { year: '2024', event: 'Smart Coins', note: 'Coins with embedded NFC chips for authenticity verification.' }
+    ]
+  },
+  {
+    id: 'coin-conspiracy',
+    title: 'Coin Conspiracy',
+    description: 'Uncover the mysteries and legends behind the world\'s most elusive coins.',
+    category: 'New',
+    events: [
+      { year: '1933', event: 'The Double Eagle Mystery', note: 'The gold coin that was never supposed to exist, yet some escaped the mint.' },
+      { year: '1943', event: 'Copper Penny Legend', note: 'A few copper pennies were accidentally struck during WWII when steel was the norm.' },
+      { year: '1974', event: 'The Aluminum Cent', note: 'A prototype cent that was never released, with most being destroyed.' }
+    ]
+  },
+  {
+    id: 'time-loop-collector',
+    title: 'Time Loop Collector',
+    description: 'A fictional journey of a collector stuck in a temporal loop of rare finds.',
+    category: 'New',
+    events: [
+      { year: '2026', event: 'The First Loop', note: 'You find a coin that shouldn\'t exist yet.' },
+      { year: '1926', event: 'The Echo', note: 'The same coin appears in a vintage collection, but older.' },
+      { year: '2126', event: 'The Resolution', note: 'The loop closes as you return the coin to its origin.' }
+    ]
+  },
+  {
+    id: 'design-evolution',
+    title: 'Design Evolution Timeline',
+    description: 'Explore the artistic shift from classical portraits to abstract modernism.',
+    category: 'All',
+    events: [
+      { year: 'Ancient Greece', event: 'Archaic Style', note: 'Focus on symbolic representations and deities.' },
+      { year: 'Renaissance', event: 'Realism Returns', note: 'Detailed portraits of monarchs and intricate heraldry.' },
+      { year: 'Art Nouveau', event: 'Flowing Lines', note: 'The early 20th century brings organic shapes to coin design.' },
+      { year: 'Modern Era', event: 'Minimalism', note: 'Clean lines and abstract concepts dominate modern commemoratives.' }
+    ]
+  },
+  {
+    id: 'mint-mark-detective',
+    title: 'Mint Mark Detective',
+    description: 'Learn to decode the secret language of mint marks across the globe.',
+    category: 'All',
+    events: [
+      { year: 'Ancient Rome', event: 'Officina Marks', note: 'Early workshops identify their output with specific symbols.' },
+      { year: '1838', event: 'New Orleans Mint', note: 'The "O" mint mark becomes a symbol of Southern numismatics.' },
+      { year: '1968', event: 'San Francisco Returns', note: 'The "S" mark returns to US proof sets after a brief hiatus.' }
+    ]
+  }
+];
 
 const CLUE_MAP: Record<string, string> = {
   'Kew Gardens': 'The Great Pagoda holds a secret... look for the 2009 50p.',
@@ -287,6 +375,8 @@ export default function App() {
         badges: parsed.badges ?? DEFAULT_BADGES,
         lastSpinDate: parsed.lastSpinDate ?? 0,
         unlockedMilestones: parsed.unlockedMilestones ?? [],
+        lastTimelineId: parsed.lastTimelineId,
+        timelineProgress: parsed.timelineProgress ?? {},
         preferences: {
           sortBy: parsed.preferences?.sortBy ?? 'added',
           theme: parsed.preferences?.theme ?? 'system',
@@ -317,6 +407,7 @@ export default function App() {
       badges: DEFAULT_BADGES,
       lastSpinDate: 0,
       unlockedMilestones: [],
+      timelineProgress: {},
       preferences: { 
         sortBy: 'added',
         theme: 'system',
@@ -374,6 +465,7 @@ export default function App() {
   const [modalInputValue, setModalInputValue] = useState('');
   const [compareCoins, setCompareCoins] = useState<string[]>([]);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
   const [showCollectorCard, setShowCollectorCard] = useState(false);
   const [discoveryTip, setDiscoveryTip] = useState('');
   const [showFusionModal, setShowFusionModal] = useState(false);
@@ -385,6 +477,224 @@ export default function App() {
       prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
     );
   };
+
+  const updateTimelineProgress = (timelineId: string, eventIndex: number) => {
+    setProfile(prev => ({
+      ...prev,
+      lastTimelineId: timelineId,
+      timelineProgress: {
+        ...prev.timelineProgress,
+        [timelineId]: Math.max(prev.timelineProgress[timelineId] || 0, eventIndex)
+      }
+    }));
+  };
+
+  const renderTimelineHub = () => {
+    const popularTimelines = TIMELINES.filter(t => t.category === 'Popular');
+    const newTimelines = TIMELINES.filter(t => t.category === 'New');
+    const allTimelines = TIMELINES;
+
+    const continueExploring = profile.lastTimelineId 
+      ? TIMELINES.find(t => t.id === profile.lastTimelineId) 
+      : null;
+
+    const renderTimelineCard = (timeline: Timeline) => {
+      const progress = profile.timelineProgress[timeline.id] || 0;
+      const total = timeline.events.length;
+      const percent = Math.round((progress / (total - 1)) * 100);
+      const isActive = profile.lastTimelineId === timeline.id;
+
+      return (
+        <motion.button
+          key={timeline.id}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setSelectedTimelineId(timeline.id)}
+          className={`flex-shrink-0 w-64 p-5 rounded-[2rem] text-left transition-all relative overflow-hidden ${
+            isActive 
+              ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20' 
+              : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700 shadow-sm'
+          }`}
+        >
+          <div className="relative z-10">
+            <h4 className="font-black text-lg leading-tight mb-2">{timeline.title}</h4>
+            <p className={`text-[10px] font-medium leading-relaxed line-clamp-2 mb-4 ${isActive ? 'text-blue-100' : 'text-gray-400'}`}>
+              {timeline.description}
+            </p>
+            <div className="flex items-center justify-between mt-auto">
+              <div className="flex flex-col">
+                <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
+                  {percent}% Complete
+                </span>
+                <div className={`h-1 w-24 rounded-full mt-1 overflow-hidden ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                  <div 
+                    className={`h-full rounded-full ${isActive ? 'bg-white' : 'bg-blue-600'}`} 
+                    style={{ width: `${percent}%` }} 
+                  />
+                </div>
+              </div>
+              <ChevronRight size={16} className={isActive ? 'text-white' : 'text-gray-300'} />
+            </div>
+          </div>
+          {isActive && (
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+          )}
+        </motion.button>
+      );
+    };
+
+    return (
+      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-10 pb-10">
+        {continueExploring && (
+          <section>
+            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-4 px-1">Continue Exploring</h3>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
+              {renderTimelineCard(continueExploring)}
+            </div>
+          </section>
+        )}
+
+        <section>
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-4 px-1">Popular Timelines</h3>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
+            {popularTimelines.map(t => renderTimelineCard(t))}
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-4 px-1">New Stories</h3>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
+            {newTimelines.map(t => renderTimelineCard(t))}
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-4 px-1">All Timelines</h3>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
+            {allTimelines.map(t => renderTimelineCard(t))}
+          </div>
+        </section>
+      </div>
+    );
+  };
+
+  const renderTimelineDetail = (timelineId: string) => {
+    const timeline = TIMELINES.find(t => t.id === timelineId);
+    if (!timeline) return null;
+
+    const currentProgress = profile.timelineProgress[timelineId] || 0;
+
+    return (
+      <div className="flex-1 flex flex-col h-full">
+        <div className="flex items-center gap-4 mb-8">
+          <button 
+            onClick={() => setSelectedTimelineId(null)}
+            className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h3 className="text-xl font-black tracking-tight">{timeline.title}</h3>
+            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Story Mode</p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-8 pb-10">
+          {timeline.events.map((event, idx) => {
+            const isUnlocked = idx <= currentProgress;
+            const isNext = idx === currentProgress + 1;
+
+            return (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="relative pl-10"
+              >
+                {idx !== timeline.events.length - 1 && (
+                  <div className={`absolute left-[15px] top-8 bottom-[-32px] w-0.5 ${isUnlocked ? 'bg-blue-600' : 'bg-gray-100 dark:bg-gray-800'}`} />
+                )}
+                <div className={`absolute left-0 top-1.5 w-8 h-8 rounded-full border-4 border-white dark:border-gray-900 shadow-sm flex items-center justify-center transition-all ${
+                  isUnlocked ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-300'
+                }`}>
+                  {isUnlocked ? <Check size={14} /> : <span className="text-[10px] font-black">{idx + 1}</span>}
+                </div>
+
+                <div 
+                  onClick={() => isNext && updateTimelineProgress(timelineId, idx)}
+                  className={`p-6 rounded-[2rem] border transition-all ${
+                    isUnlocked 
+                      ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm' 
+                      : isNext 
+                        ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200/50 dark:border-blue-800/30 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        : 'bg-gray-50/50 dark:bg-gray-900/50 border-transparent opacity-50 grayscale'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${isUnlocked ? 'text-blue-600' : 'text-gray-400'}`}>
+                      {event.year}
+                    </span>
+                    {isNext && (
+                      <span className="bg-blue-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
+                        Next
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-black text-gray-900 dark:text-white mb-2">{event.event}</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-medium">
+                    {event.note}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTimelineModal = () => (
+    <AnimatePresence>
+      {showTimeline && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-end justify-center"
+          onClick={() => setShowTimeline(false)}
+        >
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="bg-gray-50 dark:bg-gray-900 w-full max-w-md h-[85vh] rounded-t-[3rem] p-8 shadow-2xl flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full mx-auto mb-8" />
+            
+            {!selectedTimelineId ? (
+              <>
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h3 className="text-2xl font-black tracking-tight">Timeline Hub</h3>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Explore the history of coins</p>
+                  </div>
+                  <button onClick={() => setShowTimeline(false)} className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm">
+                    <X size={20} />
+                  </button>
+                </div>
+                {renderTimelineHub()}
+              </>
+            ) : (
+              renderTimelineDetail(selectedTimelineId)
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   const SettingsSection = ({ id, title, icon: Icon, children, badge }: { id: string, title: string, icon: any, children: React.ReactNode, badge?: string }) => {
     const isExpanded = expandedSections.includes(id);
@@ -2349,7 +2659,7 @@ export default function App() {
                     }`}
                   >
                     <History size={24} className="text-blue-600" />
-                    <span>Timeline</span>
+                    <span>Timeline Hub</span>
                   </button>
                 </div>
 
@@ -3161,72 +3471,6 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* Collection Timeline Modal */}
-        <AnimatePresence>
-          {showTimeline && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-end justify-center"
-              onClick={() => setShowTimeline(false)}
-            >
-              <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="bg-gray-50 dark:bg-gray-900 w-full max-w-md h-[80vh] rounded-t-[3rem] p-8 shadow-2xl flex flex-col"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full mx-auto mb-8" />
-                
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h3 className="text-2xl font-black tracking-tight">Collection Timeline</h3>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">History of your finds</p>
-                  </div>
-                  <button onClick={() => setShowTimeline(false)} className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm">
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
-                  {[...coins].sort((a, b) => b.dateAdded - a.dateAdded).map((coin, idx) => (
-                    <div key={coin.id} className="relative pl-8">
-                      {idx !== coins.length - 1 && (
-                        <div className="absolute left-[11px] top-6 bottom-[-24px] w-0.5 bg-gray-100 dark:bg-gray-800" />
-                      )}
-                      <div className="absolute left-0 top-1.5 w-6 h-6 bg-blue-600 rounded-full border-4 border-white dark:border-gray-900 shadow-sm" />
-                      <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                          {new Date(coin.dateAdded).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gray-50 dark:bg-gray-900 rounded-xl flex items-center justify-center text-xs font-black text-gray-400">
-                              {coin.type}
-                            </div>
-                            <div>
-                              <p className="font-bold text-gray-800 dark:text-gray-200">{coin.name}</p>
-                              <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{coin.rarity}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {coins.length === 0 && (
-                    <div className="text-center py-20">
-                      <p className="text-gray-400 font-bold italic">Your timeline is empty...</p>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Compare Mode Modal */}
         <AnimatePresence>
           {compareCoins.length === 2 && (
@@ -3411,6 +3655,7 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        {renderTimelineModal()}
       </div>
     </ErrorBoundary>
   );
