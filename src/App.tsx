@@ -722,7 +722,7 @@ export default function App() {
       return (
         <motion.button
           key={timeline.id}
-          whileHover={locked ? {} : { scale: 1.02 }}
+          whileHover={locked ? {} : { scale: 1.02, y: -4 }}
           whileTap={locked ? {} : { scale: 0.98 }}
           onClick={() => {
             if (locked) {
@@ -732,40 +732,47 @@ export default function App() {
             setSelectedTimelineId(timeline.id);
             setExpandedEventIdx(null);
           }}
-          className={`flex-shrink-0 w-64 p-5 rounded-[2rem] text-left transition-all relative overflow-hidden ${
+          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden premium-shadow premium-border border inner-glow ${
             locked
-              ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+              ? 'bg-gray-100/40 dark:bg-gray-800/40 text-gray-400 cursor-not-allowed border-gray-200/30 dark:border-gray-700/30'
               : isActive 
-                ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20' 
+                ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-2xl shadow-blue-500/40 border-blue-400/30' 
                 : isPersonal
-                  ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-lg'
-                  : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700 shadow-sm'
+                  ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-xl border-indigo-400/30'
+                  : 'glass-card text-gray-900 dark:text-white border-white/20 dark:border-gray-800/50'
           }`}
         >
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <h4 className="font-black text-lg leading-tight line-clamp-1">{timeline.title}</h4>
+                <h4 className="font-black text-xl leading-tight line-clamp-1 tracking-tight">{timeline.title}</h4>
                 {isPersonal && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
               </div>
-              {locked && <Lock size={14} className="text-gray-400" />}
+              {locked && <Lock size={16} className="text-gray-400/60" />}
             </div>
-            <p className={`text-[10px] font-medium leading-relaxed line-clamp-2 mb-4 ${locked ? 'text-gray-400' : isActive || isPersonal ? 'text-blue-100' : 'text-gray-400'}`}>
+            <p className={`text-[11px] font-bold leading-relaxed line-clamp-2 mb-6 ${locked ? 'text-gray-400/60' : isActive || isPersonal ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'}`}>
               {locked ? getUnlockMessage(timeline) : timeline.description}
             </p>
             <div className="flex items-center justify-between mt-auto">
-              <div className="flex flex-col">
-                <span className={`text-[9px] font-black uppercase tracking-widest ${locked ? 'text-gray-400' : isActive || isPersonal ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
-                  {percent}% Complete
-                </span>
-                <div className={`h-1 w-24 rounded-full mt-1 overflow-hidden ${locked ? 'bg-gray-200 dark:bg-gray-700' : isActive || isPersonal ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                  <div 
-                    className={`h-full rounded-full ${locked ? 'bg-gray-300' : isActive || isPersonal ? 'bg-white' : 'bg-blue-600'}`} 
-                    style={{ width: `${percent}%` }} 
+              <div className="flex flex-col flex-1 mr-4">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${locked ? 'text-gray-400/60' : isActive || isPersonal ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
+                    {percent}%
+                  </span>
+                  <span className={`text-[9px] font-bold uppercase tracking-tighter opacity-60 ${locked ? 'text-gray-400/60' : isActive || isPersonal ? 'text-white' : 'text-gray-400'}`}>
+                    {progress}/{total}
+                  </span>
+                </div>
+                <div className={`h-2 w-full rounded-full overflow-hidden ${locked ? 'bg-gray-200/50 dark:bg-gray-700/50' : isActive || isPersonal ? 'bg-white/20' : 'bg-gray-100/50 dark:bg-gray-800/50'}`}>
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percent}%` }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+                    className={`h-full rounded-full ${locked ? 'bg-gray-300' : isActive || isPersonal ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-gradient-to-r from-blue-400 to-blue-600 shadow-[0_0_8px_rgba(59,130,246,0.5)]'}`} 
                   />
                 </div>
               </div>
-              {!locked && <ChevronRight size={16} className={isActive || isPersonal ? 'text-white' : 'text-gray-300'} />}
+              {!locked && <ChevronRight size={20} className={isActive || isPersonal ? 'text-white/80' : 'text-gray-300 dark:text-gray-600'} />}
             </div>
           </div>
           {(isActive || isPersonal) && !locked && (
@@ -776,58 +783,101 @@ export default function App() {
     };
 
     return (
-      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-10 pb-10">
-        <div className="flex items-center justify-between px-1 mb-2">
+      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-12 pb-10 pr-2">
+        <div className="flex items-center justify-between px-1 mb-4">
           <div>
-            <h2 className="text-3xl font-black tracking-tighter text-gray-900 dark:text-white">Timeline Hub</h2>
-            <p className="text-gray-500 text-sm">Explore the history of numismatics</p>
+            <h2 className="text-4xl font-black tracking-tighter text-gradient-blue leading-none">Timeline Hub</h2>
+            <p className="text-gray-400 dark:text-gray-500 text-[11px] font-bold uppercase tracking-widest mt-2">Explore the history of numismatics</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <div className="text-right">
-              <div className="flex items-center gap-1 justify-end text-orange-500 font-black">
-                <Flame size={16} />
+              <div className="flex items-center gap-1.5 justify-end text-orange-500 font-black text-xl">
+                <Flame size={20} className="fill-orange-500/20" />
                 <span>{profile.timelineStreak}</span>
               </div>
-              <p className="text-[8px] uppercase tracking-widest font-bold text-gray-400">Streak</p>
+              <p className="text-[9px] uppercase tracking-widest font-black text-gray-400/60 mt-0.5">Streak</p>
             </div>
-            <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-800" />
+            <div className="h-10 w-[1px] bg-gray-200/50 dark:bg-gray-800/50" />
             <div className="text-right">
-              <p className="text-lg font-black text-blue-600 dark:text-blue-400">{profile.points}</p>
-              <p className="text-[8px] uppercase tracking-widest font-bold text-gray-400">Total XP</p>
+              <p className="text-xl font-black text-blue-600 dark:text-blue-400 leading-none">{profile.points}</p>
+              <p className="text-[9px] uppercase tracking-widest font-black text-gray-400/60 mt-1.5">Total XP</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-card p-6 rounded-[2.5rem] premium-border border border-white/20 dark:border-gray-800/50 shadow-xl premium-shadow inner-glow mb-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-inner">
+              <Zap size={22} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-gray-800 dark:text-gray-100 uppercase tracking-widest">Collector Progress</h3>
+              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">Level {profile.level} • {profile.points} XP</p>
             </div>
           </div>
         </div>
 
         {continueExploring && (
-          <section>
-            <div className="flex items-center gap-2 mb-4 px-1">
-              <RefreshCw size={14} className="text-blue-600" />
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em]">Continue Exploring</h3>
+          <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center gap-2 mb-5 px-1">
+              <div className="w-6 h-6 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                <RefreshCw size={12} className="text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Continue Exploring</h3>
             </div>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
-              {renderTimelineCard(continueExploring)}
+            <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
+              <div className="snap-start">
+                {renderTimelineCard(continueExploring)}
+              </div>
             </div>
           </section>
         )}
 
-        <section>
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-4 px-1">Popular Timelines</h3>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
-            {popularTimelines.map(t => renderTimelineCard(t))}
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+          <div className="flex items-center gap-2 mb-5 px-1">
+            <div className="w-6 h-6 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
+              <Star size={12} className="text-orange-600 dark:text-orange-400" />
+            </div>
+            <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Popular Timelines</h3>
+          </div>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
+            {popularTimelines.map(t => (
+              <div key={t.id} className="snap-start">
+                {renderTimelineCard(t)}
+              </div>
+            ))}
           </div>
         </section>
 
-        <section>
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-4 px-1">New Stories</h3>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
-            {newTimelines.map(t => renderTimelineCard(t))}
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+          <div className="flex items-center gap-2 mb-5 px-1">
+            <div className="w-6 h-6 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
+              <Clock size={12} className="text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">New Stories</h3>
+          </div>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
+            {newTimelines.map(t => (
+              <div key={t.id} className="snap-start">
+                {renderTimelineCard(t)}
+              </div>
+            ))}
           </div>
         </section>
 
-        <section>
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-4 px-1">All Timelines</h3>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
-            {allTimelines.map(t => renderTimelineCard(t))}
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+          <div className="flex items-center gap-2 mb-5 px-1">
+            <div className="w-6 h-6 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
+              <LayoutGrid size={12} className="text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">All Timelines</h3>
+          </div>
+          <div className="grid grid-cols-1 gap-5 px-1">
+            {allTimelines.map(t => (
+              <div key={t.id} className="w-full">
+                {renderTimelineCard(t)}
+              </div>
+            ))}
           </div>
         </section>
       </div>
@@ -844,25 +894,27 @@ export default function App() {
 
     return (
       <div className="flex-1 flex flex-col h-full">
-        <div className="flex items-center gap-4 mb-8">
-          <button 
+        <div className="flex items-center gap-5 mb-10">
+          <motion.button 
+            whileHover={{ scale: 1.1, x: -4 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => {
               setSelectedTimelineId(null);
               setExpandedEventIdx(null);
             }}
-            className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors"
+            className="w-12 h-12 glass-card rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors premium-border border border-white/20 dark:border-gray-800/50"
           >
-            <ChevronLeft size={20} />
-          </button>
+            <ChevronLeft size={24} />
+          </motion.button>
           <div>
-            <h3 className="text-xl font-black tracking-tight">{timeline.title}</h3>
-            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+            <h3 className="text-3xl font-black tracking-tight text-gray-800 dark:text-gray-100 leading-tight">{timeline.title}</h3>
+            <p className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1">
               {isPersonal ? 'Personal Journey' : 'Story Mode'}
             </p>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-8 pb-10">
+        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-10 pb-10">
           {timeline.events.map((event, idx) => {
             const isUnlocked = isPersonal || idx <= currentProgress;
             const isNext = !isPersonal && idx === currentProgress + 1;
@@ -873,19 +925,20 @@ export default function App() {
                 key={idx}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="relative pl-10"
+                transition={{ delay: idx * 0.05 }}
+                className="relative pl-12"
               >
                 {idx !== timeline.events.length - 1 && (
-                  <div className={`absolute left-[15px] top-8 bottom-[-32px] w-0.5 ${isUnlocked ? 'bg-blue-600' : 'bg-gray-100 dark:bg-gray-800'}`} />
+                  <div className={`absolute left-[19px] top-10 bottom-[-40px] w-1 rounded-full ${isUnlocked ? 'bg-blue-600/30' : 'bg-gray-100 dark:bg-gray-800/50'}`} />
                 )}
-                <div className={`absolute left-0 top-1.5 w-8 h-8 rounded-full border-4 border-white dark:border-gray-900 shadow-sm flex items-center justify-center transition-all ${
-                  isUnlocked ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-300'
+                <div className={`absolute left-0 top-2 w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-lg flex items-center justify-center transition-all z-10 ${
+                  isUnlocked ? 'bg-blue-600 text-white shadow-blue-500/30' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                 }`}>
-                  {isUnlocked ? <Check size={14} /> : <span className="text-[10px] font-black">{idx + 1}</span>}
+                  {isUnlocked ? <Check size={18} strokeWidth={3} /> : <span className="text-xs font-black">{idx + 1}</span>}
                 </div>
 
-                <div 
+                <motion.div 
+                  layout
                   onClick={() => {
                     if (isNext) {
                       updateTimelineProgress(timelineId, idx);
@@ -893,35 +946,35 @@ export default function App() {
                       setExpandedEventIdx(isExpanded ? null : idx);
                     }
                   }}
-                  className={`p-6 rounded-[2rem] border transition-all ${
+                  className={`p-7 rounded-[2.5rem] border transition-all relative overflow-hidden premium-shadow inner-glow ${
                     isUnlocked 
-                      ? 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 shadow-sm' 
+                      ? 'glass-card border-white/20 dark:border-gray-800/50 shadow-sm' 
                       : isNext 
-                        ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200/50 dark:border-blue-800/30 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                        : 'bg-gray-50/50 dark:bg-gray-900/50 border-transparent opacity-50 grayscale'
-                  } ${isUnlocked || isNext ? 'cursor-pointer active:scale-[0.99]' : ''}`}
+                        ? 'bg-blue-50/30 dark:bg-blue-900/10 border-blue-200/30 dark:border-blue-800/20 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        : 'bg-gray-50/30 dark:bg-gray-900/30 border-transparent opacity-40 grayscale'
+                  } ${isUnlocked || isNext ? 'cursor-pointer active:scale-[0.98]' : ''}`}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${isUnlocked ? 'text-blue-600' : 'text-gray-400'}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex flex-col">
+                      <span className={`text-[11px] font-black uppercase tracking-widest mb-1 ${isUnlocked ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>
                         {event.year}
                       </span>
-                      {isUnlocked && !isPersonal && (
-                        <span className="text-[8px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1">
-                          <CheckCircle2 size={10} /> Discovered
-                        </span>
-                      )}
+                      <h4 className={`text-lg font-black tracking-tight ${isUnlocked ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400'}`}>
+                        {isUnlocked || isNext ? (isPersonal ? event.title : event.event) : 'Locked Event'}
+                      </h4>
                     </div>
+                    {isUnlocked && !isPersonal && (
+                      <span className="text-[9px] font-black text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
+                        <CheckCircle2 size={10} /> Discovered
+                      </span>
+                    )}
                     {isNext && (
-                      <span className="bg-blue-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
-                        Unlock +10 XP
+                      <span className="text-[9px] font-black text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                        <Star size={10} /> Unlock Next
                       </span>
                     )}
                   </div>
-                  <h4 className={`font-bold text-lg mb-2 ${isUnlocked ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
-                    {isUnlocked || isNext ? event.event : 'Locked Event'}
-                  </h4>
-                  
+
                   <AnimatePresence>
                     {(isExpanded || isNext || (!isPersonal && isUnlocked)) && (
                       <motion.div
@@ -930,19 +983,35 @@ export default function App() {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                       >
-                        <p className={`text-sm leading-relaxed ${isUnlocked ? 'text-gray-600 dark:text-gray-400' : 'text-blue-600/60 font-medium italic'}`}>
-                          {isUnlocked ? event.note : 'Tap to discover this historical milestone...'}
+                        <p className={`text-sm leading-relaxed mt-4 ${isUnlocked ? 'text-gray-500 dark:text-gray-400' : 'text-blue-600/60 font-medium italic'}`}>
+                          {isUnlocked ? (isPersonal ? event.description : event.note) : 'Tap to discover this historical milestone...'}
                         </p>
+                        {isPersonal && event.note && (
+                          <div className="mt-4 p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/20">
+                            <p className="text-xs italic text-blue-600 dark:text-blue-400 font-medium">
+                              "{event.note}"
+                            </p>
+                          </div>
+                        )}
+                        {isNext && (
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="w-full mt-6 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-blue-500/30"
+                          >
+                            Mark as Discovered (+10 XP)
+                          </motion.button>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
-
-                  {isUnlocked && !isExpanded && isPersonal && (
+                  
+                  {!isExpanded && isUnlocked && !isNext && isPersonal && (
                     <div className="mt-2 flex items-center gap-1 text-[10px] font-black text-blue-600 uppercase tracking-widest">
                       <Info size={10} /> Tap to read story
                     </div>
                   )}
-                </div>
+                </motion.div>
               </motion.div>
             );
           })}
@@ -958,35 +1027,45 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-end justify-center"
+          className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-end justify-center"
           onClick={() => setShowTimeline(false)}
         >
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="bg-gray-50 dark:bg-gray-900 w-full max-w-md h-[85vh] rounded-t-[3rem] p-8 shadow-2xl flex flex-col"
+            transition={{ type: 'spring', damping: 30, stiffness: 250 }}
+            className="glass-card w-full max-w-md h-[90vh] rounded-t-[3rem] p-8 shadow-2xl flex flex-col premium-border border-t border-x border-white/20 dark:border-gray-800/50 relative overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full mx-auto mb-8" />
+            {/* Mesh background effect for modal */}
+            <div className="absolute inset-0 mesh-gradient opacity-20 pointer-events-none" />
             
-            {!selectedTimelineId ? (
-              <>
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h3 className="text-2xl font-black tracking-tight">Timeline Hub</h3>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Explore the history of coins</p>
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="w-12 h-1.5 bg-gray-200/50 dark:bg-gray-800/50 rounded-full mx-auto mb-8 flex-shrink-0" />
+              
+              {!selectedTimelineId ? (
+                <>
+                  <div className="flex items-center justify-between mb-8 flex-shrink-0">
+                    <div>
+                      <h3 className="text-3xl font-black tracking-tight text-gradient-blue">Timeline Hub</h3>
+                      <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1.5">Explore the history of coins</p>
+                    </div>
+                    <motion.button 
+                      whileHover={{ scale: 1.1, rotate: 90 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setShowTimeline(false)} 
+                      className="w-11 h-11 glass-button rounded-full flex items-center justify-center shadow-sm border border-white/20 dark:border-gray-800/20"
+                    >
+                      <X size={22} className="text-gray-500 dark:text-gray-400" />
+                    </motion.button>
                   </div>
-                  <button onClick={() => setShowTimeline(false)} className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm">
-                    <X size={20} />
-                  </button>
-                </div>
-                {renderTimelineHub()}
-              </>
-            ) : (
-              renderTimelineDetail(selectedTimelineId)
-            )}
+                  {renderTimelineHub()}
+                </>
+              ) : (
+                renderTimelineDetail(selectedTimelineId)
+              )}
+            </div>
           </motion.div>
         </motion.div>
       )}
@@ -996,26 +1075,28 @@ export default function App() {
   const SettingsSection = ({ id, title, icon: Icon, children, badge }: { id: string, title: string, icon: any, children: React.ReactNode, badge?: string }) => {
     const isExpanded = expandedSections.includes(id);
     return (
-      <div className="space-y-2">
-        <button 
+      <div className="space-y-3">
+        <motion.button 
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={() => toggleSection(id)}
-          className={`w-full flex items-center justify-between p-4 rounded-3xl transition-all ${
-            isExpanded ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800'
-          } border shadow-sm`}
+          className={`w-full flex items-center justify-between p-5 rounded-[2rem] transition-all ${
+            isExpanded ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'glass-card border-gray-100 dark:border-gray-800'
+          } border premium-border soft-shadow`}
         >
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-2xl ${isExpanded ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
-              <Icon size={18} />
+          <div className="flex items-center gap-4">
+            <div className={`p-2.5 rounded-2xl shadow-sm transition-all ${isExpanded ? 'bg-blue-600 text-white shadow-blue-200/50' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-400'}`}>
+              <Icon size={20} />
             </div>
             <div className="flex flex-col items-start">
-              <span className={`font-black uppercase tracking-widest text-[10px] ${isExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>{title}</span>
-              {badge && <span className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">{badge}</span>}
+              <span className={`font-black uppercase tracking-widest text-[11px] ${isExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>{title}</span>
+              {badge && <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest mt-0.5">{badge}</span>}
             </div>
           </div>
-          <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
-            <ChevronDown size={18} className={isExpanded ? 'text-blue-600' : 'text-gray-300'} />
+          <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
+            <ChevronDown size={20} className={isExpanded ? 'text-blue-600' : 'text-gray-300 dark:text-gray-600'} />
           </motion.div>
-        </button>
+        </motion.button>
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -1024,7 +1105,7 @@ export default function App() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
+              <div className="glass-card rounded-[2.5rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50/50 dark:divide-gray-800/50 overflow-hidden soft-shadow premium-border">
                 {children}
               </div>
             </motion.div>
@@ -1049,26 +1130,27 @@ export default function App() {
     description?: string,
     badge?: string
   }) => (
-    <div className={`p-4 flex items-center justify-between transition-colors ${value ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}>
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-xl transition-colors ${value ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
-          <Icon size={16} />
+    <div className={`p-5 flex items-center justify-between transition-all ${value ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''}`}>
+      <div className="flex items-center gap-4">
+        <div className={`p-2.5 rounded-xl transition-all ${value ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'bg-gray-100/50 dark:bg-gray-800/50 text-gray-400'}`}>
+          <Icon size={18} />
         </div>
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-gray-700 dark:text-gray-300 text-sm">{label}</span>
-            {badge && <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest leading-none">{badge}</span>}
+            <span className="font-black text-gray-800 dark:text-gray-200 text-sm tracking-tight">{label}</span>
+            {badge && <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest leading-none bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-md">{badge}</span>}
           </div>
-          {description && <span className="text-[10px] text-gray-400 font-medium leading-tight mt-0.5">{description}</span>}
+          {description && <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold leading-tight mt-1 tracking-tight">{description}</span>}
         </div>
       </div>
       <button 
         onClick={onChange}
-        className={`w-12 h-6 rounded-full transition-colors relative flex-shrink-0 ${value ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+        className={`w-14 h-7 rounded-full transition-all relative flex-shrink-0 p-1 ${value ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
       >
         <motion.div 
-          animate={{ x: value ? 26 : 2 }}
-          className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-md"
+          animate={{ x: value ? 28 : 0 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+          className="w-5 h-5 bg-white rounded-full shadow-lg"
         />
       </button>
     </div>
@@ -1087,19 +1169,22 @@ export default function App() {
     onChange: (val: string) => void, 
     options: { value: string, label: string }[] 
   }) => (
-    <div className="p-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400">
-          <Icon size={16} />
+    <div className="p-5 flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className="p-2.5 rounded-xl bg-gray-100/50 dark:bg-gray-800/50 text-gray-400">
+          <Icon size={18} />
         </div>
-        <span className="font-bold text-gray-700 dark:text-gray-300 text-sm">{label}</span>
+        <span className="font-black text-gray-800 dark:text-gray-200 text-sm tracking-tight">{label}</span>
       </div>
       <select 
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-xl text-xs font-black border-none focus:ring-2 focus:ring-blue-500"
+        className="bg-gray-100/50 dark:bg-gray-800/50 px-4 py-2 rounded-2xl text-[11px] font-black border-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 dark:text-gray-300 transition-all appearance-none pr-8 relative"
+        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
       >
-        {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+        {options.map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
       </select>
     </div>
   );
@@ -1835,31 +1920,31 @@ export default function App() {
     <motion.div 
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className={`bg-gray-950 dark:bg-black text-white ${isCompact ? 'py-2' : 'py-3'} px-4 relative z-[60] border-b border-white/5 flex items-center justify-between ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-bold uppercase tracking-[0.2em]`}
+      className={`bg-white/80 dark:bg-black/80 backdrop-blur-md text-gray-900 dark:text-white ${isCompact ? 'py-2' : 'py-2.5'} px-5 relative z-[60] border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-black uppercase tracking-[0.25em] shadow-sm inner-glow`}
     >
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2 group cursor-default">
-          <Coins size={isCompact ? 10 : 12} className="text-blue-400/80 transition-transform group-hover:scale-110" />
-          <span className="flex items-center gap-1">{stats.total} <span className="text-gray-500 font-medium">Coins</span></span>
+      <div className="flex items-center gap-8">
+        <div className="flex items-center gap-2.5 group cursor-default">
+          <Coins size={isCompact ? 10 : 13} className="text-blue-500 transition-transform group-hover:scale-110" />
+          <span className="flex items-center gap-1.5">{stats.total} <span className="text-gray-400 dark:text-gray-500 font-bold">Coins</span></span>
         </div>
-        <div className="flex items-center gap-2 group cursor-default">
-          <Zap size={isCompact ? 10 : 12} className="text-amber-400/80 transition-transform group-hover:scale-110" />
-          <span className="flex items-center gap-1">{profile.points} <span className="text-gray-500 font-medium">XP</span></span>
+        <div className="flex items-center gap-2.5 group cursor-default">
+          <Zap size={isCompact ? 10 : 13} className="text-amber-500 transition-transform group-hover:scale-110" />
+          <span className="flex items-center gap-1.5">{profile.points} <span className="text-gray-400 dark:text-gray-500 font-bold">XP</span></span>
         </div>
       </div>
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className={`${isCompact ? 'w-12' : 'w-20'} h-1 bg-white/5 rounded-full overflow-hidden`}>
+      <div className="flex items-center gap-5">
+        <div className="flex items-center gap-3">
+          <div className={`${isCompact ? 'w-12' : 'w-24'} h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden shadow-inner`}>
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${progressToNextLevel}%` }}
-              className="h-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]"
+              className="h-full bg-gradient-to-r from-blue-400 to-blue-600 shadow-[0_0_12px_rgba(59,130,246,0.4)]"
             />
           </div>
-          <span className="text-blue-400 font-bold">{progressToNextLevel}%</span>
+          <span className="text-blue-600 dark:text-blue-400 font-black">{progressToNextLevel}%</span>
         </div>
-        <div className="w-px h-3 bg-white/10" />
-        <span className="text-gray-400 font-medium">{currentLevel.name}</span>
+        <div className="w-px h-3 bg-gray-200 dark:bg-white/10" />
+        <span className="text-gray-500 dark:text-gray-400 font-bold">{currentLevel.name}</span>
       </div>
     </motion.div>
   );
@@ -1867,31 +1952,35 @@ export default function App() {
   const renderHeader = () => (
     <>
       {profile.preferences.showTopSummary && renderSummaryBar()}
-      <header className={`bg-white dark:bg-gray-900 border-b border-gray-100/50 dark:border-gray-800/50 px-4 ${isCompact ? 'pt-6 pb-4' : 'pt-10 pb-8'} relative z-10 transition-colors`}>
-        <div className="max-w-md mx-auto">
+      <header className={`px-4 ${isCompact ? 'pt-6 pb-4' : 'pt-10 pb-8'} relative z-10 transition-colors overflow-hidden`}>
+        {/* Mesh background effect */}
+        <div className="absolute inset-0 mesh-gradient opacity-40 pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
+        
+        <div className="max-w-md mx-auto relative z-10">
           <div className={`flex items-center justify-between ${isCompact ? 'mb-4' : 'mb-8'}`}>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5">
               <motion.div 
                 whileHover={{ rotate: 5, scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`${isCompact ? 'w-10 h-10' : 'w-14 h-14'} bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/10 dark:shadow-none transition-transform`}
+                className={`${isCompact ? 'w-12 h-12' : 'w-16 h-16'} bg-gradient-to-br from-blue-500 to-blue-700 rounded-[1.75rem] flex items-center justify-center text-white shadow-2xl shadow-blue-500/30 dark:shadow-blue-900/20 transition-transform premium-border border border-blue-400/30 inner-glow`}
               >
-                <Star size={isCompact ? 20 : 28} className="fill-white" />
+                <Star size={isCompact ? 24 : 32} className="fill-white" />
               </motion.div>
               <div>
-                <h1 className={`${isCompact ? 'text-xl' : 'text-2xl'} font-black tracking-tight leading-none text-gray-900 dark:text-white`}>Coinly</h1>
+                <h1 className={`${isCompact ? 'text-2xl' : 'text-4xl'} font-black tracking-tighter leading-none text-gradient-blue`}>Coinly</h1>
                 {!profile.preferences.focusMode && (
-                  <div className="flex items-center gap-3 mt-2">
+                  <div className="flex items-center gap-4 mt-3">
                     <motion.div 
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/10 px-2.5 py-1 rounded-full border border-orange-100/50 dark:border-orange-800/20 cursor-default"
+                      className="flex items-center gap-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 dark:border-gray-700/30 shadow-sm cursor-default inner-glow"
                     >
-                      <Flame size={12} className="text-orange-500" />
-                      <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400">{profile.streak.current}</span>
+                      <Flame size={14} className="text-orange-500 fill-orange-500/20" />
+                      <span className="text-xs font-black text-orange-600 dark:text-orange-400 tracking-tight">{profile.streak.current}</span>
                     </motion.div>
                     <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full" />
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">{currentLevel.name}</p>
+                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.25em]">{currentLevel.name}</p>
                   </div>
                 )}
               </div>
@@ -1903,12 +1992,14 @@ export default function App() {
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLuckySpin}
                   disabled={isSpinning}
-                  className={`${isCompact ? 'p-2.5' : 'p-3'} rounded-2xl transition-all active:bg-gray-100 dark:active:bg-gray-800 ${
-                    isSpinning ? 'bg-gray-50 text-gray-300 animate-spin' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                  className={`${isCompact ? 'p-2.5' : 'p-3.5'} rounded-[1.25rem] transition-all relative overflow-hidden glass-button ${
+                    isSpinning 
+                      ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 animate-spin' 
+                      : 'text-blue-600 dark:text-blue-400 border border-white/20 dark:border-gray-800/50 shadow-sm'
                   }`}
                   title="Daily Lucky Spin"
                 >
-                  <Gift size={20} />
+                  <Gift size={22} />
                 </motion.button>
               )}
               <div className="flex gap-1">
@@ -1919,20 +2010,20 @@ export default function App() {
                       whileTap={{ scale: 0.95 }} 
                       id="refresh-app-btn" 
                       onClick={() => window.location.reload()} 
-                      className="p-3 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors active:bg-gray-100 dark:active:bg-gray-800 rounded-2xl" 
+                      className="p-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] glass-button border border-white/20 dark:border-gray-800/50 shadow-sm" 
                       title="Refresh App"
                     >
-                      <Clock size={20} />
+                      <Clock size={22} />
                     </motion.button>
                     <motion.button 
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }} 
                       id="export-data-btn" 
                       onClick={exportData} 
-                      className="p-3 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors active:bg-gray-100 dark:active:bg-gray-800 rounded-2xl" 
+                      className="p-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] glass-button border border-white/20 dark:border-gray-800/50 shadow-sm" 
                       title="Export Data"
                     >
-                      <Download size={20} />
+                      <Download size={22} />
                     </motion.button>
                   </>
                 )}
@@ -1942,14 +2033,15 @@ export default function App() {
 
           {!profile.preferences.focusMode && discoveryTip && (
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-[1.5rem] flex items-center gap-4 mb-6 border border-blue-100/50 dark:border-blue-800/20"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card p-5 rounded-[1.75rem] flex items-center gap-4 mb-8 border border-white/20 dark:border-gray-800/50 shadow-sm relative overflow-hidden inner-glow"
             >
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex-shrink-0 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                <Lightbulb size={20} />
+              <div className="absolute top-0 left-0 w-1 h-full bg-blue-600/30" />
+              <div className="w-11 h-11 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex-shrink-0 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-inner">
+                <Lightbulb size={22} />
               </div>
-              <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300 italic leading-snug">
+              <p className="text-[12px] font-bold text-gray-700 dark:text-gray-300 italic leading-relaxed tracking-tight">
                 "{discoveryTip}"
               </p>
             </motion.div>
@@ -1959,50 +2051,51 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl ${
+            className={`rounded-[3rem] p-9 text-white relative overflow-hidden shadow-2xl premium-shadow premium-border border inner-glow ${
               profile.preferences.textMode 
-                ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-none' 
-                : 'bg-gray-900 dark:bg-gray-800 shadow-blue-100/50 dark:shadow-none'
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 shadow-none' 
+                : 'bg-gray-900 dark:bg-gray-950 border-white/10 shadow-blue-500/10 dark:shadow-none'
             }`}
           >
             {!profile.preferences.textMode && (
               <>
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full -mr-32 -mt-32 blur-3xl animate-pulse" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-600/10 rounded-full -ml-24 -mb-24 blur-3xl" />
+                <div className="absolute top-0 right-0 w-72 h-72 bg-blue-600/20 rounded-full -mr-36 -mt-36 blur-3xl animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-56 h-56 bg-purple-600/10 rounded-full -ml-28 -mb-28 blur-3xl" />
+                <div className="absolute inset-0 bg-noise opacity-[0.03] pointer-events-none" />
               </>
             )}
             
             <div className="relative z-10">
-              <div className="flex justify-between items-start mb-8">
+              <div className="flex justify-between items-start mb-10">
                 <div>
-                  <p className={`text-[10px] font-black uppercase tracking-[0.25em] mb-2 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400'}`}>Current Rank</p>
-                  <h2 className={`text-4xl font-black tracking-tight ${profile.preferences.textMode ? '' : 'italic'}`}>{currentLevel.name}</h2>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-3 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400/80'}`}>Current Rank</p>
+                  <h2 className={`text-4xl font-black tracking-tighter ${profile.preferences.textMode ? '' : 'italic'}`}>{currentLevel.name}</h2>
                 </div>
                 <div className="text-right">
-                  <p className={`text-[10px] font-black uppercase tracking-[0.25em] mb-2 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400'}`}>Total Coins</p>
-                  <p className="text-4xl font-black tracking-tight">{stats.total}</p>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-3 ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-400/80'}`}>Total Coins</p>
+                  <p className="text-4xl font-black tracking-tighter">{stats.total}</p>
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex justify-between items-end">
-                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-200'}`}>Level Progress</p>
-                  <p className="text-xs font-black">{progressToNextLevel}%</p>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-200/80'}`}>Level Progress</p>
+                  <p className="text-xs font-black tracking-tight">{progressToNextLevel}%</p>
                 </div>
-                <div className={`h-3 rounded-full overflow-hidden ${profile.preferences.textMode ? 'bg-gray-200 dark:bg-gray-700' : 'bg-white/10'}`}>
+                <div className={`h-3.5 rounded-full overflow-hidden ${profile.preferences.textMode ? 'bg-gray-200 dark:bg-gray-700' : 'bg-white/10 shadow-inner'}`}>
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${progressToNextLevel}%` }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    className={`h-full rounded-full ${profile.preferences.textMode ? 'bg-blue-600' : 'bg-gradient-to-r from-blue-400 to-blue-600 shadow-[0_0_15px_rgba(96,165,250,0.5)]'}`}
+                    transition={{ duration: 1.5, ease: "circOut" }}
+                    className={`h-full rounded-full ${profile.preferences.textMode ? 'bg-blue-600' : 'bg-gradient-to-r from-blue-400 to-blue-600 shadow-[0_0_20px_rgba(96,165,250,0.6)]'}`}
                   />
                 </div>
-                <div className="flex justify-between items-center pt-1">
-                  <p className={`text-[9px] font-bold uppercase tracking-widest ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-300'}`}>
+                <div className="flex justify-between items-center pt-2">
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-300/60'}`}>
                     {profile.points} XP Total
                   </p>
                   {nextLevel && (
-                    <p className={`text-[9px] font-bold uppercase tracking-widest ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-300'}`}>
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${profile.preferences.textMode ? 'text-gray-400' : 'text-blue-300/60'}`}>
                       Next: {nextLevel.name}
                     </p>
                   )}
@@ -2017,89 +2110,94 @@ export default function App() {
 
   const renderTabs = () => {
     if (profile.preferences.showBottomMenu) return null;
+    const tabs = [
+      { id: 'collection', label: 'Collection', icon: LayoutGrid },
+      { id: 'library', label: 'Library', icon: ImageIcon },
+      { id: 'stats', label: 'Stats', icon: PieChart },
+      { id: 'profile', label: 'Profile', icon: User },
+    ];
+
     return (
-      <div className="flex bg-gray-200/30 dark:bg-gray-800/30 p-1.5 rounded-2xl mb-8 overflow-x-auto no-scrollbar border border-gray-100/50 dark:border-gray-800/50">
-        <button
-          onClick={() => setActiveTab('collection')}
-          className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-[11px] font-bold uppercase tracking-[0.15em] transition-all whitespace-nowrap active:bg-gray-100 dark:active:bg-gray-800 ${
-            activeTab === 'collection' ? 'bg-white dark:bg-gray-900 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
-          }`}
-        >
-          <LayoutGrid size={16} />
-          Collection
-        </button>
-        <button
-          onClick={() => setActiveTab('library')}
-          className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-[11px] font-bold uppercase tracking-[0.15em] transition-all whitespace-nowrap active:bg-gray-100 dark:active:bg-gray-800 ${
-            activeTab === 'library' ? 'bg-white dark:bg-gray-900 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
-          }`}
-        >
-          <ImageIcon size={16} />
-          Library
-        </button>
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-[11px] font-bold uppercase tracking-[0.15em] transition-all whitespace-nowrap active:bg-gray-100 dark:active:bg-gray-800 ${
-            activeTab === 'stats' ? 'bg-white dark:bg-gray-900 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
-          }`}
-        >
-          <PieChart size={16} />
-          Stats
-        </button>
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-[11px] font-bold uppercase tracking-[0.15em] transition-all whitespace-nowrap active:bg-gray-100 dark:active:bg-gray-800 ${
-            activeTab === 'profile' ? 'bg-white dark:bg-gray-900 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
-          }`}
-        >
-          <User size={16} />
-          Profile
-        </button>
+      <div className="max-w-md mx-auto mb-10 px-4">
+        <div className="flex glass-card p-1.5 rounded-[2.25rem] premium-border border border-white/20 dark:border-gray-800/50 shadow-xl premium-shadow relative overflow-hidden inner-glow">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 relative flex items-center justify-center gap-2.5 py-3.5 px-2 rounded-[1.75rem] text-[10px] font-black uppercase tracking-[0.15em] transition-colors z-10 ${
+                  isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabIndicator"
+                    className="absolute inset-0 bg-white dark:bg-gray-900 rounded-[1.75rem] shadow-sm border border-white/20 dark:border-gray-800/30 z-[-1] inner-glow"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <Icon size={16} className={isActive ? 'fill-blue-600/10' : ''} />
+                <span className="hidden xs:inline">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   };
 
   const renderBottomMenu = () => {
     if (!profile.preferences.showBottomMenu) return null;
+    const menuItems = [
+      { id: 'collection', label: 'Home', icon: LayoutGrid },
+      { id: 'library', label: 'Library', icon: ImageIcon },
+      { id: 'stats', label: 'Stats', icon: PieChart },
+      { id: 'profile', label: 'Profile', icon: User },
+    ];
+
     return (
-      <nav className={`fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-100/50 dark:border-gray-800/50 px-6 ${isCompact ? 'py-3 pb-6' : 'py-4 pb-10 sm:pb-4'} z-40 flex items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.04)]`}>
-        <button
-          onClick={() => setActiveTab('collection')}
-          className={`flex flex-col items-center gap-1.5 transition-all active:scale-95 ${
-            activeTab === 'collection' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
-          }`}
-        >
-          <LayoutGrid size={isCompact ? 20 : 22} className={activeTab === 'collection' ? 'fill-blue-600/10' : ''} />
-          <span className="text-[9px] font-bold uppercase tracking-[0.2em]">Home</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('library')}
-          className={`flex flex-col items-center gap-1.5 transition-all active:scale-95 ${
-            activeTab === 'library' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
-          }`}
-        >
-          <ImageIcon size={isCompact ? 20 : 22} className={activeTab === 'library' ? 'fill-blue-600/10' : ''} />
-          <span className="text-[9px] font-bold uppercase tracking-[0.2em]">Library</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={`flex flex-col items-center gap-1.5 transition-all active:scale-95 ${
-            activeTab === 'stats' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
-          }`}
-        >
-          <PieChart size={isCompact ? 20 : 22} className={activeTab === 'stats' ? 'fill-blue-600/10' : ''} />
-          <span className="text-[9px] font-bold uppercase tracking-[0.2em]">Stats</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`flex flex-col items-center gap-1.5 transition-all active:scale-95 ${
-            activeTab === 'profile' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
-          }`}
-        >
-          <User size={isCompact ? 20 : 22} className={activeTab === 'profile' ? 'fill-blue-600/10' : ''} />
-          <span className="text-[9px] font-bold uppercase tracking-[0.2em]">Profile</span>
-        </button>
-      </nav>
+      <div className="fixed bottom-6 left-0 right-0 z-40 px-6 pointer-events-none">
+        <nav className="max-w-md mx-auto glass-card border border-white/20 dark:border-gray-800/50 px-6 py-3 rounded-[2.5rem] flex items-center justify-around shadow-2xl premium-shadow premium-border inner-glow pointer-events-auto relative overflow-hidden">
+          {/* Subtle background glow for active item */}
+          <div className="absolute inset-0 bg-gradient-to-t from-blue-500/5 to-transparent pointer-events-none" />
+          
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <motion.button
+                key={item.id}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setActiveTab(item.id as any)}
+                className={`flex flex-col items-center gap-1.5 transition-all relative py-1 ${
+                  isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                }`}
+              >
+                <div className="relative">
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeBottomIndicator"
+                      className="absolute -inset-2 bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-md"
+                    />
+                  )}
+                  <Icon size={isActive ? 24 : 22} className={`transition-all ${isActive ? 'fill-blue-600/10' : ''}`} />
+                </div>
+                <span className={`text-[9px] font-black uppercase tracking-[0.2em] transition-all ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <motion.div 
+                    layoutId="activeBottomDot"
+                    className="w-1 h-1 bg-blue-600 dark:bg-blue-400 rounded-full absolute -bottom-1"
+                  />
+                )}
+              </motion.button>
+            );
+          })}
+        </nav>
+      </div>
     );
   };
 
@@ -2176,7 +2274,10 @@ export default function App() {
 
   return (
     <ErrorBoundary onExport={exportData}>
-      <div className={`min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans transition-colors ${profile.preferences.showBottomMenu ? 'pb-24' : 'pb-12'}`}>
+      <div className={`min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans transition-colors relative ${profile.preferences.showBottomMenu ? 'pb-24' : 'pb-12'}`}>
+        {/* Global Texture Overlay */}
+        <div className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-50 bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
+        
         <input 
           type="file" 
           ref={importInputRef} 
@@ -2208,7 +2309,7 @@ export default function App() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search collection..."
-                    className={`w-full pl-11 pr-4 ${isCompact ? 'py-2.5' : 'py-3'} bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 transition-all shadow-sm`}
+                    className={`w-full pl-11 pr-4 ${isCompact ? 'py-3' : 'py-4'} glass-card rounded-[1.5rem] border-none focus:ring-2 focus:ring-blue-500/50 transition-all soft-shadow placeholder:text-gray-400 font-medium`}
                   />
                   {searchQuery && (
                     <button 
@@ -2272,19 +2373,20 @@ export default function App() {
 
                 {/* Add Button / Form */}
                 {!isAdding ? (
-                    <motion.button
-                      id="add-coin-btn"
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        if (selectedFolderId !== 'all') {
-                          setNewFolderId(selectedFolderId);
-                        }
-                        setIsAdding(true);
-                      }}
-                      className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 dark:shadow-none"
-                    >
-                      <Plus size={20} /> {profile.preferences.quickAddMode ? 'Quick Add' : 'Add New Coin'}
-                    </motion.button>
+                      <motion.button
+                        id="add-coin-btn"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          if (selectedFolderId !== 'all') {
+                            setNewFolderId(selectedFolderId);
+                          }
+                          setIsAdding(true);
+                        }}
+                        className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 active:bg-blue-700 transition-colors"
+                      >
+                        <Plus size={22} /> {profile.preferences.quickAddMode ? 'Quick Add' : 'Add New Coin'}
+                      </motion.button>
                 ) : (
                   <motion.form
                     id="add-coin-form"
@@ -2580,14 +2682,14 @@ export default function App() {
                           key={coin.id}
                           initial={{ opacity: 0, y: 12 }}
                           animate={{ opacity: 1, y: 0 }}
-                          whileHover={{ scale: 1.005 }}
+                          whileHover={{ scale: 1.01, y: -2 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => openCoin(coin)}
-                          className={`bg-white dark:bg-gray-900 rounded-[1.5rem] border transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden active:bg-gray-50 dark:active:bg-gray-800/50 ${
-                            isCompact ? 'p-3' : 'p-5'
+                          className={`glass-card rounded-[2rem] premium-border transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden soft-shadow active:bg-white/80 dark:active:bg-black/60 ${
+                            isCompact ? 'p-4' : 'p-6'
                           } ${
-                            coin.rarity === 'Very Rare' ? 'border-amber-400/20 bg-amber-50/20 dark:bg-amber-900/5 shadow-sm' : 
-                            coin.rarity === 'Rare' ? 'border-blue-400/20 bg-blue-50/20 dark:bg-blue-900/5 shadow-sm' : 'border-gray-100/80 dark:border-gray-800/80 shadow-sm'
+                            coin.rarity === 'Very Rare' ? 'ring-1 ring-amber-400/30 bg-amber-50/30 dark:bg-amber-900/10' : 
+                            coin.rarity === 'Rare' ? 'ring-1 ring-blue-400/30 bg-blue-50/30 dark:bg-blue-900/10' : ''
                           }`}
                         >
                           <div className="flex items-center gap-4">
@@ -2891,31 +2993,32 @@ export default function App() {
               >
                 {/* Profile Card */}
                 {profile.preferences.showProgressCard && (
-                  <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-5 mb-2">
-                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-blue-200 dark:shadow-none">
+                  <div className="glass-card p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 soft-shadow premium-border flex items-center gap-6 mb-2">
+                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[1.75rem] flex items-center justify-center text-white shadow-xl shadow-blue-200/50 dark:shadow-none">
                       <User size={40} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-2xl font-black tracking-tight">{profile.name}</h3>
+                      <h3 className="text-2xl font-black tracking-tight text-gray-800 dark:text-gray-100">{profile.name}</h3>
                       {profile.preferences.showRankSystem && (
                         <>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{currentLevel.name} Collector</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">{currentLevel.name} Collector</p>
                             {nextLevel && (
-                              <span className="text-[10px] font-bold text-gray-400">Level {LEVELS.indexOf(currentLevel) + 1}</span>
+                              <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 leading-none">Level {LEVELS.indexOf(currentLevel) + 1}</span>
                             )}
                           </div>
                           {nextLevel && (
-                            <div className="mt-2">
-                              <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">
-                                <span>Progress to {nextLevel.name}</span>
+                            <div className="mt-3">
+                              <div className="flex justify-between text-[10px] font-black text-gray-400 dark:text-gray-500 mb-1.5 uppercase tracking-widest">
+                                <span>Next: {nextLevel.name}</span>
                                 <span>{Math.round(progressToNextLevel)}%</span>
                               </div>
-                              <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                              <div className="h-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-full overflow-hidden">
                                 <motion.div 
                                   initial={{ width: 0 }}
                                   animate={{ width: `${progressToNextLevel}%` }}
-                                  className="h-full bg-blue-500 rounded-full"
+                                  transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+                                  className="h-full bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                                 />
                               </div>
                             </div>
@@ -2928,36 +3031,40 @@ export default function App() {
 
                 {/* Collector Stats Grid */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Value</p>
-                    <p className="text-2xl font-black text-green-600 dark:text-green-400">£{stats.totalSpend.toFixed(2)}</p>
+                  <div className="glass-card p-5 rounded-[2rem] border border-gray-100 dark:border-gray-800 soft-shadow premium-border">
+                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Total Value</p>
+                    <p className="text-2xl font-black text-green-600 dark:text-green-400 tracking-tight">£{stats.totalSpend.toFixed(2)}</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Points</p>
-                    <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{profile.points}</p>
+                  <div className="glass-card p-5 rounded-[2rem] border border-gray-100 dark:border-gray-800 soft-shadow premium-border">
+                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Total Points</p>
+                    <p className="text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tight">{profile.points}</p>
                   </div>
                 </div>
 
                 {/* Collector Identity & Timeline Section */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {profile.preferences.showCollectorCard && (
-                    <button 
+                    <motion.button 
+                      whileHover={{ scale: 1.02, y: -2 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setShowCollectorCard(true)}
-                      className="p-5 bg-blue-600 text-white rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform"
+                      className="p-6 bg-blue-600 text-white rounded-[2rem] font-black text-sm flex flex-col items-center justify-center gap-3 shadow-xl shadow-blue-200/50 dark:shadow-none active:scale-95 transition-all"
                     >
-                      <User size={24} />
-                      <span>Identity Card</span>
-                    </button>
+                      <User size={28} />
+                      <span className="tracking-tight">Identity Card</span>
+                    </motion.button>
                   )}
-                  <button 
+                  <motion.button 
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setShowTimeline(true)}
-                    className={`p-5 rounded-3xl font-black text-sm flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform ${
-                      profile.preferences.showCollectorCard ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 shadow-sm' : 'col-span-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 shadow-sm'
+                    className={`p-6 rounded-[2rem] font-black text-sm flex flex-col items-center justify-center gap-3 shadow-xl active:scale-95 transition-all ${
+                      profile.preferences.showCollectorCard ? 'glass-card text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 soft-shadow premium-border' : 'col-span-2 glass-card text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 soft-shadow premium-border'
                     }`}
                   >
-                    <History size={24} className="text-blue-600" />
-                    <span>Timeline Hub</span>
-                  </button>
+                    <History size={28} className="text-blue-600" />
+                    <span className="tracking-tight">Timeline Hub</span>
+                  </motion.button>
                 </div>
 
                 {/* Hidden Settings (Unlocked via Milestones) */}
@@ -3316,23 +3423,23 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+              className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
               onClick={() => setSelectedCoin(null)}
             >
               <motion.div
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
-                className="bg-white dark:bg-gray-900 w-full max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden max-h-[90vh] flex flex-col border-t sm:border border-gray-100 dark:border-gray-800"
+                className="glass-card w-full max-w-md rounded-t-[3rem] sm:rounded-[3rem] overflow-hidden max-h-[90vh] flex flex-col premium-border soft-shadow"
                 onClick={e => e.stopPropagation()}
               >
                 <div className={`relative h-80 flex-shrink-0 flex items-center justify-center overflow-hidden ${
-                  selectedCoin.rarity === 'Very Rare' ? 'bg-amber-50 dark:bg-amber-900/10' :
-                  selectedCoin.rarity === 'Rare' ? 'bg-blue-50 dark:bg-blue-900/10' : 'bg-gray-100 dark:bg-gray-800'
+                  selectedCoin.rarity === 'Very Rare' ? 'bg-amber-50/50 dark:bg-amber-900/10' :
+                  selectedCoin.rarity === 'Rare' ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'bg-gray-100/50 dark:bg-gray-800/50'
                 }`}>
                   {/* Subtle Glow for Rare Coins */}
                   {(selectedCoin.rarity === 'Rare' || selectedCoin.rarity === 'Very Rare') && (
-                    <div className={`absolute inset-0 blur-3xl opacity-30 ${
+                    <div className={`absolute inset-0 blur-[100px] opacity-40 ${
                       selectedCoin.rarity === 'Very Rare' ? 'bg-amber-400' : 'bg-blue-400'
                     }`} />
                   )}
@@ -3344,6 +3451,7 @@ export default function App() {
                       src={selectedCoin.image} 
                       alt={selectedCoin.name} 
                       className="w-full h-full object-cover relative z-10" 
+                      referrerPolicy="no-referrer"
                     />
                   ) : (
                     <motion.div 
@@ -3358,25 +3466,26 @@ export default function App() {
                     </motion.div>
                   )}
                   <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white dark:from-gray-900 to-transparent z-20" />
-                  <button 
+                  <motion.button 
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => setSelectedCoin(null)}
-                    className="absolute top-6 right-6 w-12 h-12 bg-black/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform z-30"
+                    className="absolute top-6 right-6 w-12 h-12 bg-black/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all z-30 border border-white/20"
                   >
                     <X size={24} />
-                  </button>
+                  </motion.button>
                 </div>
 
-                <div className="px-8 pb-10 overflow-y-auto relative z-30">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="px-8 pb-10 overflow-y-auto relative z-30 custom-scrollbar">
+                  <div className="flex items-center justify-between mb-4 mt-2">
                     <div className="flex gap-2">
-                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 premium-border ${
                         selectedCoin.rarity === 'Very Rare' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
                         selectedCoin.rarity === 'Rare' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                       }`}>
                         {selectedCoin.rarity !== 'Common' && <Star size={10} className="fill-current" />}
                         {selectedCoin.rarity}
                       </span>
-                      <span className="px-4 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                      <span className="px-4 py-1.5 rounded-full bg-gray-100/50 dark:bg-gray-800/50 text-[10px] font-black uppercase tracking-widest text-gray-500 premium-border">
                         {selectedCoin.year}
                       </span>
                     </div>
@@ -3388,9 +3497,9 @@ export default function App() {
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-[2rem] mb-8 border border-amber-100 dark:border-amber-800 relative group"
+                      className="bg-amber-50/50 dark:bg-amber-900/20 p-6 rounded-[2.5rem] mb-8 border border-amber-100 dark:border-amber-800/50 relative group soft-shadow"
                     >
-                      <div className="absolute -top-2 -left-2 w-8 h-8 bg-amber-600 rounded-lg flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
+                      <div className="absolute -top-2 -left-2 w-8 h-8 bg-amber-600 rounded-xl flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
                         <Lightbulb size={16} />
                       </div>
                       <p className="text-amber-800 dark:text-amber-400 leading-relaxed font-bold italic text-sm">
@@ -3402,7 +3511,7 @@ export default function App() {
                   {selectedCoin.tags && selectedCoin.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-6">
                       {selectedCoin.tags.map(tag => (
-                        <span key={tag} className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-blue-100 dark:border-blue-800/50">
+                        <span key={tag} className="bg-blue-50/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-blue-100 dark:border-blue-800/50">
                           <Tag size={10} />
                           {tag}
                         </span>
@@ -3410,50 +3519,38 @@ export default function App() {
                     </div>
                   )}
 
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-[2rem] mb-8 border border-gray-100 dark:border-gray-800 relative group">
-                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
+                  <div className="bg-gray-50/50 dark:bg-gray-800/30 p-6 rounded-[2.5rem] mb-8 border border-gray-100 dark:border-gray-800/50 relative group soft-shadow">
+                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
                       <Info size={16} />
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-bold italic text-lg line-clamp-3">
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-bold italic text-lg line-clamp-4">
                       "{selectedCoin.summary || 'No summary provided.'}"
                     </p>
                   </div>
 
-                  {/* Clue Display */}
-                  {CLUE_MAP[selectedCoin.name] && (
-                    <div className="mb-8 p-6 bg-amber-50 dark:bg-amber-900/20 rounded-[2rem] border border-amber-100 dark:border-amber-900/30 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-20 h-20 bg-amber-400/10 rounded-full -mr-10 -mt-10 blur-2xl" />
-                      <div className="flex items-center gap-3 text-amber-800 dark:text-amber-400 font-black text-xs uppercase tracking-widest mb-3">
-                        <Search size={14} />
-                        <span>Hidden Clue Found</span>
-                      </div>
-                      <p className="text-amber-900 dark:text-amber-300 font-bold italic leading-relaxed">
-                        "{CLUE_MAP[selectedCoin.name]}"
-                      </p>
-                    </div>
-                  )}
-
                   <div className="grid grid-cols-2 gap-4 mb-10">
-                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Denomination</p>
-                      <p className="font-black text-2xl text-gray-800 dark:text-gray-100">{selectedCoin.type}</p>
+                    <div className="glass-card p-5 rounded-[2rem] premium-border soft-shadow">
+                      <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Denomination</p>
+                      <p className="font-black text-2xl text-gray-800 dark:text-gray-100 tracking-tight">{selectedCoin.type}</p>
                     </div>
-                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Investment</p>
-                      <p className="font-black text-2xl text-green-600 dark:text-green-400">£{selectedCoin.amountPaid?.toFixed(2)}</p>
+                    <div className="glass-card p-5 rounded-[2rem] premium-border soft-shadow">
+                      <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Investment</p>
+                      <p className="font-black text-2xl text-green-600 dark:text-green-400 tracking-tight">£{selectedCoin.amountPaid?.toFixed(2)}</p>
                     </div>
                   </div>
 
                   <div className="flex gap-4">
                     <motion.button 
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: 1.02, y: -2 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => startEdit(selectedCoin)}
-                      className="flex-1 py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-3xl font-black text-lg shadow-xl active:scale-95 transition-transform"
+                      className="flex-1 py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-[2rem] font-black text-lg shadow-2xl active:scale-95 transition-all"
                     >
                       Edit Details
                     </motion.button>
                     <motion.button 
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: 1.02, y: -2 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => {
                         setConfirmModal({
                           title: 'Delete Coin',
@@ -3461,7 +3558,7 @@ export default function App() {
                           onConfirm: () => deleteCoin(selectedCoin.id)
                         });
                       }}
-                      className="w-20 py-5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-3xl font-black flex items-center justify-center active:scale-95 transition-transform"
+                      className="w-20 py-5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-[2rem] font-black flex items-center justify-center active:scale-95 transition-all border border-red-100 dark:border-red-900/30"
                     >
                       <Trash2 size={24} />
                     </motion.button>

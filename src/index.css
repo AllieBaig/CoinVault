@@ -30,39 +30,91 @@ body {
 
 /* --- Texture Themes --- */
 
-/* Paper Theme */
+/* Paper Theme: Refined with subtle noise and soft lighting */
 .theme-paper {
   background-color: #fdfaf6;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(255,255,255,0.5) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
-/* Glass Theme */
+/* Glass Theme: Premium frosted look with deep gradients */
 .theme-glass {
-  background: linear-gradient(135deg, #e0e7ff 0%, #f3f4f6 100%);
+  background: linear-gradient(165deg, #f8fafc 0%, #e2e8f0 40%, #cbd5e1 100%);
   background-attachment: fixed;
 }
 
-/* Wood Theme */
+/* Wood Theme: Realistic grain and warm lighting */
 .theme-wood {
   background-color: #f5e6d3;
-  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h100v100H0z' fill='%23f5e6d3'/%3E%3Cpath d='M10 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30M30 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30M50 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30M70 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30M90 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30' stroke='%23d2b48c' stroke-width='0.5' fill='none' opacity='0.3'/%3E%3C/svg%3E");
+  background-image: 
+    radial-gradient(at 50% 0%, rgba(255,255,255,0.3) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h100v100H0z' fill='%23f5e6d3'/%3E%3Cpath d='M10 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30M30 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30M50 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30M70 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30M90 0c5 10 5 20 0 30s-5 20 0 30 5 20 0 30' stroke='%23d2b48c' stroke-width='0.4' fill='none' opacity='0.25'/%3E%3C/svg%3E");
 }
 
-/* Metal Theme */
+/* Metal Theme: Brushed finish with specular highlights */
 .theme-metal {
-  background-color: #d1d5db;
+  background-color: #e2e8f0;
   background-image: 
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 2px),
-    linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%);
+    linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(0,0,0,0.05) 100%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 2px);
 }
 
-/* Fabric Theme */
+/* Fabric Theme: Tactile weave and soft shadows */
 .theme-fabric {
-  background-color: #e5e7eb;
+  background-color: #f1f5f9;
   background-image: 
-    linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px),
-    linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
-  background-size: 4px 4px;
+    radial-gradient(at 0% 0%, rgba(255,255,255,0.4) 0%, transparent 50%),
+    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 4px 4px, 4px 4px;
+}
+
+/* --- Premium UI Utilities --- */
+
+.glass-card {
+  @apply bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm;
+}
+
+.dark .glass-card {
+  @apply bg-black/40 backdrop-blur-xl border-white/10 shadow-lg;
+}
+
+.soft-shadow {
+  box-shadow: 
+    0 2px 4px rgba(0,0,0,0.02),
+    0 10px 20px rgba(0,0,0,0.04);
+}
+
+.premium-border {
+  @apply border border-gray-100/50 dark:border-white/5;
+}
+
+.mesh-gradient {
+  background: 
+    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(147, 51, 234, 0.15) 0%, transparent 50%);
+}
+
+.inner-glow {
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.text-gradient-blue {
+  @apply bg-clip-text text-transparent bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-400 dark:to-blue-600;
+}
+
+.premium-shadow {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 20px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+.glass-button {
+  @apply glass-card hover:bg-white/80 dark:hover:bg-white/10 transition-all duration-300 active:scale-95;
 }
 
 /* Theme Overrides for Components */
@@ -72,43 +124,43 @@ body {
 .theme-glass .bg-gray-50,
 .theme-glass .bg-gray-100,
 .theme-glass .bg-blue-50 {
-  @apply bg-white/40 backdrop-blur-md border-white/50;
+  @apply bg-white/40 backdrop-blur-lg border-white/60 shadow-sm;
 }
 
 .theme-glass .dark .bg-gray-900,
 .theme-glass .dark .bg-black,
 .theme-glass .dark .bg-gray-800 {
-  @apply bg-black/40 backdrop-blur-md border-white/10;
+  @apply bg-black/40 backdrop-blur-lg border-white/10 shadow-xl;
 }
 
 /* Paper Theme Overrides */
 .theme-paper .bg-white,
 .theme-paper .bg-gray-50,
 .theme-paper .bg-gray-100 {
-  background-color: rgba(255, 255, 255, 0.7);
-  @apply border-gray-200/50;
+  background-color: rgba(255, 255, 255, 0.75);
+  @apply border-orange-100/30 shadow-sm;
 }
 
 /* Wood Theme Overrides */
 .theme-wood .bg-white,
 .theme-wood .bg-gray-50,
 .theme-wood .bg-gray-100 {
-  background-color: rgba(255, 255, 255, 0.6);
-  @apply border-amber-200/30;
+  background-color: rgba(255, 255, 255, 0.65);
+  @apply border-amber-200/20 shadow-sm;
 }
 
 /* Metal Theme Overrides */
 .theme-metal .bg-white,
 .theme-metal .bg-gray-50,
 .theme-metal .bg-gray-100 {
-  background-color: rgba(255, 255, 255, 0.8);
-  @apply border-gray-300/50;
+  background-color: rgba(255, 255, 255, 0.85);
+  @apply border-slate-300/30 shadow-sm;
 }
 
 /* Fabric Theme Overrides */
 .theme-fabric .bg-white,
 .theme-fabric .bg-gray-50,
 .theme-fabric .bg-gray-100 {
-  background-color: rgba(255, 255, 255, 0.7);
-  @apply border-gray-200/50;
+  background-color: rgba(255, 255, 255, 0.75);
+  @apply border-slate-200/40 shadow-sm;
 }
