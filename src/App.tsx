@@ -12,7 +12,8 @@ import {
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
   Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp,
   Share2, Columns, History, Lightbulb, Coins, Shield, Database, Layout,
-  Monitor, Smartphone, Activity, Award, Palette, Gauge, Layers, Moon
+  Monitor, Smartphone, Activity, Award, Palette, Gauge, Layers, Moon,
+  BookOpen, Puzzle, PlayCircle
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 import LZString from 'lz-string';
@@ -284,6 +285,7 @@ const TIMELINES: Timeline[] = [
 const GAME_MODES: GameMode[] = [
   { id: 'era-conquest', title: 'Era Conquest Mode', description: 'Conquer history by collecting coins from every era.', icon: History },
   { id: 'timeline-explorer', title: 'Timeline Explorer', description: 'Journey through historical and fictional coin stories.', icon: Clock },
+  { id: 'timeline-puzzle', title: 'Timeline Puzzle', description: 'Reconstruct broken timelines to earn massive XP rewards.', icon: Puzzle },
   { id: 'mint-mark-detective', title: 'Mint Mark Detective', description: 'Decode the secret language of mint marks.', icon: Search },
   { id: 'my-coin-story', title: 'My Coin Story', description: 'Generate a personal timeline from your own collection.', icon: User },
 ];
@@ -508,6 +510,7 @@ export default function App() {
         lastSpinDate: parsed.lastSpinDate ?? 0,
         unlockedMilestones: parsed.unlockedMilestones ?? [],
         lastTimelineId: parsed.lastTimelineId,
+        lastStoryItemId: parsed.lastStoryItemId,
         timelineProgress: parsed.timelineProgress ?? {},
         timelineStreak: parsed.timelineStreak ?? 0,
         lastTimelineExplorationDate: parsed.lastTimelineExplorationDate ?? 0,
@@ -574,7 +577,7 @@ export default function App() {
     };
   });
 
-  const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'modes' | 'stats' | 'profile'>('collection');
+  const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'story' | 'stats' | 'profile'>('collection');
   const [activeGameMode, setActiveGameMode] = useState<string | null>(null);
   const [unlockedFolders, setUnlockedFolders] = useState<string[]>([]);
   const [newTags, setNewTags] = useState<string[]>([]);
@@ -2207,7 +2210,7 @@ export default function App() {
     if (profile.preferences.showBottomMenu) return null;
     const tabs = [
       { id: 'collection', label: 'Collection', icon: LayoutGrid },
-      { id: 'modes', label: 'Modes', icon: Trophy },
+      { id: 'story', label: 'Story', icon: BookOpen },
       { id: 'library', label: 'Library', icon: ImageIcon },
       { id: 'stats', label: 'Stats', icon: PieChart },
       { id: 'profile', label: 'Profile', icon: User },
@@ -2248,7 +2251,7 @@ export default function App() {
     if (!profile.preferences.showBottomMenu) return null;
     const menuItems = [
       { id: 'collection', label: 'Home', icon: LayoutGrid },
-      { id: 'modes', label: 'Modes', icon: Trophy },
+      { id: 'story', label: 'Story', icon: BookOpen },
       { id: 'library', label: 'Library', icon: ImageIcon },
       { id: 'stats', label: 'Stats', icon: PieChart },
       { id: 'profile', label: 'Profile', icon: User },
@@ -2469,60 +2472,285 @@ export default function App() {
     );
   };
 
-  const renderGameModesHub = () => {
+  const renderTimelinePuzzle = () => {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="max-w-md mx-auto px-4 pb-24"
+      >
+        <div className="flex items-center gap-4 mb-10">
+          <motion.button 
+            whileHover={{ scale: 1.1, x: -4 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setActiveGameMode(null)}
+            className="w-12 h-12 glass-button rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors premium-border border border-white/20 dark:border-gray-800/50"
+          >
+            <ChevronLeft size={24} />
+          </motion.button>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight text-gradient-blue leading-tight">Timeline Puzzle</h2>
+            <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-1">Reconstruct History</p>
+          </div>
+        </div>
+
+        <div className="glass-card p-10 rounded-[3rem] premium-shadow premium-border border inner-glow relative overflow-hidden text-center">
+          <div className="w-24 h-24 bg-blue-50 dark:bg-blue-900/20 rounded-[2rem] flex items-center justify-center text-blue-600 dark:text-blue-400 mx-auto mb-8 shadow-inner">
+            <Puzzle size={48} />
+          </div>
+          <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-4">Broken Timelines</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-10">
+            The historical record has been fragmented. Drag and drop events into their correct chronological order to restore the timeline and earn massive XP.
+          </p>
+          
+          <div className="space-y-4 mb-10">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-16 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-300 font-bold text-xs uppercase tracking-widest">
+                Slot {i}
+              </div>
+            ))}
+          </div>
+
+          <button 
+            onClick={() => setFeedback({ message: 'Puzzle Mode coming in next update!', type: 'info' })}
+            className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-blue-500/30 active:scale-95 transition-all"
+          >
+            Start Solving
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const renderStoryMode = () => {
     if (activeGameMode === 'era-conquest') return renderEraConquest();
+    if (activeGameMode === 'timeline-puzzle') return renderTimelinePuzzle();
     
+    const popularTimelines = allAvailableTimelines.filter(t => t.category === 'Popular');
+    const newTimelines = allAvailableTimelines.filter(t => t.category === 'New');
+    const allTimelines = allAvailableTimelines;
+
+    const isTimelineLocked = (timeline: Timeline) => {
+      if (!timeline.unlockCriteria) return false;
+      const { coins: reqCoins, xp: reqXp, timelineId: reqTimelineId } = timeline.unlockCriteria;
+      if (reqCoins && coins.length < reqCoins) return true;
+      if (reqXp && profile.points < reqXp) return true;
+      if (reqTimelineId) {
+        const targetTimeline = allAvailableTimelines.find(t => t.id === reqTimelineId);
+        const progress = profile.timelineProgress[reqTimelineId] || 0;
+        if (!targetTimeline || progress < targetTimeline.events.length - 1) return true;
+      }
+      return false;
+    };
+
+    const getUnlockMessage = (timeline: Timeline) => {
+      if (!timeline.unlockCriteria) return '';
+      const { coins: reqCoins, xp: reqXp, timelineId: reqTimelineId } = timeline.unlockCriteria;
+      if (reqCoins && coins.length < reqCoins) return `Add ${reqCoins} coins to unlock`;
+      if (reqXp && profile.points < reqXp) return `Reach ${reqXp} XP to unlock`;
+      if (reqTimelineId) {
+        const target = allAvailableTimelines.find(t => t.id === reqTimelineId);
+        return `Complete "${target?.title}" to unlock`;
+      }
+      return 'Locked';
+    };
+
+    const renderStoryCard = (item: Timeline | GameMode, type: 'timeline' | 'mode') => {
+      const isTimeline = type === 'timeline';
+      const timeline = isTimeline ? item as Timeline : null;
+      const mode = !isTimeline ? item as GameMode : null;
+      
+      const id = item.id;
+      const title = item.title;
+      const description = item.description;
+      const Icon = !isTimeline ? (item as GameMode).icon : Clock;
+
+      let progress = 0;
+      let total = 1;
+      let percent = 0;
+      let locked = false;
+      let unlockMsg = '';
+
+      if (isTimeline && timeline) {
+        progress = profile.timelineProgress[id] || 0;
+        total = timeline.events.length;
+        percent = total > 1 ? Math.round((progress / (total - 1)) * 100) : (progress === 0 ? 0 : 100);
+        locked = isTimelineLocked(timeline);
+        unlockMsg = getUnlockMessage(timeline);
+      } else if (mode) {
+        if (mode.id === 'era-conquest') {
+          const erasProgress = ERAS.map(era => getEraProgress(era));
+          const totalChallenges = erasProgress.reduce((acc, curr) => acc + curr.totalCount, 0);
+          const completedChallenges = erasProgress.reduce((acc, curr) => acc + curr.completedCount, 0);
+          progress = completedChallenges;
+          total = totalChallenges;
+          percent = Math.round((progress / total) * 100);
+        }
+        locked = mode.isLocked || false;
+        unlockMsg = mode.unlockCriteria || 'Locked';
+      }
+
+      const isActive = profile.lastStoryItemId === id || profile.lastTimelineId === id;
+
+      return (
+        <motion.button
+          key={id}
+          whileHover={locked ? {} : { scale: 1.02, y: -4 }}
+          whileTap={locked ? {} : { scale: 0.98 }}
+          onClick={() => {
+            if (locked) {
+              setFeedback({ message: unlockMsg, type: 'info' });
+              return;
+            }
+            setProfile(prev => ({ ...prev, lastStoryItemId: id }));
+            if (isTimeline) {
+              setSelectedTimelineId(id);
+              setShowTimeline(true);
+            } else if (mode) {
+              if (mode.id === 'timeline-explorer') {
+                setShowTimeline(true);
+                setSelectedTimelineId(null);
+              } else if (mode.id === 'my-coin-story') {
+                setShowTimeline(true);
+                setSelectedTimelineId('my-coin-story');
+              } else {
+                setActiveGameMode(mode.id);
+              }
+            }
+          }}
+          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden premium-shadow premium-border border inner-glow ${
+            locked
+              ? 'bg-gray-100/40 dark:bg-gray-800/40 text-gray-400 cursor-not-allowed border-gray-200/30 dark:border-gray-700/30'
+              : isActive 
+                ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-2xl shadow-blue-500/40 border-blue-400/30' 
+                : 'glass-card text-gray-900 dark:text-white border-white/20 dark:border-gray-800/50'
+          }`}
+        >
+          <div className="relative z-10 h-full flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isActive ? 'bg-white/20 text-white' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'}`}>
+                  <Icon size={20} />
+                </div>
+                <h4 className="font-black text-lg leading-tight line-clamp-1 tracking-tight">{title}</h4>
+              </div>
+              {locked && <Lock size={16} className="text-gray-400/60" />}
+            </div>
+            <p className={`text-[11px] font-bold leading-relaxed line-clamp-2 mb-6 ${locked ? 'text-gray-400/60' : isActive ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'}`}>
+              {locked ? unlockMsg : description}
+            </p>
+            <div className="flex items-center justify-between mt-auto">
+              <div className="flex flex-col flex-1 mr-4">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${locked ? 'text-gray-400/60' : isActive ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
+                    {percent}%
+                  </span>
+                  <span className={`text-[9px] font-bold uppercase tracking-tighter opacity-60 ${locked ? 'text-gray-400/60' : isActive ? 'text-white' : 'text-gray-400'}`}>
+                    {progress}/{total}
+                  </span>
+                </div>
+                <div className={`h-2 w-full rounded-full overflow-hidden ${locked ? 'bg-gray-200/50 dark:bg-gray-700/50' : isActive ? 'bg-white/20' : 'bg-gray-100/50 dark:bg-gray-800/50'}`}>
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percent}%` }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+                    className={`h-full rounded-full ${locked ? 'bg-gray-300' : isActive ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-gradient-to-r from-blue-400 to-blue-600 shadow-[0_0_8px_rgba(59,130,246,0.5)]'}`} 
+                  />
+                </div>
+              </div>
+              {!locked && <ChevronRight size={20} className={isActive ? 'text-white/80' : 'text-gray-300 dark:text-gray-600'} />}
+            </div>
+          </div>
+          {isActive && !locked && (
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+          )}
+        </motion.button>
+      );
+    };
+
+    const lastItem = profile.lastStoryItemId 
+      ? (GAME_MODES.find(m => m.id === profile.lastStoryItemId) || allAvailableTimelines.find(t => t.id === profile.lastStoryItemId))
+      : (profile.lastTimelineId ? allAvailableTimelines.find(t => t.id === profile.lastTimelineId) : null);
+
+    const lastItemType = profile.lastStoryItemId 
+      ? (GAME_MODES.some(m => m.id === profile.lastStoryItemId) ? 'mode' : 'timeline')
+      : 'timeline';
+
     return (
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 1.05 }}
-        className="max-w-md mx-auto px-4 pb-24"
+        className="max-w-md mx-auto px-4 pb-24 space-y-12"
       >
-        <div className="mb-10">
-          <h2 className="text-4xl font-black tracking-tighter text-gradient-blue leading-none">Game Modes</h2>
-          <p className="text-gray-400 dark:text-gray-500 text-[11px] font-bold uppercase tracking-widest mt-2">New ways to explore your collection</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-4xl font-black tracking-tighter text-gradient-blue leading-none">Story Mode</h2>
+            <p className="text-gray-400 dark:text-gray-500 text-[11px] font-bold uppercase tracking-widest mt-2">Your journey through history</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="flex items-center gap-1.5 justify-end text-orange-500 font-black text-lg">
+                <Flame size={18} className="fill-orange-500/20" />
+                <span>{profile.timelineStreak}</span>
+              </div>
+              <p className="text-[8px] uppercase tracking-widest font-black text-gray-400/60 mt-0.5">Streak</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-black text-blue-600 dark:text-blue-400 leading-none">{profile.points}</p>
+              <p className="text-[8px] uppercase tracking-widest font-black text-gray-400/60 mt-1">Total XP</p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
-          {GAME_MODES.map((mode) => {
-            const Icon = mode.icon;
-            return (
-              <motion.button
-                key={mode.id}
-                whileHover={{ scale: 1.02, y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  if (mode.id === 'timeline-explorer') {
-                    setShowTimeline(true);
-                    setSelectedTimelineId(null);
-                  } else if (mode.id === 'my-coin-story') {
-                    setShowTimeline(true);
-                    setSelectedTimelineId('my-coin-story');
-                  } else {
-                    setActiveGameMode(mode.id);
-                  }
-                }}
-                className="glass-card p-8 rounded-[3rem] text-left transition-all relative overflow-hidden premium-shadow premium-border border inner-glow group"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-blue-500/10 transition-colors" />
-                
-                <div className="flex items-start gap-6 relative z-10">
-                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-[1.5rem] flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-inner group-hover:scale-110 transition-transform">
-                    <Icon size={32} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white mb-2">{mode.title}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{mode.description}</p>
-                  </div>
-                  <div className="self-center">
-                    <ChevronRight size={24} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors" />
-                  </div>
-                </div>
-              </motion.button>
-            );
-          })}
-        </div>
+        {lastItem && (
+          <section>
+            <div className="flex items-center gap-2 mb-5">
+              <div className="w-6 h-6 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                <PlayCircle size={12} className="text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Continue Exploring</h3>
+            </div>
+            <div className="flex gap-5 overflow-x-auto no-scrollbar pb-2 px-1 snap-x">
+              <div className="snap-start">
+                {renderStoryCard(lastItem as any, lastItemType as any)}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section>
+          <div className="flex items-center gap-2 mb-5">
+            <div className="w-6 h-6 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
+              <History size={12} className="text-orange-600 dark:text-orange-400" />
+            </div>
+            <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Timelines</h3>
+          </div>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
+            {allAvailableTimelines.map(t => (
+              <div key={t.id} className="snap-start">
+                {renderStoryCard(t, 'timeline')}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <div className="flex items-center gap-2 mb-5">
+            <div className="w-6 h-6 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
+              <Trophy size={12} className="text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Game Modes</h3>
+          </div>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
+            {GAME_MODES.map(m => (
+              <div key={m.id} className="snap-start">
+                {renderStoryCard(m, 'mode')}
+              </div>
+            ))}
+          </div>
+        </section>
       </motion.div>
     );
   };
@@ -2566,7 +2794,7 @@ export default function App() {
           {renderBottomMenu()}
 
           <AnimatePresence mode="wait">
-            {activeTab === 'modes' && renderGameModesHub()}
+            {activeTab === 'story' && renderStoryMode()}
             
             {activeTab === 'collection' && (
               <motion.div
