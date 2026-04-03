@@ -12,11 +12,12 @@ import {
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
   Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp,
   Share2, Columns, History, Lightbulb, Coins, Shield, Database, Layout,
-  Monitor, Smartphone, Activity, Award, Palette, Gauge, Layers, Moon,
+  Monitor, Smartphone, Activity, Award, Palette, Gauge, Layers, Moon, Map,
   BookOpen, Puzzle, PlayCircle
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 import LZString from 'lz-string';
+import { GoogleGenAI } from "@google/genai";
 
 // --- Types ---
 
@@ -125,6 +126,26 @@ interface AppVersion {
   notes: string;
 }
 
+interface NarrativeChapter {
+  id: string;
+  title: string;
+  description: string;
+  requirement: {
+    coins?: number;
+    rarity?: Rarity;
+    yearRange?: [number, number];
+  };
+}
+
+interface NarrativeStory {
+  id: string;
+  title: string;
+  description: string;
+  icon: any;
+  chapters: NarrativeChapter[];
+  badgeId?: string;
+}
+
 interface Profile {
   name: string;
   recoveryCode: string;
@@ -145,6 +166,7 @@ interface Profile {
     eraConquest: { [eraId: string]: { completedChallenges: string[], loreUnlocked: boolean } };
     mintMarkDetective: { discoveredMarks: string[] };
   };
+  narrativeProgress: { [storyId: string]: { unlockedChapters: string[], completed: boolean, chapterStories: { [chapterId: string]: string } } };
   preferences: {
     sortBy: SortOption;
     groupBy: GroupOption;
@@ -294,6 +316,58 @@ const GAME_MODES: GameMode[] = [
   { id: 'my-coin-story', title: 'My Coin Story', description: 'Generate a personal timeline from your own collection.', icon: User },
 ];
 
+const NARRATIVE_STORIES: NarrativeStory[] = [
+  {
+    id: 'coin-journey',
+    title: 'Coin Journey',
+    description: 'An era-based narrative following the evolution of currency.',
+    icon: Map,
+    chapters: [
+      { id: 'cj-1', title: 'The Victorian Dawn', description: 'Begin your journey with a coin from the 1800s.', requirement: { yearRange: [1800, 1899], coins: 1 } },
+      { id: 'cj-2', title: 'The Early 20th Century', description: 'Expand your collection with coins from 1900-1919.', requirement: { yearRange: [1900, 1919], coins: 3 } },
+      { id: 'cj-3', title: 'The Roaring Twenties', description: 'Collect coins from the 1920s.', requirement: { yearRange: [1920, 1929], coins: 5 } },
+      { id: 'cj-4', title: 'The Modern Era', description: 'Complete the journey with modern coins.', requirement: { yearRange: [1930, 2026], coins: 10 } },
+    ],
+    badgeId: 'badge-coin-journey'
+  },
+  {
+    id: 'mystery-trail',
+    title: 'Mystery Trail',
+    description: 'Follow the clues hidden in your coins to reveal the next chapter.',
+    icon: Search,
+    chapters: [
+      { id: 'mt-1', title: 'The First Clue', description: 'Find a Rare coin to start the trail.', requirement: { rarity: 'Rare', coins: 1 } },
+      { id: 'mt-2', title: 'The Hidden Mark', description: 'Collect 5 coins to reveal the secret mint mark.', requirement: { coins: 5 } },
+      { id: 'mt-3', title: 'The Final Secret', description: 'Find a Very Rare coin to solve the mystery.', requirement: { rarity: 'Very Rare', coins: 1 } },
+    ],
+    badgeId: 'badge-mystery-trail'
+  },
+  {
+    id: 'time-traveler',
+    title: 'Time Traveler',
+    description: 'Experience major historical events through the coins of that time.',
+    icon: Clock,
+    chapters: [
+      { id: 'tt-1', title: 'The Great War', description: 'Collect a coin from 1914-1918.', requirement: { yearRange: [1914, 1918], coins: 1 } },
+      { id: 'tt-2', title: 'The Moon Landing', description: 'Collect a coin from 1969.', requirement: { yearRange: [1969, 1969], coins: 1 } },
+      { id: 'tt-3', title: 'The New Millennium', description: 'Collect a coin from 2000.', requirement: { yearRange: [2000, 2000], coins: 1 } },
+    ],
+    badgeId: 'badge-time-traveler'
+  },
+  {
+    id: 'collector-diary',
+    title: 'Collector Diary',
+    description: 'Your personal story as a collector, one coin at a time.',
+    icon: BookOpen,
+    chapters: [
+      { id: 'cd-1', title: 'The First Find', description: 'Add your first coin to start your diary.', requirement: { coins: 1 } },
+      { id: 'cd-2', title: 'The Growing Collection', description: 'Reach 10 coins in your collection.', requirement: { coins: 10 } },
+      { id: 'cd-3', title: 'The Master Collector', description: 'Reach 50 coins to complete your diary.', requirement: { coins: 50 } },
+    ],
+    badgeId: 'badge-collector-diary'
+  }
+];
+
 const ERAS: Era[] = [
   {
     id: '1800s',
@@ -371,6 +445,10 @@ const DEFAULT_BADGES: Badge[] = [
   { id: 'streak-7', name: 'Week Streak', description: 'Maintained a 7-day streak', icon: 'Flame', isUnlocked: false },
   { id: 'mint-master', name: 'Mint Master', description: 'Explored 50 timeline events', icon: 'Award', isUnlocked: false },
   { id: 'history-explorer', name: 'History Explorer', description: 'Completed 3 full timelines', icon: 'History', isUnlocked: false },
+  { id: 'badge-coin-journey', name: 'Time Traveler', description: 'Completed the Coin Journey story', icon: 'Map', isUnlocked: false },
+  { id: 'badge-mystery-trail', name: 'Detective', description: 'Solved the Mystery Trail', icon: 'Search', isUnlocked: false },
+  { id: 'badge-time-traveler', name: 'Chrononaut', description: 'Traveled through all Time Traveler chapters', icon: 'Clock', isUnlocked: false },
+  { id: 'badge-collector-diary', name: 'Storyteller', description: 'Completed your personal Collector Diary', icon: 'BookOpen', isUnlocked: false },
 ];
 
 // --- Error Boundary ---
@@ -522,6 +600,7 @@ export default function App() {
           eraConquest: {},
           mintMarkDetective: { discoveredMarks: [] }
         },
+        narrativeProgress: parsed.narrativeProgress ?? {},
         preferences: {
           sortBy: parsed.preferences?.sortBy ?? 'added',
           groupBy: parsed.preferences?.groupBy ?? 'none',
@@ -561,6 +640,7 @@ export default function App() {
         eraConquest: {},
         mintMarkDetective: { discoveredMarks: [] }
       },
+      narrativeProgress: {},
       preferences: { 
         sortBy: 'added',
         groupBy: 'none',
@@ -587,6 +667,8 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'story' | 'stats' | 'profile'>('collection');
   const [activeGameMode, setActiveGameMode] = useState<string | null>(null);
+  const [activeNarrativeStoryId, setActiveNarrativeStoryId] = useState<string | null>(null);
+  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [unlockedFolders, setUnlockedFolders] = useState<string[]>([]);
   const [newTags, setNewTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -1450,6 +1532,47 @@ export default function App() {
       }
     });
   }, [coins.length, profile.streak.current]);
+
+  useEffect(() => {
+    let changed = false;
+    const newNarrativeProgress = { ...profile.narrativeProgress };
+
+    NARRATIVE_STORIES.forEach(story => {
+      const progress = newNarrativeProgress[story.id] || { unlockedChapters: [], completed: false, chapterStories: {} };
+      let storyChanged = false;
+
+      story.chapters.forEach((chapter) => {
+        if (progress.unlockedChapters.includes(chapter.id)) return;
+
+        const req = chapter.requirement;
+        let meetsReq = true;
+
+        if (req.coins && coins.length < req.coins) meetsReq = false;
+        if (req.rarity && !coins.some(c => c.rarity === req.rarity)) meetsReq = false;
+        if (req.yearRange) {
+          const hasYear = coins.some(c => {
+            const y = parseInt(c.year);
+            return !isNaN(y) && y >= req.yearRange![0] && y <= req.yearRange![1];
+          });
+          if (!hasYear) meetsReq = false;
+        }
+
+        if (meetsReq) {
+          progress.unlockedChapters.push(chapter.id);
+          storyChanged = true;
+          changed = true;
+        }
+      });
+
+      if (storyChanged) {
+        newNarrativeProgress[story.id] = progress;
+      }
+    });
+
+    if (changed) {
+      setProfile(prev => ({ ...prev, narrativeProgress: newNarrativeProgress }));
+    }
+  }, [coins.length]);
 
   useEffect(() => {
     // Mission: Data Analyst
@@ -2645,7 +2768,197 @@ export default function App() {
     );
   };
 
+  const renderNarrativeStory = () => {
+    const story = NARRATIVE_STORIES.find(s => s.id === activeNarrativeStoryId);
+    if (!story) return null;
+
+    const progress = profile.narrativeProgress[story.id] || { unlockedChapters: [], completed: false, chapterStories: {} };
+
+    return (
+      <motion.div 
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="max-w-md mx-auto px-4 pb-24"
+      >
+        <div className="flex items-center gap-4 mb-10">
+          <motion.button 
+            whileHover={{ scale: 1.1, x: -4 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setActiveNarrativeStoryId(null);
+              setSelectedChapterId(null);
+            }}
+            className="w-12 h-12 glass-button rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors premium-border border border-white/20 dark:border-gray-800/50"
+          >
+            <ChevronLeft size={24} />
+          </motion.button>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight text-gradient-blue leading-tight">{story.title}</h2>
+            <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-1">Narrative Adventure</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {story.chapters.map((chapter, index) => {
+            const isUnlocked = progress.unlockedChapters.includes(chapter.id) || (index === 0 && coins.length > 0);
+            const isSelected = selectedChapterId === chapter.id;
+            const hasStory = !!progress.chapterStories[chapter.id];
+
+            return (
+              <motion.div
+                key={chapter.id}
+                layout
+                className={`glass-card rounded-[2.5rem] premium-border border overflow-hidden transition-all ${
+                  isUnlocked ? 'opacity-100' : 'opacity-50 grayscale'
+                } ${isSelected ? 'ring-2 ring-blue-500 shadow-2xl shadow-blue-500/20' : ''}`}
+              >
+                <button
+                  onClick={() => {
+                    if (!isUnlocked) {
+                      setFeedback({ message: 'Chapter Locked! Add more coins to unlock.', type: 'info' });
+                      return;
+                    }
+                    setSelectedChapterId(isSelected ? null : chapter.id);
+                    if (!hasStory && isUnlocked) {
+                      generateChapterStory(story.id, chapter.id);
+                    }
+                  }}
+                  className="w-full p-8 text-left flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-5">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl ${
+                      isUnlocked ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h4 className="font-black text-lg text-gray-900 dark:text-white leading-tight">{chapter.title}</h4>
+                      <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">
+                        {isUnlocked ? 'Chapter Unlocked' : 'Locked'}
+                      </p>
+                    </div>
+                  </div>
+                  {isUnlocked ? (
+                    <ChevronDown size={20} className={`text-gray-300 transition-transform ${isSelected ? 'rotate-180' : ''}`} />
+                  ) : (
+                    <Lock size={18} className="text-gray-300" />
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {isSelected && isUnlocked && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="px-8 pb-8"
+                    >
+                      <div className="h-[1px] w-full bg-gray-100 dark:bg-gray-800 mb-6" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6 italic">
+                        {chapter.description}
+                      </p>
+                      
+                      <div className="p-6 rounded-3xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/20">
+                        {hasStory ? (
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <BookOpen size={14} className="text-blue-600 dark:text-blue-400" />
+                              <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">The Story So Far</span>
+                            </div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                              {progress.chapterStories[chapter.id]}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center py-4 space-y-3">
+                            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                            <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Generating Narrative...</p>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const generateChapterStory = async (storyId: string, chapterId: string) => {
+    const story = NARRATIVE_STORIES.find(s => s.id === storyId);
+    const chapter = story?.chapters.find(c => c.id === chapterId);
+    if (!story || !chapter) return;
+
+    // Find a relevant coin
+    const relevantCoin = coins.find(c => {
+      const req = chapter.requirement;
+      if (req.rarity && c.rarity !== req.rarity) return false;
+      if (req.yearRange) {
+        const y = parseInt(c.year);
+        if (isNaN(y) || y < req.yearRange[0] || y > req.yearRange[1]) return false;
+      }
+      return true;
+    }) || coins[0];
+
+    if (!relevantCoin) return;
+
+    const prompt = `Generate a short, engaging historical narrative (max 80 words) for a coin collection app. 
+    Story Theme: ${story.title}
+    Chapter: ${chapter.title} - ${chapter.description}
+    Featured Coin: ${relevantCoin.name} (${relevantCoin.year}, ${relevantCoin.type})
+    The story should feel like a personal discovery or a historical snippet. Use a professional yet adventurous tone.`;
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+      });
+      const text = response.text || "History is still being written for this coin...";
+      
+      setProfile(prev => {
+        const storyProgress = prev.narrativeProgress[storyId] || { unlockedChapters: [], completed: false, chapterStories: {} };
+        const newUnlocked = [...new Set([...storyProgress.unlockedChapters, chapterId])];
+        const isCompleted = newUnlocked.length === story.chapters.length;
+        
+        if (isCompleted && !storyProgress.completed && story.badgeId) {
+          // Award badge if not already completed
+          const badge = DEFAULT_BADGES.find(b => b.id === story.badgeId);
+          if (badge && !prev.badges.some(b => b.id === badge.id)) {
+            setTimeout(() => setFeedback({ message: `Story Completed! Earned ${story.title} Badge`, type: 'success' }), 1000);
+          }
+        }
+
+        return {
+          ...prev,
+          narrativeProgress: {
+            ...prev.narrativeProgress,
+            [storyId]: {
+              ...storyProgress,
+              unlockedChapters: newUnlocked,
+              completed: isCompleted,
+              chapterStories: {
+                ...storyProgress.chapterStories,
+                [chapterId]: text
+              }
+            }
+          },
+          badges: isCompleted && story.badgeId && !prev.badges.some(b => b.id === story.badgeId)
+            ? [...prev.badges, DEFAULT_BADGES.find(b => b.id === story.badgeId)!]
+            : prev.badges
+        };
+      });
+    } catch (error) {
+      console.error("Failed to generate story:", error);
+    }
+  };
+
   const renderStoryMode = () => {
+    if (activeNarrativeStoryId) return renderNarrativeStory();
     if (activeGameMode === 'era-conquest') return renderEraConquest();
     if (activeGameMode === 'timeline-puzzle') return renderTimelinePuzzle();
     
@@ -2678,15 +2991,19 @@ export default function App() {
       return 'Locked';
     };
 
-    const renderStoryCard = (item: Timeline | GameMode, type: 'timeline' | 'mode') => {
+    const renderStoryCard = (item: Timeline | GameMode | NarrativeStory, type: 'timeline' | 'mode' | 'narrative') => {
       const isTimeline = type === 'timeline';
+      const isMode = type === 'mode';
+      const isNarrative = type === 'narrative';
+
       const timeline = isTimeline ? item as Timeline : null;
-      const mode = !isTimeline ? item as GameMode : null;
+      const mode = isMode ? item as GameMode : null;
+      const narrative = isNarrative ? item as NarrativeStory : null;
       
       const id = item.id;
       const title = item.title;
       const description = item.description;
-      const Icon = !isTimeline ? (item as GameMode).icon : Clock;
+      const Icon = isNarrative ? (item as NarrativeStory).icon : isMode ? (item as GameMode).icon : Clock;
 
       let progress = 0;
       let total = 1;
@@ -2700,7 +3017,7 @@ export default function App() {
         percent = total > 1 ? Math.round((progress / (total - 1)) * 100) : (progress === 0 ? 0 : 100);
         locked = isTimelineLocked(timeline);
         unlockMsg = getUnlockMessage(timeline);
-      } else if (mode) {
+      } else if (isMode && mode) {
         if (mode.id === 'era-conquest') {
           const erasProgress = ERAS.map(era => getEraProgress(era));
           const totalChallenges = erasProgress.reduce((acc, curr) => acc + curr.totalCount, 0);
@@ -2711,6 +3028,12 @@ export default function App() {
         }
         locked = mode.isLocked || false;
         unlockMsg = mode.unlockCriteria || 'Locked';
+      } else if (isNarrative && narrative) {
+        const narrProgress = profile.narrativeProgress[id] || { unlockedChapters: [], completed: false, chapterStories: {} };
+        progress = narrProgress.unlockedChapters.length;
+        total = narrative.chapters.length;
+        percent = Math.round((progress / total) * 100);
+        locked = false; // Narrative stories are generally unlocked if you have coins
       }
 
       const isActive = profile.lastStoryItemId === id || profile.lastTimelineId === id;
@@ -2729,7 +3052,7 @@ export default function App() {
             if (isTimeline) {
               setSelectedTimelineId(id);
               setShowTimeline(true);
-            } else if (mode) {
+            } else if (isMode && mode) {
               if (mode.id === 'timeline-explorer') {
                 setShowTimeline(true);
                 setSelectedTimelineId(null);
@@ -2739,6 +3062,8 @@ export default function App() {
               } else {
                 setActiveGameMode(mode.id);
               }
+            } else if (isNarrative) {
+              setActiveNarrativeStoryId(id);
             }
           }}
           className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden premium-shadow premium-border border inner-glow ${
@@ -2792,11 +3117,14 @@ export default function App() {
     };
 
     const lastItem = profile.lastStoryItemId 
-      ? (GAME_MODES.find(m => m.id === profile.lastStoryItemId) || allAvailableTimelines.find(t => t.id === profile.lastStoryItemId))
+      ? (GAME_MODES.find(m => m.id === profile.lastStoryItemId) || 
+         allAvailableTimelines.find(t => t.id === profile.lastStoryItemId) ||
+         NARRATIVE_STORIES.find(s => s.id === profile.lastStoryItemId))
       : (profile.lastTimelineId ? allAvailableTimelines.find(t => t.id === profile.lastTimelineId) : null);
 
     const lastItemType = profile.lastStoryItemId 
-      ? (GAME_MODES.some(m => m.id === profile.lastStoryItemId) ? 'mode' : 'timeline')
+      ? (GAME_MODES.some(m => m.id === profile.lastStoryItemId) ? 'mode' : 
+         NARRATIVE_STORIES.some(s => s.id === profile.lastStoryItemId) ? 'narrative' : 'timeline')
       : 'timeline';
 
     return (
@@ -2841,6 +3169,22 @@ export default function App() {
             </div>
           </section>
         )}
+
+        <section>
+          <div className="flex items-center gap-2 mb-5">
+            <div className="w-6 h-6 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
+              <BookOpen size={12} className="text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Narrative Stories</h3>
+          </div>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
+            {NARRATIVE_STORIES.map(story => (
+              <div key={story.id} className="snap-start">
+                {renderStoryCard(story, 'narrative')}
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section>
           <div className="flex items-center gap-2 mb-5">
