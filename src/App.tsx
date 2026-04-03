@@ -23,7 +23,7 @@ import { GoogleGenAI } from "@google/genai";
 
 type CoinType = '£1' | '£2' | '50p';
 type Rarity = 'Common' | 'Rare' | 'Very Rare';
-type SortOption = 'year' | 'denomination' | 'date' | 'month' | 'added' | 'opened';
+type SortOption = 'year' | 'denomination' | 'date' | 'month' | 'added' | 'opened' | 'name';
 type GroupOption = 'year' | 'denomination' | 'date' | 'month' | 'none';
 
 interface Coin {
@@ -2021,8 +2021,22 @@ export default function App() {
     return [...filtered].sort((a, b) => {
       const sortBy = profile.preferences.sortBy;
       if (sortBy === 'opened') return b.lastOpened - a.lastOpened;
-      if (sortBy === 'year') return parseInt(b.year) - parseInt(a.year);
-      if (sortBy === 'denomination') return a.type.localeCompare(b.type);
+      if (sortBy === 'year') {
+        const yearA = parseInt(a.year) || 0;
+        const yearB = parseInt(b.year) || 0;
+        if (yearA !== yearB) return yearB - yearA;
+        return b.dateAdded - a.dateAdded;
+      }
+      if (sortBy === 'denomination') {
+        const typeCompare = a.type.localeCompare(b.type);
+        if (typeCompare !== 0) return typeCompare;
+        return b.dateAdded - a.dateAdded;
+      }
+      if (sortBy === 'name') {
+        const nameCompare = a.name.localeCompare(b.name);
+        if (nameCompare !== 0) return nameCompare;
+        return b.dateAdded - a.dateAdded;
+      }
       if (sortBy === 'date' || sortBy === 'month' || sortBy === 'added') return b.dateAdded - a.dateAdded;
       return b.dateAdded - a.dateAdded;
     });
@@ -3341,49 +3355,63 @@ export default function App() {
                 </div>
 
                 {/* Sorting & Grouping Controls */}
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                  <div className="flex items-center gap-2 bg-white dark:bg-gray-900 px-3 py-2 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex-shrink-0">
-                    <Layout size={14} className="text-gray-400" />
-                    <select 
-                      value={profile.preferences.sortBy}
-                      onChange={(e) => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, sortBy: e.target.value as SortOption } }))}
-                      className="text-[10px] font-black uppercase tracking-widest bg-transparent border-none p-0 focus:ring-0 cursor-pointer"
+                <div className="flex flex-col gap-3 bg-white dark:bg-gray-900 p-4 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">View Options</span>
+                    <button 
+                      onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupViewEnabled: !prev.preferences.groupViewEnabled } }))}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
+                        profile.preferences.groupViewEnabled 
+                          ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20' 
+                          : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400'
+                      }`}
                     >
-                      <option value="added">Sort: Added</option>
-                      <option value="year">Sort: Year</option>
-                      <option value="denomination">Sort: Denom</option>
-                      <option value="date">Sort: Date</option>
-                      <option value="month">Sort: Month</option>
-                      <option value="opened">Sort: Opened</option>
-                    </select>
+                      <Layers size={12} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">
+                        {profile.preferences.groupViewEnabled ? 'Grouping On' : 'Grouping Off'}
+                      </span>
+                    </button>
                   </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <Layout size={14} className="text-gray-400" />
+                      <div className="flex flex-col flex-1">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Sort By</span>
+                        <select 
+                          value={profile.preferences.sortBy}
+                          onChange={(e) => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, sortBy: e.target.value as SortOption } }))}
+                          className="text-[11px] font-black uppercase tracking-tight bg-transparent border-none p-0 focus:ring-0 cursor-pointer text-gray-700 dark:text-gray-200 w-full"
+                        >
+                          <option value="added">Date Added</option>
+                          <option value="month">Month Added</option>
+                          <option value="year">Coin Year</option>
+                          <option value="denomination">Denomination</option>
+                          <option value="name">Coin Name</option>
+                          <option value="opened">Recently Opened</option>
+                        </select>
+                      </div>
+                    </div>
 
-                  <div className="flex items-center gap-2 bg-white dark:bg-gray-900 px-3 py-2 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex-shrink-0">
-                    <Grid size={14} className="text-gray-400" />
-                    <select 
-                      value={profile.preferences.groupBy}
-                      onChange={(e) => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupBy: e.target.value as GroupOption } }))}
-                      className="text-[10px] font-black uppercase tracking-widest bg-transparent border-none p-0 focus:ring-0 cursor-pointer"
-                    >
-                      <option value="none">Group: None</option>
-                      <option value="year">Group: Year</option>
-                      <option value="denomination">Group: Denom</option>
-                      <option value="date">Group: Date</option>
-                      <option value="month">Group: Month</option>
-                    </select>
+                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <Grid size={14} className="text-gray-400" />
+                      <div className="flex flex-col flex-1">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Group By</span>
+                        <select 
+                          value={profile.preferences.groupBy}
+                          onChange={(e) => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupBy: e.target.value as GroupOption } }))}
+                          className="text-[11px] font-black uppercase tracking-tight bg-transparent border-none p-0 focus:ring-0 cursor-pointer text-gray-700 dark:text-gray-200 w-full"
+                          disabled={!profile.preferences.groupViewEnabled}
+                        >
+                          <option value="none">No Grouping</option>
+                          <option value="year">Year</option>
+                          <option value="denomination">Denom</option>
+                          <option value="date">Exact Date</option>
+                          <option value="month">Month</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-
-                  <button 
-                    onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupViewEnabled: !prev.preferences.groupViewEnabled } }))}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-2xl border transition-all flex-shrink-0 ${
-                      profile.preferences.groupViewEnabled 
-                        ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20' 
-                        : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-400'
-                    }`}
-                  >
-                    <Layers size={14} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Group View</span>
-                  </button>
                 </div>
 
                 {/* Add Button / Form */}
@@ -3663,30 +3691,68 @@ export default function App() {
                             <th className="p-6 text-lg font-black text-gray-900 dark:text-white uppercase tracking-widest text-right">View</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y-2 divide-gray-100 dark:divide-gray-800">
-                          {sortedCoins.map((coin) => (
-                            <tr 
-                              key={coin.id} 
-                              onClick={() => openCoin(coin)}
-                              className="active:bg-blue-50 dark:active:bg-blue-900/20 transition-colors cursor-pointer"
-                            >
-                              <td className="p-6">
-                                <div className="flex flex-col">
-                                  <span className="text-3xl font-black text-gray-900 dark:text-white">{coin.type}</span>
-                                  <span className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">{coin.name}</span>
-                                </div>
-                              </td>
-                              <td className="p-6">
-                                <span className="text-3xl font-black text-gray-900 dark:text-white">{coin.year}</span>
-                              </td>
-                              <td className="p-6 text-right">
-                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800">
-                                  <ChevronRight size={32} className="text-gray-900 dark:text-white" />
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
+                        {profile.preferences.groupViewEnabled && groupedCoins ? (
+                          Object.entries(groupedCoins as Record<string, Coin[]>).map(([groupName, groupCoins]) => (
+                            <React.Fragment key={groupName}>
+                              <tbody className="bg-gray-50 dark:bg-gray-800/50">
+                                <tr>
+                                  <td colSpan={3} className="px-6 py-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-y border-gray-100 dark:border-gray-800">
+                                    {groupName} ({groupCoins.length})
+                                  </td>
+                                </tr>
+                              </tbody>
+                              <tbody className="divide-y-2 divide-gray-100 dark:divide-gray-800">
+                                {groupCoins.map((coin) => (
+                                  <tr 
+                                    key={coin.id} 
+                                    onClick={() => openCoin(coin)}
+                                    className="active:bg-blue-50 dark:active:bg-blue-900/20 transition-colors cursor-pointer"
+                                  >
+                                    <td className="p-6">
+                                      <div className="flex flex-col">
+                                        <span className="text-3xl font-black text-gray-900 dark:text-white">{coin.type}</span>
+                                        <span className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">{coin.name}</span>
+                                      </div>
+                                    </td>
+                                    <td className="p-6">
+                                      <span className="text-3xl font-black text-gray-900 dark:text-white">{coin.year}</span>
+                                    </td>
+                                    <td className="p-6 text-right">
+                                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800">
+                                        <ChevronRight size={32} className="text-gray-900 dark:text-white" />
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </React.Fragment>
+                          ))
+                        ) : (
+                          <tbody className="divide-y-2 divide-gray-100 dark:divide-gray-800">
+                            {sortedCoins.map((coin) => (
+                              <tr 
+                                key={coin.id} 
+                                onClick={() => openCoin(coin)}
+                                className="active:bg-blue-50 dark:active:bg-blue-900/20 transition-colors cursor-pointer"
+                              >
+                                <td className="p-6">
+                                  <div className="flex flex-col">
+                                    <span className="text-3xl font-black text-gray-900 dark:text-white">{coin.type}</span>
+                                    <span className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">{coin.name}</span>
+                                  </div>
+                                </td>
+                                <td className="p-6">
+                                  <span className="text-3xl font-black text-gray-900 dark:text-white">{coin.year}</span>
+                                </td>
+                                <td className="p-6 text-right">
+                                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800">
+                                    <ChevronRight size={32} className="text-gray-900 dark:text-white" />
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        )}
                       </table>
                     </div>
                   ) : (
@@ -4142,10 +4208,27 @@ export default function App() {
                       label="Sort By" 
                       icon={Clock} 
                       value={profile.preferences.sortBy}
-                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, sortBy: val as any } })}
+                      onChange={(val) => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, sortBy: val as any } }))}
                       options={[
-                        { value: 'added', label: 'Recently Added' },
+                        { value: 'added', label: 'Date Added' },
+                        { value: 'month', label: 'Month Added' },
+                        { value: 'year', label: 'Coin Year' },
+                        { value: 'denomination', label: 'Denomination' },
+                        { value: 'name', label: 'Coin Name' },
                         { value: 'opened', label: 'Recently Opened' }
+                      ]}
+                    />
+                    <SettingSelect 
+                      label="Group By" 
+                      icon={Grid} 
+                      value={profile.preferences.groupBy}
+                      onChange={(val) => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupBy: val as any } }))}
+                      options={[
+                        { value: 'none', label: 'No Grouping' },
+                        { value: 'year', label: 'Year' },
+                        { value: 'denomination', label: 'Denomination' },
+                        { value: 'date', label: 'Exact Date' },
+                        { value: 'month', label: 'Month' }
                       ]}
                     />
                     <div className="p-5 space-y-4">
