@@ -114,7 +114,7 @@ body {
 }
 
 .glass-button {
-  @apply glass-card hover:bg-white/80 dark:hover:bg-white/10 transition-all duration-300 active:scale-95;
+  @apply bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm hover:bg-white/80 dark:hover:bg-white/10 transition-all duration-300 active:scale-95;
 }
 
 /* Theme Overrides for Components */

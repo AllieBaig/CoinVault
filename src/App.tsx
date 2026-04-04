@@ -564,6 +564,9 @@ export default function App() {
     return localStorage.getItem('coin-safe-mode') === 'true';
   });
 
+  const [isAppReady, setIsAppReady] = useState(false);
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
+
   const [coins, setCoins] = useState<Coin[]>(() => {
     const key = isSafeMode ? 'coin-backup-collection' : 'coin-collection';
     const saved = storage.load(key);
@@ -689,8 +692,26 @@ export default function App() {
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    
+    // Simulate initial loading for perceived speed with skeletons
+    const timer = setTimeout(() => setIsAppReady(true), 800);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timer);
+    };
   }, []);
+
+  // Preload images for recently viewed coins
+  useEffect(() => {
+    recentlyViewedIds.forEach(id => {
+      const coin = coins.find(c => c.id === id);
+      if (coin?.image) {
+        const img = new Image();
+        img.src = coin.image;
+      }
+    });
+  }, [recentlyViewedIds, coins]);
 
   const isCompact = useMemo(() => {
     // Automatically use compact layout for small screens (iPhone mini threshold)
@@ -1863,8 +1884,19 @@ export default function App() {
   };
 
   const openCoin = (coin: Coin) => {
-    setCoins(coins.map(c => c.id === coin.id ? { ...c, lastOpened: Date.now() } : c));
+    // Instant navigation
     setSelectedCoin(coin);
+    
+    // Update recently viewed
+    setRecentlyViewedIds(prev => {
+      const filtered = prev.filter(id => id !== coin.id);
+      return [coin.id, ...filtered].slice(0, 5);
+    });
+    
+    // Update lastOpened in background
+    setTimeout(() => {
+      setCoins(prev => prev.map(c => c.id === coin.id ? { ...c, lastOpened: Date.now() } : c));
+    }, 0);
   };
 
   const exportData = () => {
@@ -2378,6 +2410,19 @@ export default function App() {
         </div>
       </header>
     </>
+  );
+
+  const renderSkeletonCard = () => (
+    <div className={`glass-card rounded-[2rem] premium-border p-6 flex items-center justify-between animate-pulse ${isCompact ? 'p-4' : 'p-6'}`}>
+      <div className="flex items-center gap-4">
+        <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-100 dark:bg-gray-800 flex-shrink-0`} />
+        <div className="space-y-2">
+          <div className="h-4 w-32 bg-gray-100 dark:bg-gray-800 rounded-full" />
+          <div className="h-3 w-20 bg-gray-50 dark:bg-gray-800/50 rounded-full" />
+        </div>
+      </div>
+      <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800" />
+    </div>
   );
 
   const renderCoinCard = (coin: Coin) => (
@@ -3295,12 +3340,13 @@ export default function App() {
                     className={`w-full pl-11 pr-4 ${isCompact ? 'py-3' : 'py-4'} glass-card rounded-[1.5rem] border-none focus:ring-2 focus:ring-blue-500/50 transition-all soft-shadow placeholder:text-gray-400 font-medium`}
                   />
                   {searchQuery && (
-                    <button 
+                    <motion.button 
+                      whileTap={{ scale: 0.8 }}
                       onClick={() => setSearchQuery('')}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
                     >
                       <X size={16} />
-                    </button>
+                    </motion.button>
                   )}
                 </div>
 
@@ -3647,7 +3693,15 @@ export default function App() {
                 )}
 
                 {/* List */}
-                {sortedCoins.length === 0 ? (
+                {!isAppReady ? (
+                  <div className={isCompact ? 'space-y-2' : 'space-y-4'}>
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <React.Fragment key={i}>
+                        {renderSkeletonCard()}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                ) : sortedCoins.length === 0 ? (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -4459,9 +4513,10 @@ export default function App() {
               onClick={() => setSelectedCoin(null)}
             >
               <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
+                initial={{ y: '20%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '20%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 className="glass-card w-full max-w-md rounded-t-[3rem] sm:rounded-[3rem] overflow-hidden max-h-[90vh] flex flex-col premium-border soft-shadow"
                 onClick={e => e.stopPropagation()}
               >
