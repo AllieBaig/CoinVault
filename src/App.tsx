@@ -149,6 +149,13 @@ interface NarrativeStory {
   badgeId?: string;
 }
 
+interface LogEntry {
+  id: string;
+  timestamp: number;
+  message: string;
+  type: 'info' | 'error' | 'action' | 'load';
+}
+
 interface Profile {
   name: string;
   recoveryCode: string;
@@ -190,6 +197,7 @@ interface Profile {
     showTopSummary: boolean;
     showRankSystem: boolean;
     showProgressCard: boolean;
+    debugMode: boolean;
   };
 }
 
@@ -628,6 +636,7 @@ export default function App() {
           showTopSummary: parsed.preferences?.showTopSummary ?? true,
           showRankSystem: parsed.preferences?.showRankSystem ?? true,
           showProgressCard: parsed.preferences?.showProgressCard ?? true,
+          debugMode: parsed.preferences?.debugMode ?? false,
         }
       };
     }
@@ -668,9 +677,14 @@ export default function App() {
         showTopSummary: true,
         showRankSystem: true,
         showProgressCard: true,
+        debugMode: false,
       }
     };
   });
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'explore' | 'stats' | 'profile'>('collection');
   const [activeGameMode, setActiveGameMode] = useState<string | null>(null);
@@ -692,16 +706,57 @@ export default function App() {
   const [xpGain, setXpGain] = useState<number | null>(null);
   const [spinResult, setSpinResult] = useState<number | null>(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
+  const [logs, setLogs] = useState<LogEntry[]>(() => {
+    const saved = localStorage.getItem('coin-logs');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+  const [showLogsModal, setShowLogsModal] = useState(false);
+
+  const addLog = (message: string, type: LogEntry['type'] = 'info') => {
+    if (!profileRef.current.preferences.debugMode) return;
+    
+    setLogs(prev => {
+      const newLog: LogEntry = {
+        id: Math.random().toString(36).substring(2, 10),
+        timestamp: Date.now(),
+        message,
+        type
+      };
+      const updated = [newLog, ...prev];
+      return updated.slice(0, 200);
+    });
+  };
+
+  useEffect(() => {
+    localStorage.setItem('coin-logs', JSON.stringify(logs));
+  }, [logs]);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     
+    const handleError = (event: ErrorEvent) => {
+      addLog(`System Error: ${event.message}`, 'error');
+    };
+    window.addEventListener('error', handleError);
+
     // Simulate initial loading for perceived speed with skeletons
-    const timer = setTimeout(() => setIsAppReady(true), 800);
+    addLog('App initializing...', 'load');
+    const timer = setTimeout(() => {
+      setIsAppReady(true);
+      addLog('App ready - Data loaded successfully', 'load');
+    }, 800);
     
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('error', handleError);
       clearTimeout(timer);
     };
   }, []);
@@ -733,6 +788,14 @@ export default function App() {
     const saved = localStorage.getItem('exploreMode');
     return (saved as ExploreMode) || 'timeline';
   });
+
+  useEffect(() => {
+    if (activeTab === 'explore') {
+      addLog(`Screen loaded: Explore (${exploreMode})`, 'load');
+    } else {
+      addLog(`Screen loaded: ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`, 'load');
+    }
+  }, [activeTab, exploreMode]);
   const [mindMapZoom, setMindMapZoom] = useState(1);
   const [mindMapOffset, setMindMapOffset] = useState({ x: 0, y: 0 });
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
@@ -2013,9 +2076,11 @@ export default function App() {
     };
 
     if (isEditing) {
+      addLog(`User action: Update coin (${coinData.name})`, 'action');
       setCoins(coins.map(c => c.id === isEditing.id ? { ...c, ...coinData } : c));
       setFeedback({ message: 'Coin updated successfully!', type: 'success' });
     } else {
+      addLog(`User action: Add coin (${coinData.name})`, 'action');
       let points = RARITY_POINTS[newRarity];
       
       // Night Bonus Mode
@@ -2694,6 +2759,98 @@ export default function App() {
       </div>
     </div>
   );
+
+  const renderLogsModal = () => {
+    if (!showLogsModal) return null;
+    
+    const exportLogs = () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `coin_logs_${new Date().toISOString()}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      addLog('User action: Export logs', 'action');
+    };
+
+    return (
+      <AnimatePresence>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowLogsModal(false)}
+        >
+          <motion.div 
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 20 }}
+            className="ios-surface w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-600">
+                  <Activity size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black tracking-tight">Debug Logs</h2>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">System Activity</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowLogsModal(false)}
+                className="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-[10px]">
+              {logs.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 py-20">
+                  <Activity size={48} className="mb-4 opacity-20" />
+                  <p className="font-bold">No logs recorded yet.</p>
+                </div>
+              ) : (
+                logs.map(log => (
+                  <div key={log.id} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 flex gap-3">
+                    <span className="text-gray-400 flex-shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                    <span className={`font-bold flex-shrink-0 ${
+                      log.type === 'error' ? 'text-red-500' : 
+                      log.type === 'action' ? 'text-blue-500' : 
+                      log.type === 'load' ? 'text-green-500' : 'text-gray-500'
+                    }`}>[{log.type.toUpperCase()}]</span>
+                    <span className="text-gray-700 dark:text-gray-300 break-all">{log.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            <div className="p-6 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-4">
+              <button 
+                onClick={() => {
+                  setLogs([]);
+                  addLog('User action: Clear logs', 'action');
+                }}
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold active:scale-95 transition-all"
+              >
+                <Trash2 size={18} /> Clear
+              </button>
+              <button 
+                onClick={exportLogs}
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-600 text-white font-bold active:scale-95 transition-all shadow-lg shadow-blue-500/20"
+              >
+                <Download size={18} /> Export
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
 
   const renderCoinCard = (coin: Coin) => (
     <motion.div
@@ -4785,6 +4942,55 @@ export default function App() {
                       ))}
                     </div>
                   </SettingsSection>
+
+                  <SettingsSection id="developer" title="Developer" icon={Zap}>
+                    <div className="p-5 space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-900/30 rounded-2xl border border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-600">
+                            <Activity size={20} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-800 dark:text-gray-100">Debug Mode</p>
+                            <p className="text-xs text-gray-400 font-medium">Record system activity</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            const newValue = !profile.preferences.debugMode;
+                            setProfile(prev => ({
+                              ...prev,
+                              preferences: { ...prev.preferences, debugMode: newValue }
+                            }));
+                            if (newValue) {
+                              addLog('Debug Mode enabled', 'info');
+                            }
+                          }}
+                          className={`w-12 h-6 rounded-full transition-all relative ${
+                            profile.preferences.debugMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                          }`}
+                        >
+                          <motion.div 
+                            animate={{ x: profile.preferences.debugMode ? 24 : 4 }}
+                            className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-sm"
+                          />
+                        </button>
+                      </div>
+                      
+                      {profile.preferences.debugMode && (
+                        <button 
+                          onClick={() => setShowLogsModal(true)}
+                          className="w-full flex items-center justify-between p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/20 text-blue-600 font-bold active:scale-95 transition-all"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Activity size={20} />
+                            <span>View System Logs</span>
+                          </div>
+                          <ChevronRight size={18} />
+                        </button>
+                      )}
+                    </div>
+                  </SettingsSection>
                 </div>
 
                 {profile.unlockedMilestones && profile.unlockedMilestones.includes('milestone-50') && (
@@ -5457,6 +5663,8 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {renderLogsModal()}
       </div>
     </ErrorBoundary>
   );
