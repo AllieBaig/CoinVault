@@ -967,14 +967,14 @@ export default function App() {
             setSelectedTimelineId(timeline.id);
             setExpandedEventIdx(null);
           }}
-          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden premium-shadow premium-border border inner-glow ${
+          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden ${
             locked
               ? 'bg-gray-100/40 dark:bg-gray-800/40 text-gray-400 cursor-not-allowed border-gray-200/30 dark:border-gray-700/30'
               : isActive 
                 ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-2xl shadow-blue-500/40 border-blue-400/30' 
                 : isPersonal
                   ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-xl border-indigo-400/30'
-                  : 'glass-card text-gray-900 dark:text-white border-white/20 dark:border-gray-800/50'
+                  : 'ios-surface text-gray-900 dark:text-white'
           }`}
         >
           <div className="relative z-10">
@@ -1040,7 +1040,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-[2.5rem] premium-border border border-white/20 dark:border-gray-800/50 shadow-xl premium-shadow inner-glow mb-10">
+        <div className="ios-surface p-6 mb-10">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-inner">
               <Zap size={22} />
@@ -1137,7 +1137,7 @@ export default function App() {
               setSelectedTimelineId(null);
               setExpandedEventIdx(null);
             }}
-            className="w-12 h-12 glass-card rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors premium-border border border-white/20 dark:border-gray-800/50"
+            className="w-12 h-12 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
           >
             <ChevronLeft size={24} />
           </motion.button>
@@ -1183,7 +1183,7 @@ export default function App() {
                   }}
                   className={`p-7 rounded-[2.5rem] border transition-all relative overflow-hidden premium-shadow inner-glow ${
                     isUnlocked 
-                      ? 'glass-card border-white/20 dark:border-gray-800/50 shadow-sm' 
+                      ? 'ios-surface' 
                       : isNext 
                         ? 'bg-blue-50/30 dark:bg-blue-900/10 border-blue-200/30 dark:border-blue-800/20 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20'
                         : 'bg-gray-50/30 dark:bg-gray-900/30 border-transparent opacity-40 grayscale'
@@ -1313,7 +1313,7 @@ export default function App() {
             animate={{ opacity: 1, x: 0 }}
             className={`group flex items-center gap-3 py-2 px-4 rounded-xl transition-all cursor-pointer relative ${
               isCoin 
-                ? 'bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md' 
+                ? 'ios-surface' 
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
             }`}
             style={{ marginLeft: `${node.level * 20}px` }}
@@ -1472,7 +1472,7 @@ export default function App() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex p-1.5 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex-shrink-0">
+        <div className="flex p-1.5 ios-surface flex-shrink-0">
           {[
             { id: 'timeline', label: 'Timeline', icon: History },
             { id: 'mindmap', label: 'Mind Map', icon: Map },
@@ -1488,7 +1488,7 @@ export default function App() {
               {exploreMode === tab.id && (
                 <motion.div
                   layoutId="activeExploreTabMain"
-                  className="absolute inset-0 bg-blue-50 dark:bg-blue-900/30 shadow-inner rounded-[1.5rem]"
+                  className="absolute inset-0 bg-white dark:bg-gray-900 shadow-sm rounded-[1.5rem] border border-black/[0.02] dark:border-white/[0.02]"
                   transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                 />
               )}
@@ -1531,8 +1531,8 @@ export default function App() {
           whileTap={{ scale: 0.99 }}
           onClick={() => toggleSection(id)}
           className={`w-full flex items-center justify-between p-5 rounded-[2rem] transition-all ${
-            isExpanded ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'glass-card border-gray-100 dark:border-gray-800'
-          } border premium-border soft-shadow`}
+            isExpanded ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'ios-surface'
+          } border premium-border`}
         >
           <div className="flex items-center gap-4">
             <div className={`p-2.5 rounded-2xl shadow-sm transition-all ${isExpanded ? 'bg-blue-600 text-white shadow-blue-200/50' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-400'}`}>
@@ -1555,7 +1555,7 @@ export default function App() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="glass-card rounded-[2.5rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50/50 dark:divide-gray-800/50 overflow-hidden soft-shadow premium-border">
+              <div className="ios-surface divide-y divide-gray-50/50 dark:divide-gray-800/50 overflow-hidden">
                 {children}
               </div>
             </motion.div>
@@ -2515,8 +2515,8 @@ export default function App() {
     <>
       {profile.preferences.showTopSummary && renderSummaryBar()}
       <header className={`px-4 ${isCompact ? 'pt-6 pb-4' : 'pt-10 pb-8'} relative z-10 transition-colors overflow-hidden`}>
-        {/* Mesh background effect */}
-        <div className="absolute inset-0 mesh-gradient opacity-40 pointer-events-none" />
+        {/* Mesh background effect - subtle and blended */}
+        <div className="absolute inset-0 mesh-gradient opacity-20 pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
         
         <div className="max-w-md mx-auto relative z-10">
@@ -2525,7 +2525,7 @@ export default function App() {
               <motion.div 
                 whileHover={{ rotate: 5, scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`${isCompact ? 'w-12 h-12' : 'w-16 h-16'} bg-gradient-to-br from-blue-500 to-blue-700 rounded-[1.75rem] flex items-center justify-center text-white shadow-2xl shadow-blue-500/30 dark:shadow-blue-900/20 transition-transform premium-border border border-blue-400/30 inner-glow`}
+                className={`${isCompact ? 'w-12 h-12' : 'w-16 h-16'} bg-gradient-to-br from-blue-500 to-blue-600 rounded-[1.75rem] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 transition-transform premium-border border border-blue-400/20 inner-glow`}
               >
                 <Star size={isCompact ? 24 : 32} className="fill-white" />
               </motion.div>
@@ -2536,7 +2536,7 @@ export default function App() {
                     <motion.div 
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="flex items-center gap-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 dark:border-gray-700/30 shadow-sm cursor-default inner-glow"
+                      className="flex items-center gap-2 ios-glass px-3 py-1 rounded-full border border-white/20 dark:border-white/5 shadow-sm cursor-default inner-glow"
                     >
                       <Flame size={14} className="text-orange-500 fill-orange-500/20" />
                       <span className="text-xs font-black text-orange-600 dark:text-orange-400 tracking-tight">{profile.streak.current}</span>
@@ -2554,10 +2554,10 @@ export default function App() {
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLuckySpin}
                   disabled={isSpinning}
-                  className={`${isCompact ? 'p-2.5' : 'p-3.5'} rounded-[1.25rem] transition-all relative overflow-hidden glass-button ${
+                  className={`${isCompact ? 'p-2.5' : 'p-3.5'} rounded-[1.25rem] transition-all relative overflow-hidden ios-button ${
                     isSpinning 
                       ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 animate-spin' 
-                      : 'text-blue-600 dark:text-blue-400 border border-white/20 dark:border-gray-800/50 shadow-sm'
+                      : 'text-blue-600 dark:text-blue-400'
                   }`}
                   title="Daily Lucky Spin"
                 >
@@ -2572,7 +2572,7 @@ export default function App() {
                       whileTap={{ scale: 0.95 }} 
                       id="refresh-app-btn" 
                       onClick={() => window.location.reload()} 
-                      className="p-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] glass-button border border-white/20 dark:border-gray-800/50 shadow-sm" 
+                      className="p-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button" 
                       title="Refresh App"
                     >
                       <Clock size={22} />
@@ -2582,7 +2582,7 @@ export default function App() {
                       whileTap={{ scale: 0.95 }} 
                       id="export-data-btn" 
                       onClick={exportData} 
-                      className="p-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] glass-button border border-white/20 dark:border-gray-800/50 shadow-sm" 
+                      className="p-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button" 
                       title="Export Data"
                     >
                       <Download size={22} />
@@ -2597,7 +2597,7 @@ export default function App() {
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass-card p-5 rounded-[1.75rem] flex items-center gap-4 mb-8 border border-white/20 dark:border-gray-800/50 shadow-sm relative overflow-hidden inner-glow"
+              className="ios-surface p-5 flex items-center gap-4 mb-8 relative overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-1 h-full bg-blue-600/30" />
               <div className="w-11 h-11 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex-shrink-0 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-inner">
@@ -2671,7 +2671,7 @@ export default function App() {
   );
 
   const renderSkeletonCard = () => (
-    <div className={`glass-card rounded-[2rem] premium-border flex items-center justify-between animate-pulse overflow-hidden ${isCompact ? 'h-[88px] p-4' : 'h-[128px] p-6'}`}>
+    <div className={`ios-surface flex items-center justify-between animate-pulse overflow-hidden ${isCompact ? 'h-[88px] p-4' : 'h-[128px] p-6'}`}>
       <div className="flex items-center gap-4 min-w-0 flex-1">
         {!profile.preferences.textMode && (
           <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-100 dark:bg-gray-800 flex-shrink-0`} />
@@ -2704,7 +2704,7 @@ export default function App() {
       whileHover={{ scale: 1.01, y: -2 }}
       whileTap={{ scale: 0.98 }}
       onClick={() => openCoin(coin)}
-      className={`glass-card rounded-[2rem] premium-border transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden soft-shadow active:bg-white/80 dark:active:bg-black/60 ${
+      className={`ios-surface transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden active:bg-white/80 dark:active:bg-black/60 ${
         isCompact ? 'h-[88px] p-4' : 'h-[128px] p-6'
       } ${
         coin.rarity === 'Very Rare' ? 'ring-1 ring-amber-400/30 bg-amber-50/30 dark:bg-amber-900/10' : 
@@ -2792,7 +2792,7 @@ export default function App() {
 
     return (
       <div className="max-w-md mx-auto mb-10 px-4">
-        <div className="flex glass-card p-1.5 rounded-[2.25rem] premium-border border border-white/20 dark:border-gray-800/50 shadow-xl premium-shadow relative overflow-hidden inner-glow">
+        <div className="flex ios-surface p-1.5 rounded-[2.25rem] relative overflow-hidden">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -2807,7 +2807,7 @@ export default function App() {
                 {isActive && (
                   <motion.div
                     layoutId="activeTabIndicator"
-                    className="absolute inset-0 bg-white dark:bg-gray-900 rounded-[1.75rem] shadow-sm border border-white/20 dark:border-gray-800/30 z-[-1] inner-glow"
+                    className="absolute inset-0 bg-white dark:bg-gray-900 rounded-[1.75rem] shadow-sm border border-black/[0.02] dark:border-white/[0.02] z-[-1]"
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
@@ -2833,7 +2833,7 @@ export default function App() {
 
     return (
       <div className="fixed bottom-6 left-0 right-0 z-40 px-6 pointer-events-none">
-        <nav className="max-w-md mx-auto glass-card border border-white/20 dark:border-gray-800/50 px-6 py-3 rounded-[2.5rem] flex items-center justify-around shadow-2xl premium-shadow premium-border inner-glow pointer-events-auto relative overflow-hidden">
+        <nav className="max-w-md mx-auto ios-overlay px-6 py-3 flex items-center justify-around pointer-events-auto relative overflow-hidden">
           {/* Subtle background glow for active item */}
           <div className="absolute inset-0 bg-gradient-to-t from-blue-500/5 to-transparent pointer-events-none" />
           
@@ -2965,7 +2965,7 @@ export default function App() {
             whileHover={{ scale: 1.1, x: -4 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setActiveGameMode(null)}
-            className="w-12 h-12 glass-button rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors premium-border border border-white/20 dark:border-gray-800/50"
+            className="w-12 h-12 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
           >
             <ChevronLeft size={24} />
           </motion.button>
@@ -2983,7 +2983,7 @@ export default function App() {
                 key={era.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card p-8 rounded-[3rem] premium-shadow premium-border border inner-glow relative overflow-hidden"
+                className="ios-surface p-8 relative overflow-hidden"
               >
                 <div className="flex justify-between items-start mb-6">
                   <div>
@@ -3059,7 +3059,7 @@ export default function App() {
             whileHover={{ scale: 1.1, x: -4 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setActiveGameMode(null)}
-            className="w-12 h-12 glass-button rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors premium-border border border-white/20 dark:border-gray-800/50"
+            className="w-12 h-12 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
           >
             <ChevronLeft size={24} />
           </motion.button>
@@ -3069,7 +3069,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="glass-card p-10 rounded-[3rem] premium-shadow premium-border border inner-glow relative overflow-hidden text-center">
+        <div className="ios-surface p-10 relative overflow-hidden text-center">
           <div className="w-24 h-24 bg-blue-50 dark:bg-blue-900/20 rounded-[2rem] flex items-center justify-center text-blue-600 dark:text-blue-400 mx-auto mb-8 shadow-inner">
             <Puzzle size={48} />
           </div>
@@ -3118,7 +3118,7 @@ export default function App() {
               setActiveNarrativeStoryId(null);
               setSelectedChapterId(null);
             }}
-            className="w-12 h-12 glass-button rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-blue-600 transition-colors premium-border border border-white/20 dark:border-gray-800/50"
+            className="w-12 h-12 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
           >
             <ChevronLeft size={24} />
           </motion.button>
@@ -3138,7 +3138,7 @@ export default function App() {
               <motion.div
                 key={chapter.id}
                 layout
-                className={`glass-card rounded-[2.5rem] premium-border border overflow-hidden transition-all ${
+                className={`ios-surface overflow-hidden transition-all ${
                   isUnlocked ? 'opacity-100' : 'opacity-50 grayscale'
                 } ${isSelected ? 'ring-2 ring-blue-500 shadow-2xl shadow-blue-500/20' : ''}`}
               >
@@ -3398,12 +3398,12 @@ export default function App() {
               setActiveNarrativeStoryId(id);
             }
           }}
-          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden premium-shadow premium-border border inner-glow ${
+          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden ${
             locked
               ? 'bg-gray-100/40 dark:bg-gray-800/40 text-gray-400 cursor-not-allowed border-gray-200/30 dark:border-gray-700/30'
               : isActive 
                 ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-2xl shadow-blue-500/40 border-blue-400/30' 
-                : 'glass-card text-gray-900 dark:text-white border-white/20 dark:border-gray-800/50'
+                : 'ios-surface text-gray-900 dark:text-white'
           }`}
         >
           <div className="relative z-10 h-full flex flex-col">
@@ -3573,9 +3573,9 @@ export default function App() {
 
   return (
     <ErrorBoundary onExport={exportData}>
-      <div className={`min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans transition-colors relative ${profile.preferences.showBottomMenu ? 'pb-24' : 'pb-12'}`}>
-        {/* Global Texture Overlay */}
-        <div className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-50 bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
+      <div className={`min-h-screen ios-base text-gray-900 dark:text-gray-100 font-sans transition-colors relative ${profile.preferences.showBottomMenu ? 'pb-24' : 'pb-12'}`}>
+        {/* Global Texture Overlay - Extremely subtle as per request */}
+        <div className="fixed inset-0 pointer-events-none opacity-[0.01] dark:opacity-[0.02] z-50 bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
         
         <input 
           type="file" 
@@ -3610,7 +3610,7 @@ export default function App() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search collection..."
-                    className={`w-full pl-11 pr-4 ${isCompact ? 'py-3' : 'py-4'} glass-card rounded-[1.5rem] border-none focus:ring-2 focus:ring-blue-500/50 transition-all soft-shadow placeholder:text-gray-400 font-medium`}
+                    className={`w-full pl-11 pr-4 ${isCompact ? 'py-3' : 'py-4'} ios-surface border-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-gray-400 font-medium`}
                   />
                   {searchQuery && (
                     <motion.button 
@@ -4203,15 +4203,15 @@ export default function App() {
                     <TrendingUp size={18} className="text-blue-600" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <div className="ios-surface p-5">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Most Collected</p>
                       <p className="text-xl font-black text-gray-800 dark:text-gray-200">{stats.insights.mostCollectedType}</p>
                     </div>
-                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <div className="ios-surface p-5">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Peak Year</p>
                       <p className="text-xl font-black text-gray-800 dark:text-gray-200">{stats.insights.mostCollectedYear || 'N/A'}</p>
                     </div>
-                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm col-span-2">
+                    <div className="ios-surface p-5 col-span-2">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Avg. Paid per Coin</p>
                       <p className="text-xl font-black text-green-600 dark:text-green-400">£{stats.insights.averagePaid.toFixed(2)}</p>
                     </div>
@@ -4358,7 +4358,7 @@ export default function App() {
               >
                 {/* Profile Card */}
                 {profile.preferences.showProgressCard && (
-                  <div className="glass-card p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 soft-shadow premium-border flex items-center gap-6 mb-2">
+                  <div className="ios-surface p-6 flex items-center gap-6 mb-2">
                     <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[1.75rem] flex items-center justify-center text-white shadow-xl shadow-blue-200/50 dark:shadow-none">
                       <User size={40} />
                     </div>
@@ -4396,11 +4396,11 @@ export default function App() {
 
                 {/* Collector Stats Grid */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="glass-card p-5 rounded-[2rem] border border-gray-100 dark:border-gray-800 soft-shadow premium-border">
+                  <div className="ios-surface p-5">
                     <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Total Value</p>
                     <p className="text-2xl font-black text-green-600 dark:text-green-400 tracking-tight">£{stats.totalSpend.toFixed(2)}</p>
                   </div>
-                  <div className="glass-card p-5 rounded-[2rem] border border-gray-100 dark:border-gray-800 soft-shadow premium-border">
+                  <div className="ios-surface p-5">
                     <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Total Points</p>
                     <p className="text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tight">{profile.points}</p>
                   </div>
@@ -4427,7 +4427,7 @@ export default function App() {
                       setExploreMode('timeline');
                     }}
                     className={`p-6 rounded-[2rem] font-black text-sm flex flex-col items-center justify-center gap-3 shadow-xl active:scale-95 transition-all ${
-                      profile.preferences.showCollectorCard ? 'glass-card text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 soft-shadow premium-border' : 'col-span-2 glass-card text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 soft-shadow premium-border'
+                      profile.preferences.showCollectorCard ? 'ios-surface text-gray-800 dark:text-gray-100' : 'col-span-2 ios-surface text-gray-800 dark:text-gray-100'
                     }`}
                   >
                     <History size={28} className="text-blue-600" />
@@ -4808,7 +4808,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+              className="ios-modal-backdrop"
               onClick={() => setSelectedCoin(null)}
             >
               <motion.div
@@ -4816,7 +4816,7 @@ export default function App() {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: '20%', opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="glass-card w-full max-w-md rounded-t-[3rem] sm:rounded-[3rem] overflow-hidden max-h-[90vh] flex flex-col premium-border soft-shadow"
+                className="ios-overlay w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col"
                 onClick={e => e.stopPropagation()}
               >
                 <div className={`relative h-80 flex-shrink-0 flex items-center justify-center overflow-hidden ${
@@ -4915,11 +4915,11 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-10">
-                    <div className="glass-card p-5 rounded-[2rem] premium-border soft-shadow">
+                    <div className="ios-surface p-5">
                       <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Denomination</p>
                       <p className="font-black text-2xl text-gray-800 dark:text-gray-100 tracking-tight">{selectedCoin.type}</p>
                     </div>
-                    <div className="glass-card p-5 rounded-[2rem] premium-border soft-shadow">
+                    <div className="ios-surface p-5">
                       <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Investment</p>
                       <p className="font-black text-2xl text-green-600 dark:text-green-400 tracking-tight">£{selectedCoin.amountPaid?.toFixed(2)}</p>
                     </div>

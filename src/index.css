@@ -22,10 +22,49 @@
   --text-fluid-2xl: clamp(1.25rem, 5vw, 1.5rem);
   --text-fluid-3xl: clamp(1.5rem, 6vw, 1.875rem);
   --text-fluid-4xl: clamp(1.875rem, 8vw, 2.25rem);
+
+  /* iOS Material System */
+  --radius-ios: 24px;
+  --radius-ios-sm: 12px;
+  --radius-ios-lg: 32px;
+  
+  --shadow-ios: 0 4px 24px -1px rgba(0, 0, 0, 0.06), 0 2px 8px -1px rgba(0, 0, 0, 0.04);
+  --shadow-ios-lg: 0 12px 48px -4px rgba(0, 0, 0, 0.12), 0 4px 16px -2px rgba(0, 0, 0, 0.08);
 }
 
 body {
   @apply antialiased selection:bg-blue-100 selection:text-blue-900 transition-colors duration-300;
+  background-color: #F2F2F7; /* iOS System Background Light */
+}
+
+.dark body {
+  background-color: #000000; /* iOS System Background Dark */
+}
+
+/* --- iOS Material Layers --- */
+
+.ios-base {
+  @apply bg-[#F2F2F7] dark:bg-black transition-colors duration-500;
+}
+
+.ios-surface {
+  @apply bg-white dark:bg-[#1C1C1E] shadow-[var(--shadow-ios)] rounded-[var(--radius-ios)] border border-black/[0.02] dark:border-white/[0.02] transition-all duration-300;
+}
+
+.ios-overlay {
+  @apply bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-[var(--shadow-ios-lg)] rounded-[var(--radius-ios-lg)] transition-all duration-500;
+}
+
+.ios-glass {
+  @apply bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-sm transition-all duration-300;
+}
+
+.ios-button {
+  @apply bg-white dark:bg-[#2C2C2E] rounded-[var(--radius-ios-sm)] shadow-sm border border-black/[0.05] dark:border-white/[0.05] active:scale-[0.97] transition-all duration-200;
+}
+
+.ios-modal-backdrop {
+  @apply fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center transition-all duration-500;
 }
 
 /* --- Texture Themes --- */
