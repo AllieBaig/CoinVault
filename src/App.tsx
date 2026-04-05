@@ -732,6 +732,19 @@ export default function App() {
   const [isMindMapMode, setIsMindMapMode] = useState(false);
   const [mindMapZoom, setMindMapZoom] = useState(1);
   const [mindMapOffset, setMindMapOffset] = useState({ x: 0, y: 0 });
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
+
+  const toggleNode = (nodeId: string) => {
+    setExpandedNodes(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  };
 
   const generateMyCoinStory = useMemo((): Timeline => {
     const events: TimelineEvent[] = [];
@@ -1236,187 +1249,162 @@ export default function App() {
   };
 
   const renderMindMap = () => {
-    // Group coins for the mind map
-    const years = Array.from(new Set(coins.map(c => c.year))).sort();
-    const totalNodes = coins.length + years.length + 1; // Coins + Years + Root
-    
-    // Simple radial layout calculation
-    const getPos = (index: number, total: number, radius: number, centerX = 0, centerY = 0) => {
-      const angle = (index / total) * 2 * Math.PI;
-      return {
-        x: centerX + radius * Math.cos(angle),
-        y: centerY + radius * Math.sin(angle)
-      };
+    // Grouping logic for the tree
+    const treeData = useMemo(() => {
+      const root = { id: 'root', label: 'Collection Root', children: [] as any[], level: 0 };
+      
+      const eras = Array.from(new Set(coins.map(c => c.era || 'Unknown Era'))).sort();
+      
+      eras.forEach(era => {
+        const eraNode = { id: `era-${era}`, label: era, children: [] as any[], level: 1 };
+        const eraCoins = coins.filter(c => (c.era || 'Unknown Era') === era);
+        
+        const years = Array.from(new Set(eraCoins.map(c => c.year))).sort();
+        years.forEach(year => {
+          const yearNode = { id: `era-${era}-year-${year}`, label: year, children: [] as any[], level: 2 };
+          const yearCoins = eraCoins.filter(c => c.year === year);
+          
+          const mints = Array.from(new Set(yearCoins.map(c => c.mint || 'Unknown Mint')));
+          mints.forEach(mint => {
+            const mintNode = { id: `era-${era}-year-${year}-mint-${mint}`, label: mint, children: [] as any[], level: 3 };
+            const mintCoins = yearCoins.filter(c => (c.mint || 'Unknown Mint') === mint);
+            
+            const types = Array.from(new Set(mintCoins.map(c => c.type)));
+            types.forEach(type => {
+              const typeNode = { id: `era-${era}-year-${year}-mint-${mint}-type-${type}`, label: type, children: [] as any[], level: 4 };
+              const typeCoins = mintCoins.filter(c => c.type === type);
+              
+              typeCoins.forEach(coin => {
+                typeNode.children.push({ id: coin.id, label: coin.name, coin, level: 5 });
+              });
+              
+              mintNode.children.push(typeNode);
+            });
+            
+            yearNode.children.push(mintNode);
+          });
+          
+          eraNode.children.push(yearNode);
+        });
+        
+        root.children.push(eraNode);
+      });
+      
+      return root;
+    }, [coins]);
+
+    const renderTreeNode = (node: any) => {
+      const isExpanded = expandedNodes.has(node.id);
+      const hasChildren = node.children && node.children.length > 0;
+      const isCoin = !!node.coin;
+
+      return (
+        <div key={node.id} className="flex flex-col">
+          <motion.div 
+            layout
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className={`group flex items-center gap-3 py-2 px-4 rounded-xl transition-all cursor-pointer relative ${
+              isCoin 
+                ? 'bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md' 
+                : 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
+            }`}
+            style={{ marginLeft: `${node.level * 20}px` }}
+            onClick={() => {
+              if (isCoin) {
+                openCoin(node.coin);
+              } else if (hasChildren) {
+                toggleNode(node.id);
+              }
+            }}
+          >
+            {/* Vertical Line for hierarchy */}
+            {node.level > 0 && (
+              <div className="absolute -left-3 top-0 bottom-0 w-[1px] bg-gray-200 dark:bg-gray-800" />
+            )}
+            {/* Horizontal branch line */}
+            {node.level > 0 && (
+              <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-3 h-[1px] bg-gray-200 dark:bg-gray-800" />
+            )}
+
+            {hasChildren && (
+              <motion.div
+                animate={{ rotate: isExpanded ? 90 : 0 }}
+                className="text-gray-400 group-hover:text-blue-500 transition-colors"
+              >
+                <ChevronRight size={12} />
+              </motion.div>
+            )}
+            
+            {!hasChildren && !isCoin && <div className="w-3" />}
+
+            <div className="flex flex-col">
+              <span className={`text-sm ${isCoin ? 'font-bold text-gray-900 dark:text-gray-100' : 'font-black uppercase tracking-widest text-[9px] text-gray-400'}`}>
+                {node.label}
+              </span>
+              {isCoin && node.coin.rarity !== 'Common' && (
+                <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter">
+                  {node.coin.rarity}
+                </span>
+              )}
+            </div>
+
+            {hasChildren && !isExpanded && (
+              <span className="ml-auto text-[8px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest">
+                {node.children.length}
+              </span>
+            )}
+          </motion.div>
+          
+          <AnimatePresence>
+            {isExpanded && hasChildren && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                {node.children.map((child: any) => renderTreeNode(child))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      );
     };
 
     return (
-      <div className="flex-1 relative overflow-hidden bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 inner-glow">
-        {/* Controls */}
-        <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setMindMapZoom(prev => Math.min(prev + 0.2, 3))}
-            className="w-10 h-10 glass-button rounded-xl flex items-center justify-center shadow-lg"
-          >
-            <Plus size={20} />
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setMindMapZoom(prev => Math.max(prev - 0.2, 0.5))}
-            className="w-10 h-10 glass-button rounded-xl flex items-center justify-center shadow-lg"
-          >
-            <ChevronDown size={20} className="rotate-180" />
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => { setMindMapZoom(1); setMindMapOffset({ x: 0, y: 0 }); }}
-            className="w-10 h-10 glass-button rounded-xl flex items-center justify-center shadow-lg"
-          >
-            <RefreshCw size={18} />
-          </motion.button>
-        </div>
-
-        {/* Legend / Progress */}
-        <div className="absolute top-6 right-6 z-20 glass-card p-4 rounded-2xl border border-white/20 dark:border-gray-800/50 shadow-xl">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Explored: {coins.length} Nodes</span>
-          </div>
-          <div className="h-1.5 w-32 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min((coins.length / 50) * 100, 100)}%` }}
-              className="h-full bg-blue-500"
-            />
-          </div>
-        </div>
-
-        {/* Mind Map Canvas */}
-        <motion.div
-          drag
-          dragMomentum={false}
-          onDrag={(e, info) => setMindMapOffset(prev => ({ x: prev.x + info.delta.x, y: prev.y + info.delta.y }))}
-          style={{ x: mindMapOffset.x, y: mindMapOffset.y, scale: mindMapZoom }}
-          className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing"
-        >
-          <div className="relative w-1 h-1">
-            {/* Root Node */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center shadow-2xl z-10 border-4 border-white/20"
-            >
-              <div className="text-center">
-                <Coins size={32} className="text-white mx-auto mb-1" />
-                <span className="text-[10px] font-black text-white uppercase tracking-tighter">Collection</span>
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 inner-glow p-6">
+        {/* Header / Progress */}
+        <div className="flex items-center justify-between mb-6 px-2">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Tree Progress</span>
+            <div className="flex items-center gap-3 mt-1">
+              <div className="h-1 w-24 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min((coins.length / 50) * 100, 100)}%` }}
+                  className="h-full bg-blue-500"
+                />
               </div>
-            </motion.div>
-
-            {/* Year Nodes & Connections */}
-            {years.map((year, yIdx) => {
-              const yearPos = getPos(yIdx, years.length, 250);
-              const yearCoins = coins.filter(c => c.year === year);
-              
-              return (
-                <React.Fragment key={year}>
-                  {/* Connection to Root */}
-                  <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: 0, height: 0 }}>
-                    <motion.line
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      x1="0" y1="0"
-                      x2={yearPos.x} y2={yearPos.y}
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-blue-200 dark:text-gray-800"
-                      strokeDasharray="4 4"
-                    />
-                  </svg>
-
-                  {/* Year Node */}
-                  <motion.div
-                    initial={{ scale: 0, x: 0, y: 0 }}
-                    animate={{ scale: 1, x: yearPos.x, y: yearPos.y }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 w-16 h-16 glass-card rounded-full flex items-center justify-center shadow-xl border border-blue-200 dark:border-gray-700 z-10"
-                  >
-                    <span className="text-xs font-black text-blue-600 dark:text-blue-400">{year}</span>
-                  </motion.div>
-
-                  {/* Coin Nodes */}
-                  {yearCoins.map((coin, cIdx) => {
-                    const coinPos = getPos(cIdx, yearCoins.length, 120, yearPos.x, yearPos.y);
-                    const isRare = coin.rarity !== 'Common';
-                    
-                    return (
-                      <React.Fragment key={coin.id}>
-                        {/* Connection to Year */}
-                        <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: 0, height: 0 }}>
-                          <motion.line
-                            initial={{ pathLength: 0 }}
-                            animate={{ pathLength: 1 }}
-                            x1={yearPos.x} y1={yearPos.y}
-                            x2={coinPos.x} y2={coinPos.y}
-                            stroke="currentColor"
-                            strokeWidth="1"
-                            className="text-gray-200 dark:text-gray-800"
-                          />
-                        </svg>
-
-                        {/* Coin Node */}
-                        <motion.button
-                          initial={{ scale: 0, x: yearPos.x, y: yearPos.y }}
-                          animate={{ scale: 1, x: coinPos.x, y: coinPos.y }}
-                          whileHover={{ scale: 1.2, zIndex: 30 }}
-                          onClick={() => openCoin(coin)}
-                          className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center shadow-lg border-2 transition-all ${
-                            isRare 
-                              ? 'w-12 h-12 bg-amber-50 dark:bg-amber-900/20 border-amber-400 shadow-amber-200/50' 
-                              : 'w-10 h-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                          }`}
-                        >
-                          {coin.image ? (
-                            <img src={coin.image} alt="" className="w-full h-full rounded-full object-cover" />
-                          ) : (
-                            <span className="text-[10px] font-black">{coin.type}</span>
-                          )}
-                          {isRare && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center border border-white">
-                              <Star size={8} className="text-white fill-white" />
-                            </div>
-                          )}
-                        </motion.button>
-
-                        {/* Cross-connections (Era/Mint) */}
-                        {yearCoins.slice(cIdx + 1).map(otherCoin => {
-                          if ((coin.era && coin.era === otherCoin.era) || (coin.mint && coin.mint === otherCoin.mint)) {
-                            const otherCoinPos = getPos(yearCoins.indexOf(otherCoin), yearCoins.length, 120, yearPos.x, yearPos.y);
-                            return (
-                              <svg key={`link-${coin.id}-${otherCoin.id}`} className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: 0, height: 0 }}>
-                                <motion.path
-                                  initial={{ pathLength: 0 }}
-                                  animate={{ pathLength: 1 }}
-                                  d={`M ${coinPos.x} ${coinPos.y} Q ${(coinPos.x + otherCoinPos.x) / 2 + 20} ${(coinPos.y + otherCoinPos.y) / 2 + 20} ${otherCoinPos.x} ${otherCoinPos.y}`}
-                                  stroke="currentColor"
-                                  strokeWidth="0.5"
-                                  fill="none"
-                                  className="text-blue-400/20 dark:text-blue-400/10"
-                                />
-                              </svg>
-                            );
-                          }
-                          return null;
-                        })}
-                      </React.Fragment>
-                    );
-                  })}
-                </React.Fragment>
-              );
-            })}
+              <span className="text-[9px] font-black text-blue-600 dark:text-blue-400">{coins.length}/50 Nodes</span>
+            </div>
           </div>
-        </motion.div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setExpandedNodes(new Set(['root']))}
+            className="text-[9px] font-black text-gray-400 hover:text-blue-500 uppercase tracking-widest flex items-center gap-1.5"
+          >
+            <RefreshCw size={10} /> Reset
+          </motion.button>
+        </div>
+
+        {/* Tree Canvas */}
+        <div className="flex-1 overflow-y-auto no-scrollbar pr-2">
+          <div className="space-y-1">
+            {renderTreeNode(treeData)}
+          </div>
+        </div>
       </div>
     );
   };
@@ -1448,10 +1436,10 @@ export default function App() {
               <div className="flex items-center justify-between mb-8 flex-shrink-0">
                 <div>
                   <h3 className="text-3xl font-black tracking-tight text-gradient-blue">
-                    {isMindMapMode ? 'Collection Map' : 'Timeline Hub'}
+                    {isMindMapMode ? 'Collection Tree' : 'Timeline Hub'}
                   </h3>
                   <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1.5">
-                    {isMindMapMode ? 'Explore your collection nodes' : 'Explore the history of coins'}
+                    {isMindMapMode ? 'Explore your collection hierarchy' : 'Explore the history of coins'}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
