@@ -25,6 +25,7 @@ type CoinType = '£1' | '£2' | '50p';
 type Rarity = 'Common' | 'Rare' | 'Very Rare';
 type SortOption = 'year' | 'denomination' | 'date' | 'month' | 'added' | 'opened' | 'name';
 type GroupOption = 'year' | 'denomination' | 'date' | 'month' | 'none';
+type ExploreMode = 'timeline' | 'mindmap' | 'story';
 
 interface Coin {
   id: string;
@@ -671,7 +672,7 @@ export default function App() {
     };
   });
 
-  const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'story' | 'stats' | 'profile'>('collection');
+  const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'explore' | 'stats' | 'profile'>('collection');
   const [activeGameMode, setActiveGameMode] = useState<string | null>(null);
   const [activeNarrativeStoryId, setActiveNarrativeStoryId] = useState<string | null>(null);
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
@@ -726,13 +727,19 @@ export default function App() {
   const [inputModal, setInputModal] = useState<{ title: string; placeholder: string; onConfirm: (value: string) => void } | null>(null);
   const [modalInputValue, setModalInputValue] = useState('');
   const [compareCoins, setCompareCoins] = useState<string[]>([]);
-  const [showTimeline, setShowTimeline] = useState(false);
   const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
   const [expandedEventIdx, setExpandedEventIdx] = useState<number | null>(null);
-  const [isMindMapMode, setIsMindMapMode] = useState(false);
+  const [exploreMode, setExploreMode] = useState<ExploreMode>(() => {
+    const saved = localStorage.getItem('exploreMode');
+    return (saved as ExploreMode) || 'timeline';
+  });
   const [mindMapZoom, setMindMapZoom] = useState(1);
   const [mindMapOffset, setMindMapOffset] = useState({ x: 0, y: 0 });
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
+
+  useEffect(() => {
+    localStorage.setItem('exploreMode', exploreMode);
+  }, [exploreMode]);
 
   const toggleNode = (nodeId: string) => {
     setExpandedNodes(prev => {
@@ -1409,78 +1416,111 @@ export default function App() {
     );
   };
 
-  const renderTimelineModal = () => (
-    <AnimatePresence>
-      {showTimeline && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-end justify-center"
-          onClick={() => setShowTimeline(false)}
-        >
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: 'spring', damping: 30, stiffness: 250 }}
-            className="glass-card w-full max-w-md h-[90vh] rounded-t-[3rem] p-8 shadow-2xl flex flex-col premium-border border-t border-x border-white/20 dark:border-gray-800/50 relative overflow-hidden"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Mesh background effect for modal */}
-            <div className="absolute inset-0 mesh-gradient opacity-20 pointer-events-none" />
-            
-            <div className="relative z-10 flex flex-col h-full">
-              <div className="w-12 h-1.5 bg-gray-200/50 dark:bg-gray-800/50 rounded-full mx-auto mb-8 flex-shrink-0" />
-              
-              <div className="flex items-center justify-between mb-8 flex-shrink-0">
-                <div>
-                  <h3 className="text-3xl font-black tracking-tight text-gradient-blue">
-                    {isMindMapMode ? 'Collection Tree' : 'Timeline Hub'}
-                  </h3>
-                  <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1.5">
-                    {isMindMapMode ? 'Explore your collection hierarchy' : 'Explore the history of coins'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setIsMindMapMode(!isMindMapMode)}
-                    className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm border transition-all ${
-                      isMindMapMode 
-                        ? 'bg-blue-600 text-white border-blue-400 shadow-blue-200' 
-                        : 'glass-button border-white/20 dark:border-gray-800/20 text-gray-500'
-                    }`}
-                  >
-                    <Map size={20} />
-                  </motion.button>
-                  <motion.button 
-                    whileHover={{ scale: 1.1, rotate: 90 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setShowTimeline(false)} 
-                    className="w-11 h-11 glass-button rounded-full flex items-center justify-center shadow-sm border border-white/20 dark:border-gray-800/20"
-                  >
-                    <X size={22} className="text-gray-500 dark:text-gray-400" />
-                  </motion.button>
-                </div>
-              </div>
-
-              {isMindMapMode ? (
-                renderMindMap()
-              ) : (
-                !selectedTimelineId ? (
-                  renderTimelineHub()
-                ) : (
-                  renderTimelineDetail(selectedTimelineId)
-                )
-              )}
+  const renderPersonalNarrative = () => {
+    const story = generateMyCoinStory;
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 inner-glow p-8">
+        <div className="flex-1 overflow-y-auto no-scrollbar pr-2 space-y-12 pb-12">
+          <div className="text-center max-w-xs mx-auto mb-12">
+            <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center shadow-xl shadow-blue-500/30 mx-auto mb-4">
+              <BookOpen size={32} className="text-white" />
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+            <h4 className="text-2xl font-black tracking-tight text-gray-800 dark:text-gray-100 leading-tight">{story.title}</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">{story.description}</p>
+          </div>
+
+          {story.events.map((event, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className="relative pl-10"
+            >
+              {idx !== story.events.length - 1 && (
+                <div className="absolute left-[15px] top-8 bottom-[-48px] w-[2px] bg-gradient-to-b from-blue-600/20 to-transparent" />
+              )}
+              <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-white dark:bg-gray-800 border-2 border-blue-600 flex items-center justify-center shadow-sm z-10">
+                <div className="w-2 h-2 rounded-full bg-blue-600" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">{event.year}</span>
+                <h5 className="text-lg font-black text-gray-800 dark:text-gray-100 leading-tight mb-2">{event.event || event.title}</h5>
+                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed italic">
+                  {event.note || event.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderExplore = () => {
+    return (
+      <motion.div
+        key="explore"
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 10 }}
+        className="space-y-6 pb-24 h-[calc(100vh-180px)] flex flex-col"
+      >
+        <div className="flex items-center justify-between px-2 flex-shrink-0">
+          <h2 className="text-2xl font-black text-gray-800 dark:text-gray-200">Explore</h2>
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{exploreMode} Mode</span>
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="flex p-1.5 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex-shrink-0">
+          {[
+            { id: 'timeline', label: 'Timeline', icon: History },
+            { id: 'mindmap', label: 'Mind Map', icon: Map },
+            { id: 'story', label: 'Story', icon: BookOpen }
+          ].map((tab) => (
+            <motion.button
+              key={tab.id}
+              onClick={() => setExploreMode(tab.id as ExploreMode)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all relative ${
+                exploreMode === tab.id ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+              }`}
+            >
+              {exploreMode === tab.id && (
+                <motion.div
+                  layoutId="activeExploreTabMain"
+                  className="absolute inset-0 bg-blue-50 dark:bg-blue-900/30 shadow-inner rounded-[1.5rem]"
+                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <tab.icon size={14} />
+                {tab.label}
+              </span>
+            </motion.button>
+          ))}
+        </div>
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={exploreMode}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="flex-1 flex flex-col overflow-hidden"
+            >
+              {exploreMode === 'timeline' && (
+                !selectedTimelineId ? renderTimelineHub() : renderTimelineDetail(selectedTimelineId)
+              )}
+              {exploreMode === 'mindmap' && renderMindMap()}
+              {exploreMode === 'story' && renderStoryHub()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    );
+  };
 
   const SettingsSection = ({ id, title, icon: Icon, children, badge }: { id: string, title: string, icon: any, children: React.ReactNode, badge?: string }) => {
     const isExpanded = expandedSections.includes(id);
@@ -2785,7 +2825,7 @@ export default function App() {
     if (!profile.preferences.showBottomMenu) return null;
     const menuItems = [
       { id: 'collection', label: 'Home', icon: LayoutGrid },
-      { id: 'story', label: 'Story', icon: BookOpen },
+      { id: 'explore', label: 'Explore', icon: Map },
       { id: 'library', label: 'Library', icon: ImageIcon },
       { id: 'stats', label: 'Stats', icon: PieChart },
       { id: 'profile', label: 'Profile', icon: User },
@@ -3246,7 +3286,7 @@ export default function App() {
     }
   };
 
-  const renderStoryMode = () => {
+  const renderStoryHub = () => {
     if (activeNarrativeStoryId) return renderNarrativeStory();
     if (activeGameMode === 'era-conquest') return renderEraConquest();
     if (activeGameMode === 'timeline-puzzle') return renderTimelinePuzzle();
@@ -3340,13 +3380,16 @@ export default function App() {
             setProfile(prev => ({ ...prev, lastStoryItemId: id }));
             if (isTimeline) {
               setSelectedTimelineId(id);
-              setShowTimeline(true);
+              setActiveTab('explore');
+              setExploreMode('timeline');
             } else if (isMode && mode) {
               if (mode.id === 'timeline-explorer') {
-                setShowTimeline(true);
+                setActiveTab('explore');
+                setExploreMode('timeline');
                 setSelectedTimelineId(null);
               } else if (mode.id === 'my-coin-story') {
-                setShowTimeline(true);
+                setActiveTab('explore');
+                setExploreMode('timeline');
                 setSelectedTimelineId('my-coin-story');
               } else {
                 setActiveGameMode(mode.id);
@@ -3549,7 +3592,7 @@ export default function App() {
           {renderBottomMenu()}
 
           <AnimatePresence mode="wait">
-            {activeTab === 'story' && renderStoryMode()}
+            {activeTab === 'explore' && renderExplore()}
             
             {activeTab === 'collection' && (
               <motion.div
@@ -4379,7 +4422,10 @@ export default function App() {
                   <motion.button 
                     whileHover={{ scale: 1.02, y: -2 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowTimeline(true)}
+                    onClick={() => {
+                      setActiveTab('explore');
+                      setExploreMode('timeline');
+                    }}
                     className={`p-6 rounded-[2rem] font-black text-sm flex flex-col items-center justify-center gap-3 shadow-xl active:scale-95 transition-all ${
                       profile.preferences.showCollectorCard ? 'glass-card text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 soft-shadow premium-border' : 'col-span-2 glass-card text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-800 soft-shadow premium-border'
                     }`}
@@ -5411,7 +5457,6 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
-        {renderTimelineModal()}
       </div>
     </ErrorBoundary>
   );
