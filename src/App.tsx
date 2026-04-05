@@ -39,6 +39,8 @@ interface Coin {
   lastOpened: number;
   amountPaid: number;
   tags?: string[];
+  mint?: string;
+  era?: string;
 }
 
 interface Folder {
@@ -449,6 +451,7 @@ const DEFAULT_BADGES: Badge[] = [
   { id: 'badge-mystery-trail', name: 'Detective', description: 'Solved the Mystery Trail', icon: 'Search', isUnlocked: false },
   { id: 'badge-time-traveler', name: 'Chrononaut', description: 'Traveled through all Time Traveler chapters', icon: 'Clock', isUnlocked: false },
   { id: 'badge-collector-diary', name: 'Storyteller', description: 'Completed your personal Collector Diary', icon: 'BookOpen', isUnlocked: false },
+  { id: 'mind-map-explorer', name: 'Mind Map Explorer', description: 'Explored 20 collection nodes', icon: 'Map', isUnlocked: false },
 ];
 
 // --- Error Boundary ---
@@ -726,6 +729,9 @@ export default function App() {
   const [showTimeline, setShowTimeline] = useState(false);
   const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
   const [expandedEventIdx, setExpandedEventIdx] = useState<number | null>(null);
+  const [isMindMapMode, setIsMindMapMode] = useState(false);
+  const [mindMapZoom, setMindMapZoom] = useState(1);
+  const [mindMapOffset, setMindMapOffset] = useState({ x: 0, y: 0 });
 
   const generateMyCoinStory = useMemo((): Timeline => {
     const events: TimelineEvent[] = [];
@@ -1229,6 +1235,192 @@ export default function App() {
     );
   };
 
+  const renderMindMap = () => {
+    // Group coins for the mind map
+    const years = Array.from(new Set(coins.map(c => c.year))).sort();
+    const totalNodes = coins.length + years.length + 1; // Coins + Years + Root
+    
+    // Simple radial layout calculation
+    const getPos = (index: number, total: number, radius: number, centerX = 0, centerY = 0) => {
+      const angle = (index / total) * 2 * Math.PI;
+      return {
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle)
+      };
+    };
+
+    return (
+      <div className="flex-1 relative overflow-hidden bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 inner-glow">
+        {/* Controls */}
+        <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setMindMapZoom(prev => Math.min(prev + 0.2, 3))}
+            className="w-10 h-10 glass-button rounded-xl flex items-center justify-center shadow-lg"
+          >
+            <Plus size={20} />
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setMindMapZoom(prev => Math.max(prev - 0.2, 0.5))}
+            className="w-10 h-10 glass-button rounded-xl flex items-center justify-center shadow-lg"
+          >
+            <ChevronDown size={20} className="rotate-180" />
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => { setMindMapZoom(1); setMindMapOffset({ x: 0, y: 0 }); }}
+            className="w-10 h-10 glass-button rounded-xl flex items-center justify-center shadow-lg"
+          >
+            <RefreshCw size={18} />
+          </motion.button>
+        </div>
+
+        {/* Legend / Progress */}
+        <div className="absolute top-6 right-6 z-20 glass-card p-4 rounded-2xl border border-white/20 dark:border-gray-800/50 shadow-xl">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Explored: {coins.length} Nodes</span>
+          </div>
+          <div className="h-1.5 w-32 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min((coins.length / 50) * 100, 100)}%` }}
+              className="h-full bg-blue-500"
+            />
+          </div>
+        </div>
+
+        {/* Mind Map Canvas */}
+        <motion.div
+          drag
+          dragMomentum={false}
+          onDrag={(e, info) => setMindMapOffset(prev => ({ x: prev.x + info.delta.x, y: prev.y + info.delta.y }))}
+          style={{ x: mindMapOffset.x, y: mindMapOffset.y, scale: mindMapZoom }}
+          className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing"
+        >
+          <div className="relative w-1 h-1">
+            {/* Root Node */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center shadow-2xl z-10 border-4 border-white/20"
+            >
+              <div className="text-center">
+                <Coins size={32} className="text-white mx-auto mb-1" />
+                <span className="text-[10px] font-black text-white uppercase tracking-tighter">Collection</span>
+              </div>
+            </motion.div>
+
+            {/* Year Nodes & Connections */}
+            {years.map((year, yIdx) => {
+              const yearPos = getPos(yIdx, years.length, 250);
+              const yearCoins = coins.filter(c => c.year === year);
+              
+              return (
+                <React.Fragment key={year}>
+                  {/* Connection to Root */}
+                  <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: 0, height: 0 }}>
+                    <motion.line
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      x1="0" y1="0"
+                      x2={yearPos.x} y2={yearPos.y}
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-blue-200 dark:text-gray-800"
+                      strokeDasharray="4 4"
+                    />
+                  </svg>
+
+                  {/* Year Node */}
+                  <motion.div
+                    initial={{ scale: 0, x: 0, y: 0 }}
+                    animate={{ scale: 1, x: yearPos.x, y: yearPos.y }}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 w-16 h-16 glass-card rounded-full flex items-center justify-center shadow-xl border border-blue-200 dark:border-gray-700 z-10"
+                  >
+                    <span className="text-xs font-black text-blue-600 dark:text-blue-400">{year}</span>
+                  </motion.div>
+
+                  {/* Coin Nodes */}
+                  {yearCoins.map((coin, cIdx) => {
+                    const coinPos = getPos(cIdx, yearCoins.length, 120, yearPos.x, yearPos.y);
+                    const isRare = coin.rarity !== 'Common';
+                    
+                    return (
+                      <React.Fragment key={coin.id}>
+                        {/* Connection to Year */}
+                        <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: 0, height: 0 }}>
+                          <motion.line
+                            initial={{ pathLength: 0 }}
+                            animate={{ pathLength: 1 }}
+                            x1={yearPos.x} y1={yearPos.y}
+                            x2={coinPos.x} y2={coinPos.y}
+                            stroke="currentColor"
+                            strokeWidth="1"
+                            className="text-gray-200 dark:text-gray-800"
+                          />
+                        </svg>
+
+                        {/* Coin Node */}
+                        <motion.button
+                          initial={{ scale: 0, x: yearPos.x, y: yearPos.y }}
+                          animate={{ scale: 1, x: coinPos.x, y: coinPos.y }}
+                          whileHover={{ scale: 1.2, zIndex: 30 }}
+                          onClick={() => openCoin(coin)}
+                          className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center shadow-lg border-2 transition-all ${
+                            isRare 
+                              ? 'w-12 h-12 bg-amber-50 dark:bg-amber-900/20 border-amber-400 shadow-amber-200/50' 
+                              : 'w-10 h-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                          }`}
+                        >
+                          {coin.image ? (
+                            <img src={coin.image} alt="" className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            <span className="text-[10px] font-black">{coin.type}</span>
+                          )}
+                          {isRare && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center border border-white">
+                              <Star size={8} className="text-white fill-white" />
+                            </div>
+                          )}
+                        </motion.button>
+
+                        {/* Cross-connections (Era/Mint) */}
+                        {yearCoins.slice(cIdx + 1).map(otherCoin => {
+                          if ((coin.era && coin.era === otherCoin.era) || (coin.mint && coin.mint === otherCoin.mint)) {
+                            const otherCoinPos = getPos(yearCoins.indexOf(otherCoin), yearCoins.length, 120, yearPos.x, yearPos.y);
+                            return (
+                              <svg key={`link-${coin.id}-${otherCoin.id}`} className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: 0, height: 0 }}>
+                                <motion.path
+                                  initial={{ pathLength: 0 }}
+                                  animate={{ pathLength: 1 }}
+                                  d={`M ${coinPos.x} ${coinPos.y} Q ${(coinPos.x + otherCoinPos.x) / 2 + 20} ${(coinPos.y + otherCoinPos.y) / 2 + 20} ${otherCoinPos.x} ${otherCoinPos.y}`}
+                                  stroke="currentColor"
+                                  strokeWidth="0.5"
+                                  fill="none"
+                                  className="text-blue-400/20 dark:text-blue-400/10"
+                                />
+                              </svg>
+                            );
+                          }
+                          return null;
+                        })}
+                      </React.Fragment>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   const renderTimelineModal = () => (
     <AnimatePresence>
       {showTimeline && (
@@ -1253,26 +1445,47 @@ export default function App() {
             <div className="relative z-10 flex flex-col h-full">
               <div className="w-12 h-1.5 bg-gray-200/50 dark:bg-gray-800/50 rounded-full mx-auto mb-8 flex-shrink-0" />
               
-              {!selectedTimelineId ? (
-                <>
-                  <div className="flex items-center justify-between mb-8 flex-shrink-0">
-                    <div>
-                      <h3 className="text-3xl font-black tracking-tight text-gradient-blue">Timeline Hub</h3>
-                      <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1.5">Explore the history of coins</p>
-                    </div>
-                    <motion.button 
-                      whileHover={{ scale: 1.1, rotate: 90 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setShowTimeline(false)} 
-                      className="w-11 h-11 glass-button rounded-full flex items-center justify-center shadow-sm border border-white/20 dark:border-gray-800/20"
-                    >
-                      <X size={22} className="text-gray-500 dark:text-gray-400" />
-                    </motion.button>
-                  </div>
-                  {renderTimelineHub()}
-                </>
+              <div className="flex items-center justify-between mb-8 flex-shrink-0">
+                <div>
+                  <h3 className="text-3xl font-black tracking-tight text-gradient-blue">
+                    {isMindMapMode ? 'Collection Map' : 'Timeline Hub'}
+                  </h3>
+                  <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1.5">
+                    {isMindMapMode ? 'Explore your collection nodes' : 'Explore the history of coins'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsMindMapMode(!isMindMapMode)}
+                    className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm border transition-all ${
+                      isMindMapMode 
+                        ? 'bg-blue-600 text-white border-blue-400 shadow-blue-200' 
+                        : 'glass-button border-white/20 dark:border-gray-800/20 text-gray-500'
+                    }`}
+                  >
+                    <Map size={20} />
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowTimeline(false)} 
+                    className="w-11 h-11 glass-button rounded-full flex items-center justify-center shadow-sm border border-white/20 dark:border-gray-800/20"
+                  >
+                    <X size={22} className="text-gray-500 dark:text-gray-400" />
+                  </motion.button>
+                </div>
+              </div>
+
+              {isMindMapMode ? (
+                renderMindMap()
               ) : (
-                renderTimelineDetail(selectedTimelineId)
+                !selectedTimelineId ? (
+                  renderTimelineHub()
+                ) : (
+                  renderTimelineDetail(selectedTimelineId)
+                )
               )}
             </div>
           </motion.div>
@@ -1426,6 +1639,8 @@ export default function App() {
   const [newImage, setNewImage] = useState<string | undefined>();
   const [newFolderId, setNewFolderId] = useState<string>('purchased');
   const [newAmountPaid, setNewAmountPaid] = useState('0');
+  const [newMint, setNewMint] = useState('');
+  const [newEra, setNewEra] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -1518,6 +1733,15 @@ export default function App() {
     // Master 100
     if (coins.length >= 100 && !newBadges.find(b => b.id === 'master-100')?.isUnlocked) {
       const badge = newBadges.find(b => b.id === 'master-100')!;
+      badge.isUnlocked = true;
+      badge.unlockedAt = Date.now();
+      changed = true;
+      setFeedback({ message: `Achievement Unlocked: ${badge.name}`, type: 'success' });
+    }
+
+    // Mind Map Explorer
+    if (coins.length >= 20 && !newBadges.find(b => b.id === 'mind-map-explorer')?.isUnlocked) {
+      const badge = newBadges.find(b => b.id === 'mind-map-explorer')!;
       badge.isUnlocked = true;
       badge.unlockedAt = Date.now();
       changed = true;
@@ -1756,6 +1980,8 @@ export default function App() {
       folderId: newFolderId,
       amountPaid: parseFloat(newAmountPaid) || 0,
       tags: newTags,
+      mint: newMint,
+      era: newEra,
     };
 
     if (isEditing) {
@@ -1859,6 +2085,8 @@ export default function App() {
     setNewImage(undefined);
     setNewFolderId('purchased');
     setNewAmountPaid('0');
+    setNewMint('');
+    setNewEra('');
     setIsAdding(false);
     setIsEditing(null);
   };
@@ -1872,6 +2100,8 @@ export default function App() {
     setNewImage(coin.image);
     setNewFolderId(coin.folderId);
     setNewAmountPaid(coin.amountPaid?.toString() || '0');
+    setNewMint(coin.mint || '');
+    setNewEra(coin.era || '');
     setIsEditing(coin);
     setIsAdding(true);
     setSelectedCoin(null);
@@ -3584,6 +3814,29 @@ export default function App() {
                               <option value="Rare">Rare</option>
                               <option value="Very Rare">Very Rare</option>
                             </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Mint</label>
+                            <input
+                              type="text"
+                              value={newMint}
+                              onChange={(e) => setNewMint(e.target.value)}
+                              placeholder="e.g. Royal Mint"
+                              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Era</label>
+                            <input
+                              type="text"
+                              value={newEra}
+                              onChange={(e) => setNewEra(e.target.value)}
+                              placeholder="e.g. Elizabethan"
+                              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            />
                           </div>
                         </div>
 
