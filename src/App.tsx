@@ -2413,15 +2413,27 @@ export default function App() {
   );
 
   const renderSkeletonCard = () => (
-    <div className={`glass-card rounded-[2rem] premium-border p-6 flex items-center justify-between animate-pulse ${isCompact ? 'p-4' : 'p-6'}`}>
-      <div className="flex items-center gap-4">
-        <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-100 dark:bg-gray-800 flex-shrink-0`} />
-        <div className="space-y-2">
-          <div className="h-4 w-32 bg-gray-100 dark:bg-gray-800 rounded-full" />
-          <div className="h-3 w-20 bg-gray-50 dark:bg-gray-800/50 rounded-full" />
+    <div className={`glass-card rounded-[2rem] premium-border flex items-center justify-between animate-pulse overflow-hidden ${isCompact ? 'h-[88px] p-4' : 'h-[128px] p-6'}`}>
+      <div className="flex items-center gap-4 min-w-0 flex-1">
+        {!profile.preferences.textMode && (
+          <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-100 dark:bg-gray-800 flex-shrink-0`} />
+        )}
+        <div className="space-y-2 min-w-0 flex-1">
+          <div className={`bg-gray-100 dark:bg-gray-800 rounded-full ${isCompact ? 'h-4 w-24' : 'h-5 w-32'}`} />
+          <div className={`bg-gray-50 dark:bg-gray-800/50 rounded-full ${isCompact ? 'h-3 w-16' : 'h-3 w-20'}`} />
         </div>
       </div>
-      <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800" />
+      <div className="flex flex-col items-end gap-2 ml-4 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          {!profile.preferences.focusMode && (
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800" />
+          )}
+          {profile.preferences.showPrice && (
+            <div className={`bg-gray-100 dark:bg-gray-800 rounded-full ${isCompact ? 'h-4 w-12' : 'h-5 w-16'}`} />
+          )}
+        </div>
+        <div className="w-[18px] h-[18px] rounded-full bg-gray-50 dark:bg-gray-800/50" />
+      </div>
     </div>
   );
 
@@ -2435,13 +2447,13 @@ export default function App() {
       whileTap={{ scale: 0.98 }}
       onClick={() => openCoin(coin)}
       className={`glass-card rounded-[2rem] premium-border transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden soft-shadow active:bg-white/80 dark:active:bg-black/60 ${
-        isCompact ? 'p-4' : 'p-6'
+        isCompact ? 'h-[88px] p-4' : 'h-[128px] p-6'
       } ${
         coin.rarity === 'Very Rare' ? 'ring-1 ring-amber-400/30 bg-amber-50/30 dark:bg-amber-900/10' : 
         coin.rarity === 'Rare' ? 'ring-1 ring-blue-400/30 bg-blue-50/30 dark:bg-blue-900/10' : ''
       }`}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 min-w-0 flex-1">
         {!profile.preferences.textMode && (
           <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner border border-gray-100/50 dark:border-gray-800/50`}>
             {coin.image ? (
@@ -2456,28 +2468,28 @@ export default function App() {
             )}
           </div>
         )}
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h4 className={`font-bold text-gray-900 dark:text-gray-100 leading-tight ${isCompact ? 'text-sm' : 'text-base'}`}>
+            <h4 className={`font-bold text-gray-900 dark:text-gray-100 leading-tight truncate ${isCompact ? 'text-sm' : 'text-base'}`}>
               {coin.name}
             </h4>
             {!profile.preferences.textMode && coin.rarity !== 'Common' && (
-              <div className={`p-1 rounded-full ${coin.rarity === 'Very Rare' ? 'bg-amber-100/50 dark:bg-amber-900/30' : 'bg-blue-100/50 dark:bg-blue-900/30'}`}>
+              <div className={`p-1 rounded-full flex-shrink-0 ${coin.rarity === 'Very Rare' ? 'bg-amber-100/50 dark:bg-amber-900/30' : 'bg-blue-100/50 dark:bg-blue-900/30'}`}>
                 <Star size={10} className={`fill-current ${coin.rarity === 'Very Rare' ? 'text-amber-600' : 'text-blue-600'}`} />
               </div>
             )}
           </div>
           <div className="flex items-center gap-2.5">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em]">{coin.year}</span>
-            <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full" />
-            <span className={`text-[10px] font-bold uppercase tracking-[0.15em] ${
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] whitespace-nowrap">{coin.year}</span>
+            <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0" />
+            <span className={`text-[10px] font-bold uppercase tracking-[0.15em] truncate ${
               coin.rarity === 'Very Rare' ? 'text-amber-600' :
               coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-400'
             }`}>{coin.rarity}</span>
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-end gap-2">
+      <div className="flex flex-col items-end gap-2 ml-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           {!profile.preferences.focusMode && (
             <motion.button
@@ -2502,7 +2514,7 @@ export default function App() {
             </motion.button>
           )}
           {profile.preferences.showPrice && (
-            <span className={`font-bold text-gray-900 dark:text-gray-100 ${isCompact ? 'text-sm' : 'text-base'}`}>£{coin.amountPaid?.toFixed(2)}</span>
+            <span className={`font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap ${isCompact ? 'text-sm' : 'text-base'}`}>£{coin.amountPaid?.toFixed(2)}</span>
           )}
         </div>
         <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
