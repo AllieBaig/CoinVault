@@ -1064,6 +1064,8 @@ export default function App() {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
   const [selectedCoinIds, setSelectedCoinIds] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [activeBulkMenu, setActiveBulkMenu] = useState<'move' | 'type' | null>(null);
+  const [isApplyingBulkAction, setIsApplyingBulkAction] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -3106,22 +3108,38 @@ export default function App() {
   const renderMultiSelectBar = () => {
     if (!isMultiSelectMode || selectedCoinIds.size === 0) return null;
 
-    const handleBulkFolderChange = (folderId: string) => {
+    const handleBulkFolderChange = async (folderId: string) => {
+      setIsApplyingBulkAction(true);
+      setActiveBulkMenu(null);
+      
+      // Artificial delay for feedback
+      await new Promise(resolve => setTimeout(resolve, 600));
+
       setCoins(prev => prev.map(coin => 
         selectedCoinIds.has(coin.id) ? { ...coin, folderId } : coin
       ));
+      
       setIsMultiSelectMode(false);
       setSelectedCoinIds(new Set());
+      setIsApplyingBulkAction(false);
       setFeedback({ message: `Moved ${selectedCoinIds.size} coins to new folder`, type: 'success' });
       addLog(`Bulk move: ${selectedCoinIds.size} coins to folder ${folderId}`, 'action');
     };
 
-    const handleBulkDenominationChange = (type: CoinType) => {
+    const handleBulkDenominationChange = async (type: CoinType) => {
+      setIsApplyingBulkAction(true);
+      setActiveBulkMenu(null);
+
+      // Artificial delay for feedback
+      await new Promise(resolve => setTimeout(resolve, 600));
+
       setCoins(prev => prev.map(coin => 
         selectedCoinIds.has(coin.id) ? { ...coin, type } : coin
       ));
+      
       setIsMultiSelectMode(false);
       setSelectedCoinIds(new Set());
+      setIsApplyingBulkAction(false);
       setFeedback({ message: `Updated ${selectedCoinIds.size} coins to ${type}`, type: 'success' });
       addLog(`Bulk update: ${selectedCoinIds.size} coins to type ${type}`, 'action');
     };
@@ -3133,12 +3151,13 @@ export default function App() {
         exit={{ y: 100, opacity: 0 }}
         className="fixed bottom-24 left-4 right-4 z-[100]"
       >
-        <div className="ios-surface p-4 flex items-center justify-between shadow-2xl border-blue-500/20 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl">
+        <div className="ios-surface p-4 flex items-center justify-between shadow-2xl border-blue-500/20 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl relative">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => {
                 setIsMultiSelectMode(false);
                 setSelectedCoinIds(new Set());
+                setActiveBulkMenu(null);
               }}
               className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500"
             >
@@ -3151,43 +3170,94 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="relative group">
-              <button className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl flex items-center gap-2">
-                <FolderIcon size={18} />
-                <span className="text-xs font-black uppercase tracking-widest">Move</span>
-              </button>
-              <div className="absolute bottom-full right-0 mb-2 w-48 ios-surface p-2 hidden group-hover:block shadow-2xl">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest p-2">Select Folder</p>
-                {folders.map(f => (
-                  <button 
-                    key={f.id}
-                    onClick={() => handleBulkFolderChange(f.id)}
-                    className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-xs font-bold transition-colors"
-                  >
-                    {f.name}
-                  </button>
-                ))}
+            {isApplyingBulkAction ? (
+              <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl">
+                <Loader2 size={18} className="animate-spin" />
+                <span className="text-xs font-black uppercase tracking-widest">Applying...</span>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <button 
+                    onClick={() => setActiveBulkMenu(activeBulkMenu === 'move' ? null : 'move')}
+                    className={`p-3 rounded-2xl flex items-center gap-2 transition-all ${
+                      activeBulkMenu === 'move' ? 'bg-blue-600 text-white' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600'
+                    }`}
+                  >
+                    <FolderIcon size={18} />
+                    <span className="text-xs font-black uppercase tracking-widest">Move</span>
+                  </button>
+                  
+                  <AnimatePresence>
+                    {activeBulkMenu === 'move' && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute bottom-full right-0 mb-4 w-56 ios-surface p-2 shadow-2xl z-[110] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
+                      >
+                        <div className="flex items-center justify-between p-2 border-b border-gray-50 dark:border-gray-800 mb-1">
+                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Select Folder</p>
+                          <button onClick={() => setActiveBulkMenu(null)} className="text-gray-400"><X size={12} /></button>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto no-scrollbar">
+                          {folders.map(f => (
+                            <button 
+                              key={f.id}
+                              onClick={() => handleBulkFolderChange(f.id)}
+                              className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-xs font-bold transition-colors flex items-center gap-3"
+                            >
+                              <div className="w-2 h-2 rounded-full bg-blue-500" />
+                              {f.name}
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-            <div className="relative group">
-              <button className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl flex items-center gap-2">
-                <Coins size={18} />
-                <span className="text-xs font-black uppercase tracking-widest">Type</span>
-              </button>
-              <div className="absolute bottom-full right-0 mb-2 w-48 ios-surface p-2 hidden group-hover:block shadow-2xl">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest p-2">Select Type</p>
-                {['50p', '£1', '£2'].map(t => (
+                <div className="relative">
                   <button 
-                    key={t}
-                    onClick={() => handleBulkDenominationChange(t as CoinType)}
-                    className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-xs font-bold transition-colors"
+                    onClick={() => setActiveBulkMenu(activeBulkMenu === 'type' ? null : 'type')}
+                    className={`p-3 rounded-2xl flex items-center gap-2 transition-all ${
+                      activeBulkMenu === 'type' ? 'bg-blue-600 text-white' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600'
+                    }`}
                   >
-                    {t}
+                    <Coins size={18} />
+                    <span className="text-xs font-black uppercase tracking-widest">Type</span>
                   </button>
-                ))}
-              </div>
-            </div>
+
+                  <AnimatePresence>
+                    {activeBulkMenu === 'type' && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute bottom-full right-0 mb-4 w-48 ios-surface p-2 shadow-2xl z-[110] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
+                      >
+                        <div className="flex items-center justify-between p-2 border-b border-gray-50 dark:border-gray-800 mb-1">
+                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Select Type</p>
+                          <button onClick={() => setActiveBulkMenu(null)} className="text-gray-400"><X size={12} /></button>
+                        </div>
+                        {['50p', '£1', '£2'].map(t => (
+                          <button 
+                            key={t}
+                            onClick={() => handleBulkDenominationChange(t as CoinType)}
+                            className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-xs font-bold transition-colors flex items-center gap-3"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-[8px] text-amber-600">
+                              {t}
+                            </div>
+                            {t}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </motion.div>
