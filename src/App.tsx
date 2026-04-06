@@ -569,6 +569,231 @@ const storage = {
 
 // --- Main App ---
 
+// --- Components ---
+
+interface MindMapProps {
+  coins: Coin[];
+  expandedNodes: Set<string>;
+  toggleNode: (id: string) => void;
+  openCoin: (coin: Coin) => void;
+  addLog: (msg: string, type: string) => void;
+  setActiveTab: (tab: any) => void;
+  setExpandedNodes: (nodes: Set<string>) => void;
+}
+
+const MindMap = ({ coins, expandedNodes, toggleNode, openCoin, addLog, setActiveTab, setExpandedNodes }: MindMapProps) => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    addLog('Mind Map: Component mounted', 'system');
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      addLog('Mind Map: Loading complete', 'system');
+    }, 800);
+    return () => {
+      clearTimeout(timer);
+      addLog('Mind Map: Component unmounted', 'system');
+    };
+  }, []);
+
+  // Grouping logic for the tree
+  const treeData = useMemo(() => {
+    try {
+      if (coins.length === 0) {
+        addLog('Mind Map: No coins found for tree generation', 'info');
+        return null;
+      }
+      addLog(`Mind Map: Generating tree for ${coins.length} coins`, 'system');
+      const root = { id: 'root', label: 'Collection Root', children: [] as any[], level: 0 };
+      
+      const eras = Array.from(new Set(coins.map(c => c.era || 'Unknown Era'))).sort();
+      
+      eras.forEach(era => {
+        const eraNode = { id: `era-${era}`, label: era, children: [] as any[], level: 1 };
+        const eraCoins = coins.filter(c => (c.era || 'Unknown Era') === era);
+        
+        const years = Array.from(new Set(eraCoins.map(c => c.year))).sort();
+        years.forEach(year => {
+          const yearNode = { id: `era-${era}-year-${year}`, label: year, children: [] as any[], level: 2 };
+          const yearCoins = eraCoins.filter(c => c.year === year);
+          
+          const mints = Array.from(new Set(yearCoins.map(c => c.mint || 'Unknown Mint')));
+          mints.forEach(mint => {
+            const mintNode = { id: `era-${era}-year-${year}-mint-${mint}`, label: mint, children: [] as any[], level: 3 };
+            const mintCoins = yearCoins.filter(c => (c.mint || 'Unknown Mint') === mint);
+            
+            const types = Array.from(new Set(mintCoins.map(c => c.type)));
+            types.forEach(type => {
+              const typeNode = { id: `era-${era}-year-${year}-mint-${mint}-type-${type}`, label: type, children: [] as any[], level: 4 };
+              const typeCoins = mintCoins.filter(c => c.type === type);
+              
+              typeCoins.forEach(coin => {
+                typeNode.children.push({ id: coin.id, label: coin.name, coin, level: 5 });
+              });
+              
+              mintNode.children.push(typeNode);
+            });
+            
+            yearNode.children.push(mintNode);
+          });
+          
+          eraNode.children.push(yearNode);
+        });
+        
+        root.children.push(eraNode);
+      });
+      
+      return root;
+    } catch (err) {
+      console.error('Mind Map Error:', err);
+      addLog(`Mind Map Render Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      return null;
+    }
+  }, [coins]);
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 p-6">
+        <Loader2 size={32} className="text-blue-600 animate-spin mb-4" />
+        <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Generating Map...</p>
+      </div>
+    );
+  }
+
+  if (!treeData) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 p-8 text-center">
+        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-3xl flex items-center justify-center mb-6 text-gray-300">
+          <Map size={32} />
+        </div>
+        <h3 className="text-xl font-black text-gray-800 dark:text-gray-100 mb-2">No Data Available</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-8 max-w-[200px] leading-relaxed">Add coins to your collection to see them visualized in the Mind Map.</p>
+        <button 
+          onClick={() => setActiveTab('collection')}
+          className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+        >
+          Add Coins
+        </button>
+      </div>
+    );
+  }
+
+  const renderTreeNode = (node: any) => {
+    const isExpanded = expandedNodes.has(node.id);
+    const hasChildren = node.children && node.children.length > 0;
+    const isCoin = !!node.coin;
+
+    return (
+      <div key={node.id} className="flex flex-col">
+        <motion.div 
+          layout
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          className={`group flex items-center gap-3 py-2 px-4 rounded-xl transition-all cursor-pointer relative ${
+            isCoin 
+              ? 'ios-surface' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
+          }`}
+          style={{ marginLeft: `${node.level * 20}px` }}
+          onClick={() => {
+            if (isCoin) {
+              openCoin(node.coin);
+            } else if (hasChildren) {
+              toggleNode(node.id);
+            }
+          }}
+        >
+          {/* Vertical Line for hierarchy */}
+          {node.level > 0 && (
+            <div className="absolute -left-3 top-0 bottom-0 w-[1px] bg-gray-200 dark:bg-gray-800" />
+          )}
+          {/* Horizontal branch line */}
+          {node.level > 0 && (
+            <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-3 h-[1px] bg-gray-200 dark:bg-gray-800" />
+          )}
+
+          {hasChildren && (
+            <motion.div
+              animate={{ rotate: isExpanded ? 90 : 0 }}
+              className="text-gray-400 group-hover:text-blue-500 transition-colors"
+            >
+              <ChevronRight size={12} />
+            </motion.div>
+          )}
+          
+          {!hasChildren && !isCoin && <div className="w-3" />}
+
+          <div className="flex flex-col">
+            <span className={`text-sm ${isCoin ? 'font-bold text-gray-900 dark:text-gray-100' : 'font-black uppercase tracking-widest text-[9px] text-gray-400'}`}>
+              {node.label}
+            </span>
+            {isCoin && node.coin.rarity !== 'Common' && (
+              <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter">
+                {node.coin.rarity}
+              </span>
+            )}
+          </div>
+
+          {hasChildren && !isExpanded && (
+            <span className="ml-auto text-[8px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest">
+              {node.children.length}
+            </span>
+          )}
+        </motion.div>
+        
+        <AnimatePresence>
+          {isExpanded && hasChildren && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              {node.children.map((child: any) => renderTreeNode(child))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 inner-glow p-6">
+      {/* Header / Progress */}
+      <div className="flex items-center justify-between mb-6 px-2">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Tree Progress</span>
+          <div className="flex items-center gap-3 mt-1">
+            <div className="h-1 w-24 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min((coins.length / 50) * 100, 100)}%` }}
+                className="h-full bg-blue-500"
+              />
+            </div>
+            <span className="text-[9px] font-black text-blue-600 dark:text-blue-400">{coins.length}/50 Nodes</span>
+          </div>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setExpandedNodes(new Set(['root']))}
+          className="text-[9px] font-black text-gray-400 hover:text-blue-500 uppercase tracking-widest flex items-center gap-1.5"
+        >
+          <RefreshCw size={10} /> Reset
+        </motion.button>
+      </div>
+
+      {/* Tree Canvas */}
+      <div className="flex-1 overflow-y-auto no-scrollbar pr-2">
+        <div className="space-y-1">
+          {renderTreeNode(treeData)}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   // --- State ---
   
@@ -1321,207 +1546,11 @@ export default function App() {
     );
   };
 
-  const MindMap = () => {
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-      const timer = setTimeout(() => setIsLoading(false), 800);
-      return () => clearTimeout(timer);
-    }, []);
-
-    // Grouping logic for the tree
-    const treeData = useMemo(() => {
-      try {
-        if (coins.length === 0) return null;
-        const root = { id: 'root', label: 'Collection Root', children: [] as any[], level: 0 };
-        
-        const eras = Array.from(new Set(coins.map(c => c.era || 'Unknown Era'))).sort();
-        
-        eras.forEach(era => {
-          const eraNode = { id: `era-${era}`, label: era, children: [] as any[], level: 1 };
-          const eraCoins = coins.filter(c => (c.era || 'Unknown Era') === era);
-          
-          const years = Array.from(new Set(eraCoins.map(c => c.year))).sort();
-          years.forEach(year => {
-            const yearNode = { id: `era-${era}-year-${year}`, label: year, children: [] as any[], level: 2 };
-            const yearCoins = eraCoins.filter(c => c.year === year);
-            
-            const mints = Array.from(new Set(yearCoins.map(c => c.mint || 'Unknown Mint')));
-            mints.forEach(mint => {
-              const mintNode = { id: `era-${era}-year-${year}-mint-${mint}`, label: mint, children: [] as any[], level: 3 };
-              const mintCoins = yearCoins.filter(c => (c.mint || 'Unknown Mint') === mint);
-              
-              const types = Array.from(new Set(mintCoins.map(c => c.type)));
-              types.forEach(type => {
-                const typeNode = { id: `era-${era}-year-${year}-mint-${mint}-type-${type}`, label: type, children: [] as any[], level: 4 };
-                const typeCoins = mintCoins.filter(c => c.type === type);
-                
-                typeCoins.forEach(coin => {
-                  typeNode.children.push({ id: coin.id, label: coin.name, coin, level: 5 });
-                });
-                
-                mintNode.children.push(typeNode);
-              });
-              
-              yearNode.children.push(mintNode);
-            });
-            
-            eraNode.children.push(yearNode);
-          });
-          
-          root.children.push(eraNode);
-        });
-        
-        return root;
-      } catch (err) {
-        console.error('Mind Map Error:', err);
-        addLog(`Mind Map Render Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
-        return null;
-      }
-    }, [coins]);
-
-    if (isLoading) {
-      return (
-        <div className="flex-1 flex flex-col items-center justify-center bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 p-6">
-          <Loader2 size={32} className="text-blue-600 animate-spin mb-4" />
-          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Generating Map...</p>
-        </div>
-      );
-    }
-
-    if (!treeData) {
-      return (
-        <div className="flex-1 flex flex-col items-center justify-center bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 p-8 text-center">
-          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-3xl flex items-center justify-center mb-6 text-gray-300">
-            <Map size={32} />
-          </div>
-          <h3 className="text-xl font-black text-gray-800 dark:text-gray-100 mb-2">No Data Available</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-8 max-w-[200px] leading-relaxed">Add coins to your collection to see them visualized in the Mind Map.</p>
-          <button 
-            onClick={() => setActiveTab('collection')}
-            className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
-          >
-            Add Coins
-          </button>
-        </div>
-      );
-    }
-
-    const renderTreeNode = (node: any) => {
-      const isExpanded = expandedNodes.has(node.id);
-      const hasChildren = node.children && node.children.length > 0;
-      const isCoin = !!node.coin;
-
-      return (
-        <div key={node.id} className="flex flex-col">
-          <motion.div 
-            layout
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className={`group flex items-center gap-3 py-2 px-4 rounded-xl transition-all cursor-pointer relative ${
-              isCoin 
-                ? 'ios-surface' 
-                : 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
-            }`}
-            style={{ marginLeft: `${node.level * 20}px` }}
-            onClick={() => {
-              if (isCoin) {
-                openCoin(node.coin);
-              } else if (hasChildren) {
-                toggleNode(node.id);
-              }
-            }}
-          >
-            {/* Vertical Line for hierarchy */}
-            {node.level > 0 && (
-              <div className="absolute -left-3 top-0 bottom-0 w-[1px] bg-gray-200 dark:bg-gray-800" />
-            )}
-            {/* Horizontal branch line */}
-            {node.level > 0 && (
-              <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-3 h-[1px] bg-gray-200 dark:bg-gray-800" />
-            )}
-
-            {hasChildren && (
-              <motion.div
-                animate={{ rotate: isExpanded ? 90 : 0 }}
-                className="text-gray-400 group-hover:text-blue-500 transition-colors"
-              >
-                <ChevronRight size={12} />
-              </motion.div>
-            )}
-            
-            {!hasChildren && !isCoin && <div className="w-3" />}
-
-            <div className="flex flex-col">
-              <span className={`text-sm ${isCoin ? 'font-bold text-gray-900 dark:text-gray-100' : 'font-black uppercase tracking-widest text-[9px] text-gray-400'}`}>
-                {node.label}
-              </span>
-              {isCoin && node.coin.rarity !== 'Common' && (
-                <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter">
-                  {node.coin.rarity}
-                </span>
-              )}
-            </div>
-
-            {hasChildren && !isExpanded && (
-              <span className="ml-auto text-[8px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest">
-                {node.children.length}
-              </span>
-            )}
-          </motion.div>
-          
-          <AnimatePresence>
-            {isExpanded && hasChildren && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                {node.children.map((child: any) => renderTreeNode(child))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      );
-    };
-
-    return (
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 inner-glow p-6">
-        {/* Header / Progress */}
-        <div className="flex items-center justify-between mb-6 px-2">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Tree Progress</span>
-            <div className="flex items-center gap-3 mt-1">
-              <div className="h-1 w-24 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min((coins.length / 50) * 100, 100)}%` }}
-                  className="h-full bg-blue-500"
-                />
-              </div>
-              <span className="text-[9px] font-black text-blue-600 dark:text-blue-400">{coins.length}/50 Nodes</span>
-            </div>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setExpandedNodes(new Set(['root']))}
-            className="text-[9px] font-black text-gray-400 hover:text-blue-500 uppercase tracking-widest flex items-center gap-1.5"
-          >
-            <RefreshCw size={10} /> Reset
-          </motion.button>
-        </div>
-
-        {/* Tree Canvas */}
-        <div className="flex-1 overflow-y-auto no-scrollbar pr-2">
-          <div className="space-y-1">
-            {renderTreeNode(treeData)}
-          </div>
-        </div>
-      </div>
-    );
+  const renderNarrativeStory = (story: NarrativeStory) => {
+    // ...
   };
+
+  // --- Main Render ---
 
   const renderPersonalNarrative = () => {
     const story = generateMyCoinStory;
@@ -1620,7 +1649,17 @@ export default function App() {
               {exploreMode === 'timeline' && (
                 !selectedTimelineId ? renderTimelineHub() : renderTimelineDetail(selectedTimelineId)
               )}
-              {exploreMode === 'mindmap' && <MindMap />}
+              {exploreMode === 'mindmap' && (
+                <MindMap 
+                  coins={coins}
+                  expandedNodes={expandedNodes}
+                  toggleNode={toggleNode}
+                  openCoin={openCoin}
+                  addLog={addLog}
+                  setActiveTab={setActiveTab}
+                  setExpandedNodes={setExpandedNodes}
+                />
+              )}
               {exploreMode === 'story' && renderStoryHub()}
             </motion.div>
           </AnimatePresence>
