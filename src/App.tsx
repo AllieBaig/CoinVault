@@ -799,6 +799,9 @@ export default function App() {
   const [mindMapZoom, setMindMapZoom] = useState(1);
   const [mindMapOffset, setMindMapOffset] = useState({ x: 0, y: 0 });
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
+  const [selectedCoinIds, setSelectedCoinIds] = useState<Set<string>>(new Set());
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     localStorage.setItem('exploreMode', exploreMode);
@@ -1318,50 +1321,91 @@ export default function App() {
     );
   };
 
-  const renderMindMap = () => {
+  const MindMap = () => {
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+      const timer = setTimeout(() => setIsLoading(false), 800);
+      return () => clearTimeout(timer);
+    }, []);
+
     // Grouping logic for the tree
     const treeData = useMemo(() => {
-      const root = { id: 'root', label: 'Collection Root', children: [] as any[], level: 0 };
-      
-      const eras = Array.from(new Set(coins.map(c => c.era || 'Unknown Era'))).sort();
-      
-      eras.forEach(era => {
-        const eraNode = { id: `era-${era}`, label: era, children: [] as any[], level: 1 };
-        const eraCoins = coins.filter(c => (c.era || 'Unknown Era') === era);
+      try {
+        if (coins.length === 0) return null;
+        const root = { id: 'root', label: 'Collection Root', children: [] as any[], level: 0 };
         
-        const years = Array.from(new Set(eraCoins.map(c => c.year))).sort();
-        years.forEach(year => {
-          const yearNode = { id: `era-${era}-year-${year}`, label: year, children: [] as any[], level: 2 };
-          const yearCoins = eraCoins.filter(c => c.year === year);
+        const eras = Array.from(new Set(coins.map(c => c.era || 'Unknown Era'))).sort();
+        
+        eras.forEach(era => {
+          const eraNode = { id: `era-${era}`, label: era, children: [] as any[], level: 1 };
+          const eraCoins = coins.filter(c => (c.era || 'Unknown Era') === era);
           
-          const mints = Array.from(new Set(yearCoins.map(c => c.mint || 'Unknown Mint')));
-          mints.forEach(mint => {
-            const mintNode = { id: `era-${era}-year-${year}-mint-${mint}`, label: mint, children: [] as any[], level: 3 };
-            const mintCoins = yearCoins.filter(c => (c.mint || 'Unknown Mint') === mint);
+          const years = Array.from(new Set(eraCoins.map(c => c.year))).sort();
+          years.forEach(year => {
+            const yearNode = { id: `era-${era}-year-${year}`, label: year, children: [] as any[], level: 2 };
+            const yearCoins = eraCoins.filter(c => c.year === year);
             
-            const types = Array.from(new Set(mintCoins.map(c => c.type)));
-            types.forEach(type => {
-              const typeNode = { id: `era-${era}-year-${year}-mint-${mint}-type-${type}`, label: type, children: [] as any[], level: 4 };
-              const typeCoins = mintCoins.filter(c => c.type === type);
+            const mints = Array.from(new Set(yearCoins.map(c => c.mint || 'Unknown Mint')));
+            mints.forEach(mint => {
+              const mintNode = { id: `era-${era}-year-${year}-mint-${mint}`, label: mint, children: [] as any[], level: 3 };
+              const mintCoins = yearCoins.filter(c => (c.mint || 'Unknown Mint') === mint);
               
-              typeCoins.forEach(coin => {
-                typeNode.children.push({ id: coin.id, label: coin.name, coin, level: 5 });
+              const types = Array.from(new Set(mintCoins.map(c => c.type)));
+              types.forEach(type => {
+                const typeNode = { id: `era-${era}-year-${year}-mint-${mint}-type-${type}`, label: type, children: [] as any[], level: 4 };
+                const typeCoins = mintCoins.filter(c => c.type === type);
+                
+                typeCoins.forEach(coin => {
+                  typeNode.children.push({ id: coin.id, label: coin.name, coin, level: 5 });
+                });
+                
+                mintNode.children.push(typeNode);
               });
               
-              mintNode.children.push(typeNode);
+              yearNode.children.push(mintNode);
             });
             
-            yearNode.children.push(mintNode);
+            eraNode.children.push(yearNode);
           });
           
-          eraNode.children.push(yearNode);
+          root.children.push(eraNode);
         });
         
-        root.children.push(eraNode);
-      });
-      
-      return root;
+        return root;
+      } catch (err) {
+        console.error('Mind Map Error:', err);
+        addLog(`Mind Map Render Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        return null;
+      }
     }, [coins]);
+
+    if (isLoading) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 p-6">
+          <Loader2 size={32} className="text-blue-600 animate-spin mb-4" />
+          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Generating Map...</p>
+        </div>
+      );
+    }
+
+    if (!treeData) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center bg-gray-50/30 dark:bg-gray-900/30 rounded-[2.5rem] border border-gray-100 dark:border-gray-800/50 p-8 text-center">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-3xl flex items-center justify-center mb-6 text-gray-300">
+            <Map size={32} />
+          </div>
+          <h3 className="text-xl font-black text-gray-800 dark:text-gray-100 mb-2">No Data Available</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-8 max-w-[200px] leading-relaxed">Add coins to your collection to see them visualized in the Mind Map.</p>
+          <button 
+            onClick={() => setActiveTab('collection')}
+            className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+          >
+            Add Coins
+          </button>
+        </div>
+      );
+    }
 
     const renderTreeNode = (node: any) => {
       const isExpanded = expandedNodes.has(node.id);
@@ -1576,7 +1620,7 @@ export default function App() {
               {exploreMode === 'timeline' && (
                 !selectedTimelineId ? renderTimelineHub() : renderTimelineDetail(selectedTimelineId)
               )}
-              {exploreMode === 'mindmap' && renderMindMap()}
+              {exploreMode === 'mindmap' && <MindMap />}
               {exploreMode === 'story' && renderStoryHub()}
             </motion.div>
           </AnimatePresence>
@@ -2852,90 +2896,230 @@ export default function App() {
     );
   };
 
-  const renderCoinCard = (coin: Coin) => (
-    <motion.div
-      layout
-      key={coin.id}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.01, y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={() => openCoin(coin)}
-      className={`ios-surface transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden active:bg-white/80 dark:active:bg-black/60 ${
-        isCompact ? 'h-[88px] p-4' : 'h-[128px] p-6'
-      } ${
-        coin.rarity === 'Very Rare' ? 'ring-1 ring-amber-400/30 bg-amber-50/30 dark:bg-amber-900/10' : 
-        coin.rarity === 'Rare' ? 'ring-1 ring-blue-400/30 bg-blue-50/30 dark:bg-blue-900/10' : ''
-      }`}
-    >
-      <div className="flex items-center gap-4 min-w-0 flex-1">
-        {!profile.preferences.textMode && (
-          <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner border border-gray-100/50 dark:border-gray-800/50`}>
-            {coin.image ? (
-              <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <span className={`${isCompact ? 'text-lg' : 'text-2xl'} font-black ${
-                coin.rarity === 'Very Rare' ? 'text-amber-500' :
-                coin.rarity === 'Rare' ? 'text-blue-500' : 'text-gray-300'
-              }`}>
-                {coin.type}
-              </span>
-            )}
-          </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className={`font-bold text-gray-900 dark:text-gray-100 leading-tight truncate ${isCompact ? 'text-sm' : 'text-base'}`}>
-              {coin.name}
-            </h4>
-            {!profile.preferences.textMode && coin.rarity !== 'Common' && (
-              <div className={`p-1 rounded-full flex-shrink-0 ${coin.rarity === 'Very Rare' ? 'bg-amber-100/50 dark:bg-amber-900/30' : 'bg-blue-100/50 dark:bg-blue-900/30'}`}>
-                <Star size={10} className={`fill-current ${coin.rarity === 'Very Rare' ? 'text-amber-600' : 'text-blue-600'}`} />
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] whitespace-nowrap">{coin.year}</span>
-            <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0" />
-            <span className={`text-[10px] font-bold uppercase tracking-[0.15em] truncate ${
-              coin.rarity === 'Very Rare' ? 'text-amber-600' :
-              coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-400'
-            }`}>{coin.rarity}</span>
+  const renderCoinCard = (coin: Coin) => {
+    const isSelected = selectedCoinIds.has(coin.id);
+
+    const handleSelect = () => {
+      setSelectedCoinIds(prev => {
+        const next = new Set(prev);
+        if (next.has(coin.id)) {
+          next.delete(coin.id);
+          if (next.size === 0) setIsMultiSelectMode(false);
+        } else {
+          next.add(coin.id);
+        }
+        return next;
+      });
+    };
+
+    const startLongPress = () => {
+      longPressTimer.current = setTimeout(() => {
+        setIsMultiSelectMode(true);
+        setSelectedCoinIds(new Set([coin.id]));
+        if (navigator.vibrate) navigator.vibrate(50);
+      }, 600);
+    };
+
+    const clearLongPress = () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+    };
+
+    return (
+      <motion.div
+        layout
+        key={coin.id}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={isMultiSelectMode ? {} : { scale: 1.01, y: -2 }}
+        whileTap={{ scale: 0.98 }}
+        onPointerDown={isMultiSelectMode ? undefined : startLongPress}
+        onPointerUp={clearLongPress}
+        onPointerLeave={clearLongPress}
+        onClick={() => {
+          if (isMultiSelectMode) {
+            handleSelect();
+          } else {
+            openCoin(coin);
+          }
+        }}
+        className={`ios-surface transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden active:bg-white/80 dark:active:bg-black/60 ${
+          isCompact ? 'h-[88px] p-4' : 'h-[128px] p-6'
+        } ${
+          isSelected ? 'ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-900/20' :
+          coin.rarity === 'Very Rare' ? 'ring-1 ring-amber-400/30 bg-amber-50/30 dark:bg-amber-900/10' : 
+          coin.rarity === 'Rare' ? 'ring-1 ring-blue-400/30 bg-blue-50/30 dark:bg-blue-900/10' : ''
+        }`}
+      >
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          {isMultiSelectMode && (
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+              isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-gray-700'
+            }`}>
+              {isSelected && <Check size={14} strokeWidth={4} />}
+            </div>
+          )}
+          {!profile.preferences.textMode && (
+            <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner border border-gray-100/50 dark:border-gray-800/50`}>
+              {coin.image ? (
+                <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <span className={`${isCompact ? 'text-lg' : 'text-2xl'} font-black ${
+                  coin.rarity === 'Very Rare' ? 'text-amber-500' :
+                  coin.rarity === 'Rare' ? 'text-blue-500' : 'text-gray-300'
+                }`}>
+                  {coin.type}
+                </span>
+              )}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className={`font-bold text-gray-900 dark:text-gray-100 leading-tight truncate ${isCompact ? 'text-sm' : 'text-base'}`}>
+                {coin.name}
+              </h4>
+              {!profile.preferences.textMode && coin.rarity !== 'Common' && (
+                <div className={`p-1 rounded-full flex-shrink-0 ${coin.rarity === 'Very Rare' ? 'bg-amber-100/50 dark:bg-amber-900/30' : 'bg-blue-100/50 dark:bg-blue-900/30'}`}>
+                  <Star size={10} className={`fill-current ${coin.rarity === 'Very Rare' ? 'text-amber-600' : 'text-blue-600'}`} />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] whitespace-nowrap">{coin.year}</span>
+              <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0" />
+              <span className={`text-[10px] font-bold uppercase tracking-[0.15em] truncate ${
+                coin.rarity === 'Very Rare' ? 'text-amber-600' :
+                coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-400'
+              }`}>{coin.rarity}</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex flex-col items-end gap-2 ml-4 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          {!profile.preferences.focusMode && (
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (compareCoins.includes(coin.id)) {
-                  setCompareCoins(compareCoins.filter(id => id !== coin.id));
-                } else if (compareCoins.length < 2) {
-                  setCompareCoins([...compareCoins, coin.id]);
-                } else {
-                  setCompareCoins([compareCoins[1], coin.id]);
-                }
+        <div className="flex flex-col items-end gap-2 ml-4 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            {!profile.preferences.focusMode && !isMultiSelectMode && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (compareCoins.includes(coin.id)) {
+                    setCompareCoins(compareCoins.filter(id => id !== coin.id));
+                  } else if (compareCoins.length < 2) {
+                    setCompareCoins([...compareCoins, coin.id]);
+                  } else {
+                    setCompareCoins([compareCoins[1], coin.id]);
+                  }
+                }}
+                className={`p-2 rounded-xl transition-all active:bg-gray-100 dark:active:bg-gray-800 ${
+                  compareCoins.includes(coin.id) 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none' 
+                    : 'bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-blue-600'
+                }`}
+              >
+                <Columns size={16} />
+              </motion.button>
+            )}
+            {profile.preferences.showPrice && (
+              <span className={`font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap ${isCompact ? 'text-sm' : 'text-base'}`}>£{coin.amountPaid?.toFixed(2)}</span>
+            )}
+          </div>
+          {!isMultiSelectMode && <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const renderMultiSelectBar = () => {
+    if (!isMultiSelectMode || selectedCoinIds.size === 0) return null;
+
+    const handleBulkFolderChange = (folderId: string) => {
+      setCoins(prev => prev.map(coin => 
+        selectedCoinIds.has(coin.id) ? { ...coin, folderId } : coin
+      ));
+      setIsMultiSelectMode(false);
+      setSelectedCoinIds(new Set());
+      setFeedback({ message: `Moved ${selectedCoinIds.size} coins to new folder`, type: 'success' });
+      addLog(`Bulk move: ${selectedCoinIds.size} coins to folder ${folderId}`, 'action');
+    };
+
+    const handleBulkDenominationChange = (type: CoinType) => {
+      setCoins(prev => prev.map(coin => 
+        selectedCoinIds.has(coin.id) ? { ...coin, type } : coin
+      ));
+      setIsMultiSelectMode(false);
+      setSelectedCoinIds(new Set());
+      setFeedback({ message: `Updated ${selectedCoinIds.size} coins to ${type}`, type: 'success' });
+      addLog(`Bulk update: ${selectedCoinIds.size} coins to type ${type}`, 'action');
+    };
+
+    return (
+      <motion.div
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 100, opacity: 0 }}
+        className="fixed bottom-24 left-4 right-4 z-[100]"
+      >
+        <div className="ios-surface p-4 flex items-center justify-between shadow-2xl border-blue-500/20 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => {
+                setIsMultiSelectMode(false);
+                setSelectedCoinIds(new Set());
               }}
-              className={`p-2 rounded-xl transition-all active:bg-gray-100 dark:active:bg-gray-800 ${
-                compareCoins.includes(coin.id) 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none' 
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-blue-600'
-              }`}
+              className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500"
             >
-              <Columns size={16} />
-            </motion.button>
-          )}
-          {profile.preferences.showPrice && (
-            <span className={`font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap ${isCompact ? 'text-sm' : 'text-base'}`}>£{coin.amountPaid?.toFixed(2)}</span>
-          )}
+              <X size={20} />
+            </button>
+            <div>
+              <p className="text-sm font-black text-gray-900 dark:text-white">{selectedCoinIds.size} Selected</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bulk Actions</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative group">
+              <button className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl flex items-center gap-2">
+                <FolderIcon size={18} />
+                <span className="text-xs font-black uppercase tracking-widest">Move</span>
+              </button>
+              <div className="absolute bottom-full right-0 mb-2 w-48 ios-surface p-2 hidden group-hover:block shadow-2xl">
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest p-2">Select Folder</p>
+                {folders.map(f => (
+                  <button 
+                    key={f.id}
+                    onClick={() => handleBulkFolderChange(f.id)}
+                    className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative group">
+              <button className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl flex items-center gap-2">
+                <Coins size={18} />
+                <span className="text-xs font-black uppercase tracking-widest">Type</span>
+              </button>
+              <div className="absolute bottom-full right-0 mb-2 w-48 ios-surface p-2 hidden group-hover:block shadow-2xl">
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest p-2">Select Type</p>
+                {['50p', '£1', '£2'].map(t => (
+                  <button 
+                    key={t}
+                    onClick={() => handleBulkDenominationChange(t as CoinType)}
+                    className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-        <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
-      </div>
-    </motion.div>
-  );
+      </motion.div>
+    );
+  };
 
   const renderTabs = () => {
     if (profile.preferences.showBottomMenu) return null;
@@ -5664,6 +5848,7 @@ export default function App() {
           )}
         </AnimatePresence>
 
+        {renderMultiSelectBar()}
         {renderLogsModal()}
       </div>
     </ErrorBoundary>
