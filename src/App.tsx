@@ -198,6 +198,7 @@ interface Profile {
     showRankSystem: boolean;
     showProgressCard: boolean;
     debugMode: boolean;
+    ambientMotionEnabled: boolean;
   };
 }
 
@@ -794,6 +795,41 @@ const MindMap = ({ coins, expandedNodes, toggleNode, openCoin, addLog, setActive
   );
 };
 
+const AmbientBackground = ({ enabled }: { enabled: boolean }) => {
+  if (!enabled) return null;
+
+  return (
+    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none opacity-30 dark:opacity-10">
+      <motion.div
+        animate={{
+          x: [0, 50, -50, 0],
+          y: [0, 30, -30, 0],
+          scale: [1, 1.05, 0.95, 1],
+        }}
+        transition={{
+          duration: 30,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="absolute -top-1/4 -left-1/4 w-[150%] h-[150%] bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-amber-500/10 rounded-full blur-[120px]"
+      />
+      <motion.div
+        animate={{
+          x: [0, -40, 40, 0],
+          y: [0, -20, 20, 0],
+          scale: [1, 1.1, 0.9, 1],
+        }}
+        transition={{
+          duration: 40,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="absolute -bottom-1/4 -right-1/4 w-[150%] h-[150%] bg-gradient-to-tl from-emerald-500/10 via-blue-500/10 to-pink-500/10 rounded-full blur-[120px]"
+      />
+    </div>
+  );
+};
+
 export default function App() {
   // --- State ---
   
@@ -862,6 +898,7 @@ export default function App() {
           showRankSystem: parsed.preferences?.showRankSystem ?? true,
           showProgressCard: parsed.preferences?.showProgressCard ?? true,
           debugMode: parsed.preferences?.debugMode ?? false,
+          ambientMotionEnabled: parsed.preferences?.ambientMotionEnabled ?? true,
         }
       };
     }
@@ -903,6 +940,7 @@ export default function App() {
         showRankSystem: true,
         showProgressCard: true,
         debugMode: false,
+        ambientMotionEnabled: true,
       }
     };
   });
@@ -1544,10 +1582,6 @@ export default function App() {
         </div>
       </div>
     );
-  };
-
-  const renderNarrativeStory = (story: NarrativeStory) => {
-    // ...
   };
 
   // --- Main Render ---
@@ -3953,6 +3987,7 @@ export default function App() {
 
   return (
     <ErrorBoundary onExport={exportData}>
+      <AmbientBackground enabled={profile.preferences.ambientMotionEnabled} />
       <div className={`min-h-screen ios-base text-gray-900 dark:text-gray-100 font-sans transition-colors relative ${profile.preferences.showBottomMenu ? 'pb-24' : 'pb-12'}`}>
         {/* Global Texture Overlay - Extremely subtle as per request */}
         <div className="fixed inset-0 pointer-events-none opacity-[0.01] dark:opacity-[0.02] z-50 bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
@@ -4905,6 +4940,13 @@ export default function App() {
                       value={profile.preferences.showRankSystem}
                       onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showRankSystem: !profile.preferences.showRankSystem } })}
                       description="Show/Hide collector level & XP"
+                    />
+                    <SettingToggle 
+                      label="Ambient Motion" 
+                      icon={Activity} 
+                      value={profile.preferences.ambientMotionEnabled}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, ambientMotionEnabled: !profile.preferences.ambientMotionEnabled } })}
+                      description="Subtle background movement"
                     />
                   </SettingsSection>
 
