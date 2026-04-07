@@ -1789,7 +1789,7 @@ export default function App() {
     description?: string,
     badge?: string
   }) => (
-    <div className={`p-5 flex items-center justify-between transition-all ${value ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''}`}>
+    <div className={`px-5 h-[88px] flex items-center justify-between transition-all ${value ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''}`}>
       <div className="flex items-center gap-4">
         <div className={`p-2.5 rounded-xl transition-all ${value ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'bg-gray-100/50 dark:bg-gray-800/50 text-gray-400'}`}>
           <Icon size={18} />
@@ -1828,7 +1828,7 @@ export default function App() {
     onChange: (val: string) => void, 
     options: { value: string, label: string }[] 
   }) => (
-    <div className="p-5 flex items-center justify-between">
+    <div className="px-5 h-[72px] flex items-center justify-between">
       <div className="flex items-center gap-4">
         <div className="p-2.5 rounded-xl bg-gray-100/50 dark:bg-gray-800/50 text-gray-400">
           <Icon size={18} />
@@ -1838,7 +1838,7 @@ export default function App() {
       <select 
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-gray-100/50 dark:bg-gray-800/50 px-4 py-2 rounded-2xl text-[11px] font-black border-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 dark:text-gray-300 transition-all appearance-none pr-8 relative"
+        className="bg-gray-100/50 dark:bg-gray-800/50 px-4 h-[36px] rounded-2xl text-[11px] font-black border-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 dark:text-gray-300 transition-all appearance-none pr-8 relative"
         style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
       >
         {options.map(opt => (
@@ -2728,7 +2728,7 @@ export default function App() {
     <motion.div 
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className={`bg-white/80 dark:bg-black/80 backdrop-blur-md text-gray-900 dark:text-white ${isCompact ? 'py-2' : 'py-2.5'} px-5 relative z-[60] border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-black uppercase tracking-[0.25em] shadow-sm inner-glow`}
+      className={`bg-white/80 dark:bg-black/80 backdrop-blur-md text-gray-900 dark:text-white ${isCompact ? 'h-[36px]' : 'h-[44px]'} px-5 relative z-[60] border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-black uppercase tracking-[0.25em] shadow-sm inner-glow`}
     >
       <div className="flex items-center gap-8">
         <div className="flex items-center gap-2.5 group cursor-default">
@@ -2839,20 +2839,24 @@ export default function App() {
             </div>
           </div>
 
-          {!profile.preferences.focusMode && discoveryTip && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="ios-surface p-5 flex items-center gap-4 mb-8 relative overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-1 h-full bg-blue-600/30" />
-              <div className="w-11 h-11 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex-shrink-0 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-inner">
-                <Lightbulb size={22} />
-              </div>
-              <p className="text-[12px] font-bold text-gray-700 dark:text-gray-300 italic leading-relaxed tracking-tight">
-                "{discoveryTip}"
-              </p>
-            </motion.div>
+          {!profile.preferences.focusMode && (
+            <div className={`transition-all duration-300 ${discoveryTip ? 'h-[84px] mb-8' : 'h-0 mb-0'} overflow-hidden`}>
+              {discoveryTip && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="ios-surface p-5 flex items-center gap-4 relative overflow-hidden h-full"
+                >
+                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-600/30" />
+                  <div className="w-11 h-11 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex-shrink-0 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-inner">
+                    <Lightbulb size={22} />
+                  </div>
+                  <p className="text-[12px] font-bold text-gray-700 dark:text-gray-300 italic leading-relaxed tracking-tight line-clamp-2">
+                    "{discoveryTip}"
+                  </p>
+                </motion.div>
+              )}
+            </div>
           )}
 
           {/* Hero Stats Section */}
@@ -3101,7 +3105,14 @@ export default function App() {
           {!profile.preferences.textMode && (
             <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner border border-gray-100/50 dark:border-gray-800/50`}>
               {coin.image ? (
-                <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <img 
+                  src={coin.image} 
+                  alt={coin.name} 
+                  width={isCompact ? 56 : 80}
+                  height={isCompact ? 56 : 80}
+                  className="w-full h-full object-cover" 
+                  referrerPolicy="no-referrer" 
+                />
               ) : (
                 <span className={`${isCompact ? 'text-lg' : 'text-2xl'} font-black ${
                   coin.rarity === 'Very Rare' ? 'text-amber-500' :
@@ -3113,7 +3124,7 @@ export default function App() {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 h-[20px]">
               <h4 className={`font-bold text-gray-900 dark:text-gray-100 leading-tight truncate ${isCompact ? 'text-sm' : 'text-base'}`}>
                 {coin.name}
               </h4>
@@ -3123,7 +3134,7 @@ export default function App() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 h-[16px]">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] whitespace-nowrap">{coin.year}</span>
               <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0" />
               <span className={`text-[10px] font-bold uppercase tracking-[0.15em] truncate ${
@@ -3132,7 +3143,7 @@ export default function App() {
               }`}>{coin.rarity}</span>
             </div>
             {profile.preferences.showFolder && (
-              <div className="flex items-center gap-1 mt-1.5">
+              <div className="flex items-center gap-1 mt-1.5 h-[14px]">
                 <FolderIcon size={10} className="text-gray-400" />
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest truncate max-w-[100px]">
                   {folders.find(f => f.id === coin.folderId)?.name || 'Unknown'}
@@ -4349,7 +4360,7 @@ export default function App() {
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                         placeholder="e.g. Kew Gardens"
-                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
                       />
                     </div>
 
@@ -4360,7 +4371,7 @@ export default function App() {
                           type="number"
                           value={newYear}
                           onChange={(e) => setNewYear(e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
+                          className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
                         />
                       </div>
                       <div>
@@ -4377,7 +4388,7 @@ export default function App() {
                               }
                             }
                           }}
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
+                          className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
                         >
                           {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map(denom => (
                             <option key={denom} value={denom}>{denom}</option>
@@ -4396,7 +4407,7 @@ export default function App() {
                               step="0.01"
                               value={newAmountPaid}
                               onChange={(e) => setNewAmountPaid(e.target.value)}
-                              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
+                              className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
                             />
                           </div>
                           <div>
@@ -4404,7 +4415,7 @@ export default function App() {
                             <select
                               value={newRarity}
                               onChange={(e) => setNewRarity(e.target.value as Rarity)}
-                              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
+                              className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
                             >
                               <option value="Common">Common</option>
                               <option value="Rare">Rare</option>
@@ -4771,17 +4782,17 @@ export default function App() {
                     <TrendingUp size={18} className="text-blue-600" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="ios-surface p-5">
+                    <div className="ios-surface p-5 h-[86px] flex flex-col justify-center">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Most Collected</p>
-                      <p className="text-xl font-black text-gray-800 dark:text-gray-200">{stats.insights.mostCollectedType}</p>
+                      <p className="text-xl font-black text-gray-800 dark:text-gray-200 truncate">{stats.insights.mostCollectedType}</p>
                     </div>
-                    <div className="ios-surface p-5">
+                    <div className="ios-surface p-5 h-[86px] flex flex-col justify-center">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Peak Year</p>
-                      <p className="text-xl font-black text-gray-800 dark:text-gray-200">{stats.insights.mostCollectedYear || 'N/A'}</p>
+                      <p className="text-xl font-black text-gray-800 dark:text-gray-200 truncate">{stats.insights.mostCollectedYear || 'N/A'}</p>
                     </div>
-                    <div className="ios-surface p-5 col-span-2">
+                    <div className="ios-surface p-5 col-span-2 h-[86px] flex flex-col justify-center">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Avg. Paid per Coin</p>
-                      <p className="text-xl font-black text-green-600 dark:text-green-400">£{stats.insights.averagePaid.toFixed(2)}</p>
+                      <p className="text-xl font-black text-green-600 dark:text-green-400 truncate">£{stats.insights.averagePaid.toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -4791,13 +4802,13 @@ export default function App() {
                   <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Collection Goals</h3>
                   <div className="grid gap-4">
                     {stats.goals.map(goal => (
-                      <div key={goal.id} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+                      <div key={goal.id} className="bg-white dark:bg-gray-900 p-5 h-[84px] rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden flex flex-col justify-center">
                         {goal.isCompleted && (
                           <div className="absolute top-0 right-0 bg-green-500 text-white px-3 py-1 rounded-bl-xl text-[8px] font-black uppercase tracking-widest">Completed</div>
                         )}
                         <div className="flex justify-between items-center mb-3">
-                          <span className="font-bold text-gray-800 dark:text-gray-200">{goal.title}</span>
-                          <span className="text-xs font-black text-gray-400">{Math.round(goal.current)} / {goal.target}</span>
+                          <span className="font-bold text-gray-800 dark:text-gray-200 truncate pr-4">{goal.title}</span>
+                          <span className="text-xs font-black text-gray-400 flex-shrink-0">{Math.round(goal.current)} / {goal.target}</span>
                         </div>
                         <div className="h-2 bg-gray-50 dark:bg-gray-800 rounded-full overflow-hidden">
                           <motion.div
@@ -4822,10 +4833,10 @@ export default function App() {
                       const count = stats.counts[type] || 0;
                       const percent = Math.min((count / TARGET_PER_TYPE) * 100, 100);
                       return (
-                        <div key={type} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
+                        <div key={type} className="bg-white dark:bg-gray-900 p-5 h-[108px] rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4 flex flex-col justify-center">
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${
                                 type === '50p' ? 'bg-blue-50 text-blue-600' :
                                 type === '£1' ? 'bg-indigo-50 text-indigo-600' : 
                                 type === '£2' ? 'bg-purple-50 text-purple-600' : 
@@ -4836,9 +4847,9 @@ export default function App() {
                               }`}>
                                 {type}
                               </div>
-                              <span className="font-black text-gray-800 dark:text-gray-200">{type} Coins</span>
+                              <span className="font-black text-gray-800 dark:text-gray-200 truncate">{type} Coins</span>
                             </div>
-                            <span className="text-sm font-black text-gray-400">{count} / {TARGET_PER_TYPE}</span>
+                            <span className="text-sm font-black text-gray-400 flex-shrink-0">{count} / {TARGET_PER_TYPE}</span>
                           </div>
                           <div className="h-3 bg-gray-50 dark:bg-gray-800 rounded-full overflow-hidden">
                             <motion.div
@@ -5183,7 +5194,7 @@ export default function App() {
                                         }
                                       });
                                     }}
-                                    className="w-full pl-6 pr-2 py-2.5 bg-white dark:bg-gray-800 rounded-xl text-xs font-bold border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                    className="w-full h-[36px] pl-6 pr-2 py-2.5 bg-white dark:bg-gray-800 rounded-xl text-xs font-bold border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500/50 transition-all"
                                   />
                                 </div>
                               </div>
@@ -5688,14 +5699,14 @@ export default function App() {
                     </div>
                   )}
 
-                  <div className="bg-gray-50/50 dark:bg-gray-800/30 p-6 rounded-[2.5rem] mb-8 border border-gray-100 dark:border-gray-800/50 relative group soft-shadow">
-                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
-                      <Info size={16} />
-                    </div>
-                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-bold italic text-lg line-clamp-4">
-                      "{selectedCoin.summary || 'No summary provided.'}"
-                    </p>
-                  </div>
+                      <div className="bg-gray-50/50 dark:bg-gray-800/30 p-6 rounded-[2.5rem] mb-8 border border-gray-100 dark:border-gray-800/50 relative group soft-shadow min-h-[120px] flex flex-col justify-center">
+                        <div className="absolute -top-2 -left-2 w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg rotate-[-10deg] group-hover:rotate-0 transition-transform">
+                          <Info size={16} />
+                        </div>
+                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-bold italic text-lg line-clamp-4">
+                          "{selectedCoin.summary || 'No summary provided.'}"
+                        </p>
+                      </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-10">
                     <div className="ios-surface p-5">
