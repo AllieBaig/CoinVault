@@ -22,7 +22,11 @@ import { GoogleGenAI } from "@google/genai";
 // --- Types ---
 
 type CoinType = string;
-const DEFAULT_DENOMINATIONS = ['50p', '£1', '£2'];
+const DEFAULT_DENOMINATIONS = [
+  '50p', '£1', '£2', 
+  'Farthing', 'Half Penny', 'Penny', 'Threepence', 'Sixpence', 
+  'Shilling', 'Florin', 'Half Crown', 'Crown'
+];
 type Rarity = 'Common' | 'Rare' | 'Very Rare';
 type SortOption = 'year' | 'denomination' | 'date' | 'month' | 'added' | 'opened' | 'name';
 type GroupOption = 'year' | 'denomination' | 'date' | 'month' | 'none';
@@ -907,7 +911,12 @@ export default function App() {
           showFolder: parsed.preferences?.showFolder ?? true,
           fixedPriceMode: parsed.preferences?.fixedPriceMode ?? false,
           customDenominations: parsed.preferences?.customDenominations ?? [],
-          denominationPrices: parsed.preferences?.denominationPrices ?? { '50p': 0.5, '£1': 1.0, '£2': 2.0 },
+          denominationPrices: parsed.preferences?.denominationPrices ?? { 
+            '50p': 0.5, '£1': 1.0, '£2': 2.0,
+            'Farthing': 0.01, 'Half Penny': 0.02, 'Penny': 0.05,
+            'Threepence': 0.10, 'Sixpence': 0.20, 'Shilling': 0.50,
+            'Florin': 1.00, 'Half Crown': 1.25, 'Crown': 2.50
+          },
         }
       };
     }
@@ -953,7 +962,12 @@ export default function App() {
         showFolder: true,
         fixedPriceMode: false,
         customDenominations: [],
-        denominationPrices: { '50p': 0.5, '£1': 1.0, '£2': 2.0 },
+        denominationPrices: { 
+          '50p': 0.5, '£1': 1.0, '£2': 2.0,
+          'Farthing': 0.01, 'Half Penny': 0.02, 'Penny': 0.05,
+          'Threepence': 0.10, 'Sixpence': 0.20, 'Shilling': 0.50,
+          'Florin': 1.00, 'Half Crown': 1.25, 'Crown': 2.50
+        },
       }
     };
   });
@@ -1856,7 +1870,7 @@ export default function App() {
   // Form state
   const [newName, setNewName] = useState('');
   const [newYear, setNewYear] = useState(new Date().getFullYear().toString());
-  const [newType, setNewType] = useState<CoinType>('50p');
+  const [newType, setNewType] = useState<CoinType>(DEFAULT_DENOMINATIONS[0]);
   const [newRarity, setNewRarity] = useState<Rarity>('Common');
   const [newSummary, setNewSummary] = useState('');
   const [newImage, setNewImage] = useState<string | undefined>();
@@ -2646,6 +2660,7 @@ export default function App() {
     };
 
     // Smart Goals
+    const firstDenom = allDenoms[0] || '50p';
     const goals: Goal[] = [
       {
         id: 'goal-count-10',
@@ -2672,12 +2687,12 @@ export default function App() {
         isCompleted: coins.filter(c => c.rarity !== 'Common').length >= 5
       },
       {
-        id: 'goal-type-50p-10',
-        title: 'Collect 10 50p Coins',
+        id: `goal-type-${firstDenom}-10`,
+        title: `Collect 10 ${firstDenom} Coins`,
         target: 10,
-        current: counts['50p'],
+        current: counts[firstDenom] || 0,
         type: 'type',
-        isCompleted: counts['50p'] >= 10
+        isCompleted: (counts[firstDenom] || 0) >= 10
       }
     ];
 
@@ -4813,7 +4828,11 @@ export default function App() {
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
                                 type === '50p' ? 'bg-blue-50 text-blue-600' :
                                 type === '£1' ? 'bg-indigo-50 text-indigo-600' : 
-                                type === '£2' ? 'bg-purple-50 text-purple-600' : 'bg-gray-50 text-gray-600'
+                                type === '£2' ? 'bg-purple-50 text-purple-600' : 
+                                ['Farthing', 'Half Penny', 'Penny'].includes(type) ? 'bg-amber-50 text-amber-600' :
+                                ['Threepence', 'Sixpence', 'Shilling'].includes(type) ? 'bg-emerald-50 text-emerald-600' :
+                                ['Florin', 'Half Crown', 'Crown'].includes(type) ? 'bg-rose-50 text-rose-600' :
+                                'bg-gray-50 text-gray-600'
                               }`}>
                                 {type}
                               </div>
@@ -4829,7 +4848,11 @@ export default function App() {
                               className={`h-full rounded-full ${
                                 type === '50p' ? 'bg-blue-500' :
                                 type === '£1' ? 'bg-indigo-500' :
-                                type === '£2' ? 'bg-purple-500' : 'bg-gray-400'
+                                type === '£2' ? 'bg-purple-500' :
+                                ['Farthing', 'Half Penny', 'Penny'].includes(type) ? 'bg-amber-500' :
+                                ['Threepence', 'Sixpence', 'Shilling'].includes(type) ? 'bg-emerald-500' :
+                                ['Florin', 'Half Crown', 'Crown'].includes(type) ? 'bg-rose-500' :
+                                'bg-gray-400'
                               }`}
                             />
                           </div>
@@ -5136,34 +5159,36 @@ export default function App() {
                     {profile.preferences.fixedPriceMode && (
                       <div className="px-5 pb-5 space-y-3 bg-blue-50/10 dark:bg-blue-900/5">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Set Fixed Prices</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map(type => (
-                            <div key={type} className="space-y-1">
-                              <label className="text-[9px] font-black text-gray-500 uppercase ml-1 truncate block" title={type}>{type}</label>
-                              <div className="relative">
-                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">£</span>
-                                <input 
-                                  type="number"
-                                  step="0.01"
-                                  value={profile.preferences.denominationPrices[type] || 0}
-                                  onChange={(e) => {
-                                    const val = parseFloat(e.target.value) || 0;
-                                    setProfile({
-                                      ...profile,
-                                      preferences: {
-                                        ...profile.preferences,
-                                        denominationPrices: {
-                                          ...profile.preferences.denominationPrices,
-                                          [type]: val
+                        <div className="max-h-[300px] overflow-y-auto no-scrollbar pr-1">
+                          <div className="grid grid-cols-3 gap-2">
+                            {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map(type => (
+                              <div key={type} className="space-y-1">
+                                <label className="text-[9px] font-black text-gray-500 uppercase ml-1 truncate block" title={type}>{type}</label>
+                                <div className="relative">
+                                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">£</span>
+                                  <input 
+                                    type="number"
+                                    step="0.01"
+                                    value={profile.preferences.denominationPrices[type] || 0}
+                                    onChange={(e) => {
+                                      const val = parseFloat(e.target.value) || 0;
+                                      setProfile({
+                                        ...profile,
+                                        preferences: {
+                                          ...profile.preferences,
+                                          denominationPrices: {
+                                            ...profile.preferences.denominationPrices,
+                                            [type]: val
+                                          }
                                         }
-                                      }
-                                    });
-                                  }}
-                                  className="w-full pl-6 pr-2 py-2.5 bg-white dark:bg-gray-800 rounded-xl text-xs font-bold border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500/50 transition-all"
-                                />
+                                      });
+                                    }}
+                                    className="w-full pl-6 pr-2 py-2.5 bg-white dark:bg-gray-800 rounded-xl text-xs font-bold border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
