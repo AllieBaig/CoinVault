@@ -199,6 +199,9 @@ interface Profile {
     showProgressCard: boolean;
     debugMode: boolean;
     ambientMotionEnabled: boolean;
+    showFolder: boolean;
+    fixedPriceMode: boolean;
+    denominationPrices: { [key in CoinType]?: number };
   };
 }
 
@@ -899,6 +902,9 @@ export default function App() {
           showProgressCard: parsed.preferences?.showProgressCard ?? true,
           debugMode: parsed.preferences?.debugMode ?? false,
           ambientMotionEnabled: parsed.preferences?.ambientMotionEnabled ?? true,
+          showFolder: parsed.preferences?.showFolder ?? true,
+          fixedPriceMode: parsed.preferences?.fixedPriceMode ?? false,
+          denominationPrices: parsed.preferences?.denominationPrices ?? { '50p': 0.5, '£1': 1.0, '£2': 2.0 },
         }
       };
     }
@@ -941,6 +947,9 @@ export default function App() {
         showProgressCard: true,
         debugMode: false,
         ambientMotionEnabled: true,
+        showFolder: true,
+        fixedPriceMode: false,
+        denominationPrices: { '50p': 0.5, '£1': 1.0, '£2': 2.0 },
       }
     };
   });
@@ -2296,7 +2305,15 @@ export default function App() {
     setNewSummary('');
     setNewImage(undefined);
     setNewFolderId('purchased');
-    setNewAmountPaid('0');
+    
+    // Auto-fill price if fixed price mode is enabled
+    if (profile.preferences.fixedPriceMode) {
+      const fixedPrice = profile.preferences.denominationPrices['50p'];
+      setNewAmountPaid(fixedPrice !== undefined ? fixedPrice.toString() : '0');
+    } else {
+      setNewAmountPaid('0');
+    }
+    
     setNewMint('');
     setNewEra('');
     setIsAdding(false);
@@ -3069,6 +3086,14 @@ export default function App() {
                 coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-400'
               }`}>{coin.rarity}</span>
             </div>
+            {profile.preferences.showFolder && (
+              <div className="flex items-center gap-1 mt-1.5">
+                <FolderIcon size={10} className="text-gray-400" />
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest truncate max-w-[100px]">
+                  {folders.find(f => f.id === coin.folderId)?.name || 'Unknown'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-col items-end gap-2 ml-4 flex-shrink-0">
@@ -4225,6 +4250,7 @@ export default function App() {
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
+                          resetForm();
                           if (selectedFolderId !== 'all') {
                             setNewFolderId(selectedFolderId);
                           }
@@ -4296,7 +4322,16 @@ export default function App() {
                         <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Type</label>
                         <select
                           value={newType}
-                          onChange={(e) => setNewType(e.target.value as CoinType)}
+                          onChange={(e) => {
+                            const type = e.target.value as CoinType;
+                            setNewType(type);
+                            if (profile.preferences.fixedPriceMode && !isEditing) {
+                              const fixedPrice = profile.preferences.denominationPrices[type];
+                              if (fixedPrice !== undefined) {
+                                setNewAmountPaid(fixedPrice.toString());
+                              }
+                            }
+                          }}
                           className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
                         >
                           <option value="50p">50p</option>
@@ -4508,7 +4543,10 @@ export default function App() {
                     ) : (
                       <motion.button 
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setIsAdding(true)}
+                        onClick={() => {
+                          resetForm();
+                          setIsAdding(true);
+                        }}
                         className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 dark:shadow-none"
                       >
                         Add First Coin
@@ -5018,6 +5056,13 @@ export default function App() {
                       onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, ambientMotionEnabled: !profile.preferences.ambientMotionEnabled } })}
                       description="Subtle background movement"
                     />
+                    <SettingToggle 
+                      label="Show Folder" 
+                      icon={FolderIcon} 
+                      value={profile.preferences.showFolder}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showFolder: !profile.preferences.showFolder } })}
+                      description="Display folder name on coin cards"
+                    />
                   </SettingsSection>
 
                   <SettingsSection id="coins" title="Coin Management" icon={Database}>
@@ -5049,6 +5094,47 @@ export default function App() {
                       onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, experimentalFeatures: !profile.preferences.experimentalFeatures } })}
                       description="Try out new unreleased tools"
                     />
+                    <SettingToggle 
+                      label="Fixed Price Mode" 
+                      icon={Tag} 
+                      value={profile.preferences.fixedPriceMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, fixedPriceMode: !profile.preferences.fixedPriceMode } })}
+                      description="Auto-fill price based on denomination"
+                    />
+                    {profile.preferences.fixedPriceMode && (
+                      <div className="px-5 pb-5 space-y-3 bg-blue-50/10 dark:bg-blue-900/5">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Set Fixed Prices</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(['50p', '£1', '£2'] as CoinType[]).map(type => (
+                            <div key={type} className="space-y-1">
+                              <label className="text-[9px] font-black text-gray-500 uppercase ml-1">{type}</label>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">£</span>
+                                <input 
+                                  type="number"
+                                  step="0.01"
+                                  value={profile.preferences.denominationPrices[type] || 0}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    setProfile({
+                                      ...profile,
+                                      preferences: {
+                                        ...profile.preferences,
+                                        denominationPrices: {
+                                          ...profile.preferences.denominationPrices,
+                                          [type]: val
+                                        }
+                                      }
+                                    });
+                                  }}
+                                  className="w-full pl-6 pr-2 py-2.5 bg-white dark:bg-gray-800 rounded-xl text-xs font-bold border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <SettingSelect 
                       label="Sort By" 
                       icon={Clock} 
