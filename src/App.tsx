@@ -21,7 +21,8 @@ import { GoogleGenAI } from "@google/genai";
 
 // --- Types ---
 
-type CoinType = '£1' | '£2' | '50p';
+type CoinType = string;
+const DEFAULT_DENOMINATIONS = ['50p', '£1', '£2'];
 type Rarity = 'Common' | 'Rare' | 'Very Rare';
 type SortOption = 'year' | 'denomination' | 'date' | 'month' | 'added' | 'opened' | 'name';
 type GroupOption = 'year' | 'denomination' | 'date' | 'month' | 'none';
@@ -201,7 +202,8 @@ interface Profile {
     ambientMotionEnabled: boolean;
     showFolder: boolean;
     fixedPriceMode: boolean;
-    denominationPrices: { [key in CoinType]?: number };
+    customDenominations: string[];
+    denominationPrices: { [key: string]: number };
   };
 }
 
@@ -904,6 +906,7 @@ export default function App() {
           ambientMotionEnabled: parsed.preferences?.ambientMotionEnabled ?? true,
           showFolder: parsed.preferences?.showFolder ?? true,
           fixedPriceMode: parsed.preferences?.fixedPriceMode ?? false,
+          customDenominations: parsed.preferences?.customDenominations ?? [],
           denominationPrices: parsed.preferences?.denominationPrices ?? { '50p': 0.5, '£1': 1.0, '£2': 2.0 },
         }
       };
@@ -949,6 +952,7 @@ export default function App() {
         ambientMotionEnabled: true,
         showFolder: true,
         fixedPriceMode: false,
+        customDenominations: [],
         denominationPrices: { '50p': 0.5, '£1': 1.0, '£2': 2.0 },
       }
     };
@@ -2298,9 +2302,10 @@ export default function App() {
   };
 
   const resetForm = () => {
+    const defaultDenom = [...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations][0] || '50p';
     setNewName('');
     setNewYear(new Date().getFullYear().toString());
-    setNewType('50p');
+    setNewType(defaultDenom as CoinType);
     setNewRarity('Common');
     setNewSummary('');
     setNewImage(undefined);
@@ -2308,7 +2313,7 @@ export default function App() {
     
     // Auto-fill price if fixed price mode is enabled
     if (profile.preferences.fixedPriceMode) {
-      const fixedPrice = profile.preferences.denominationPrices['50p'];
+      const fixedPrice = profile.preferences.denominationPrices[defaultDenom];
       setNewAmountPaid(fixedPrice !== undefined ? fixedPrice.toString() : '0');
     } else {
       setNewAmountPaid('0');
@@ -2418,26 +2423,50 @@ export default function App() {
         
         let importedCount = 0;
         if (Array.isArray(data.coins)) {
+          const importedDenoms = new Set<string>();
           setCoins(prev => {
             const existingIds = new Set(prev.map(c => c.id));
             const newCoins = data.coins
               .filter((c: any) => c && c.id && !existingIds.has(c.id))
-              .map((c: any) => ({
-                id: c.id,
-                name: String(c.name || 'Unknown Coin'),
-                year: String(c.year || ''),
-                type: (['£1', '£2', '50p'].includes(c.type) ? c.type : '50p') as CoinType,
-                rarity: (['Common', 'Rare', 'Very Rare'].includes(c.rarity) ? c.rarity : 'Common') as Rarity,
-                image: c.image || null,
-                amountPaid: Number(c.amountPaid) || 0,
-                summary: String(c.summary ?? '').substring(0, 100),
-                folderId: String(c.folderId ?? 'purchased'),
-                dateAdded: Number(c.dateAdded) || Date.now(),
-                lastOpened: Number(c.lastOpened) || Date.now(),
-              }));
+              .map((c: any) => {
+                if (c.type) importedDenoms.add(c.type);
+                return {
+                  id: c.id,
+                  name: String(c.name || 'Unknown Coin'),
+                  year: String(c.year || ''),
+                  type: (c.type || '50p') as CoinType,
+                  rarity: (['Common', 'Rare', 'Very Rare'].includes(c.rarity) ? c.rarity : 'Common') as Rarity,
+                  image: c.image || null,
+                  amountPaid: Number(c.amountPaid) || 0,
+                  summary: String(c.summary ?? '').substring(0, 100),
+                  folderId: String(c.folderId ?? 'purchased'),
+                  dateAdded: Number(c.dateAdded) || Date.now(),
+                  lastOpened: Number(c.lastOpened) || Date.now(),
+                };
+              });
             importedCount = newCoins.length;
             return [...prev, ...newCoins];
           });
+
+          // Add new denominations to custom list
+          if (importedDenoms.size > 0) {
+            setProfile(prev => {
+              const currentDenoms = new Set([...DEFAULT_DENOMINATIONS, ...prev.preferences.customDenominations]);
+              const newCustom = [...prev.preferences.customDenominations];
+              importedDenoms.forEach(d => {
+                if (!currentDenoms.has(d)) {
+                  newCustom.push(d);
+                }
+              });
+              return {
+                ...prev,
+                preferences: {
+                  ...prev.preferences,
+                  customDenominations: newCustom
+                }
+              };
+            });
+          }
         }
         
         if (Array.isArray(data.folders)) {
@@ -2561,13 +2590,14 @@ export default function App() {
   }, [sortedCoins, profile.preferences.groupViewEnabled, profile.preferences.groupBy]);
 
   const stats = useMemo(() => {
-    const counts = {
-      '£1': coins.filter(c => c.type === '£1').length,
-      '£2': coins.filter(c => c.type === '£2').length,
-      '50p': coins.filter(c => c.type === '50p').length,
-    };
+    const allDenoms = [...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations];
+    const counts: { [key: string]: number } = {};
+    allDenoms.forEach(denom => {
+      counts[denom] = coins.filter(c => c.type === denom).length;
+    });
+    
     const total = coins.length;
-    const targetTotal = TARGET_PER_TYPE * 3;
+    const targetTotal = TARGET_PER_TYPE * allDenoms.length;
     const completion = Math.min(Math.round((total / targetTotal) * 100), 100);
 
     const totalSpend = coins.reduce((sum, c) => sum + (c.amountPaid || 0), 0);
@@ -3265,7 +3295,7 @@ export default function App() {
                           <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Select Type</p>
                           <button onClick={() => setActiveBulkMenu(null)} className="text-gray-400"><X size={12} /></button>
                         </div>
-                        {['50p', '£1', '£2'].map(t => (
+                        {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map(t => (
                           <button 
                             key={t}
                             onClick={() => handleBulkDenominationChange(t as CoinType)}
@@ -4334,9 +4364,9 @@ export default function App() {
                           }}
                           className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
                         >
-                          <option value="50p">50p</option>
-                          <option value="£1">£1</option>
-                          <option value="£2">£2</option>
+                          {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map(denom => (
+                            <option key={denom} value={denom}>{denom}</option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -4437,7 +4467,7 @@ export default function App() {
                     <div>
                       <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Folder</label>
                       <div className="flex gap-2 mb-2 overflow-x-auto no-scrollbar pb-1">
-                        {['50p', '£1', '£2'].map(denom => {
+                        {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map(denom => {
                           const exists = folders.find(f => f.name === denom);
                           return (
                             <button
@@ -4773,8 +4803,8 @@ export default function App() {
                     <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{stats.completion}% Total</span>
                   </div>
                   <div className="grid gap-4">
-                    {(['50p', '£1', '£2'] as CoinType[]).map((type) => {
-                      const count = stats.counts[type];
+                    {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map((type) => {
+                      const count = stats.counts[type] || 0;
                       const percent = Math.min((count / TARGET_PER_TYPE) * 100, 100);
                       return (
                         <div key={type} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
@@ -4782,7 +4812,8 @@ export default function App() {
                             <div className="flex items-center gap-3">
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
                                 type === '50p' ? 'bg-blue-50 text-blue-600' :
-                                type === '£1' ? 'bg-indigo-50 text-indigo-600' : 'bg-purple-50 text-purple-600'
+                                type === '£1' ? 'bg-indigo-50 text-indigo-600' : 
+                                type === '£2' ? 'bg-purple-50 text-purple-600' : 'bg-gray-50 text-gray-600'
                               }`}>
                                 {type}
                               </div>
@@ -4797,7 +4828,8 @@ export default function App() {
                               transition={{ duration: 1, ease: "easeOut" }}
                               className={`h-full rounded-full ${
                                 type === '50p' ? 'bg-blue-500' :
-                                type === '£1' ? 'bg-indigo-500' : 'bg-purple-500'
+                                type === '£1' ? 'bg-indigo-500' :
+                                type === '£2' ? 'bg-purple-500' : 'bg-gray-400'
                               }`}
                             />
                           </div>
@@ -5105,9 +5137,9 @@ export default function App() {
                       <div className="px-5 pb-5 space-y-3 bg-blue-50/10 dark:bg-blue-900/5">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Set Fixed Prices</p>
                         <div className="grid grid-cols-3 gap-2">
-                          {(['50p', '£1', '£2'] as CoinType[]).map(type => (
+                          {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map(type => (
                             <div key={type} className="space-y-1">
-                              <label className="text-[9px] font-black text-gray-500 uppercase ml-1">{type}</label>
+                              <label className="text-[9px] font-black text-gray-500 uppercase ml-1 truncate block" title={type}>{type}</label>
                               <div className="relative">
                                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">£</span>
                                 <input 
@@ -5162,6 +5194,105 @@ export default function App() {
                         { value: 'month', label: 'Month' }
                       ]}
                     />
+                    <div className="p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-700 dark:text-gray-300 block">Custom Denominations</span>
+                        <button 
+                          onClick={() => {
+                            setModalInputValue('');
+                            setInputModal({
+                              title: 'New Denomination',
+                              placeholder: 'e.g. 5p, 10p, Custom',
+                              onConfirm: (name) => {
+                                if (DEFAULT_DENOMINATIONS.includes(name) || profile.preferences.customDenominations.includes(name)) {
+                                  setFeedback({ message: 'Denomination already exists!', type: 'error' });
+                                  return;
+                                }
+                                setProfile({
+                                  ...profile,
+                                  preferences: {
+                                    ...profile.preferences,
+                                    customDenominations: [...profile.preferences.customDenominations, name]
+                                  }
+                                });
+                              }
+                            });
+                          }}
+                          className="text-blue-600 dark:text-blue-400 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {profile.preferences.customDenominations.map(denom => (
+                          <div key={denom} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                            <div className="flex items-center gap-3">
+                              <Tag size={16} className="text-gray-400" />
+                              <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{denom}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button 
+                                onClick={() => {
+                                  setModalInputValue(denom);
+                                  setInputModal({
+                                    title: 'Edit Denomination',
+                                    placeholder: 'Denomination Name',
+                                    onConfirm: (newName) => {
+                                      if (newName === denom) return;
+                                      if (DEFAULT_DENOMINATIONS.includes(newName) || profile.preferences.customDenominations.includes(newName)) {
+                                        setFeedback({ message: 'Denomination already exists!', type: 'error' });
+                                        return;
+                                      }
+                                      const newDenoms = profile.preferences.customDenominations.map(d => d === denom ? newName : d);
+                                      const newPrices = { ...profile.preferences.denominationPrices };
+                                      if (newPrices[denom] !== undefined) {
+                                        newPrices[newName] = newPrices[denom];
+                                        delete newPrices[denom];
+                                      }
+                                      setProfile({
+                                        ...profile,
+                                        preferences: {
+                                          ...profile.preferences,
+                                          customDenominations: newDenoms,
+                                          denominationPrices: newPrices
+                                        }
+                                      });
+                                    }
+                                  });
+                                }}
+                                className="text-gray-400 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                              >
+                                <Settings size={14} />
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setConfirmModal({
+                                    title: 'Delete Denomination',
+                                    message: `Are you sure you want to delete "${denom}"?`,
+                                    onConfirm: () => {
+                                      const newDenoms = profile.preferences.customDenominations.filter(d => d !== denom);
+                                      const newPrices = { ...profile.preferences.denominationPrices };
+                                      delete newPrices[denom];
+                                      setProfile({
+                                        ...profile,
+                                        preferences: {
+                                          ...profile.preferences,
+                                          customDenominations: newDenoms,
+                                          denominationPrices: newPrices
+                                        }
+                                      });
+                                    }
+                                  });
+                                }}
+                                className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                     <div className="p-5 space-y-4">
                       <span className="font-bold text-gray-700 dark:text-gray-300 block">Folders</span>
                       <div className="space-y-2">
