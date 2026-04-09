@@ -2757,7 +2757,7 @@ export default function App() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowLayoutDropdown(!showLayoutDropdown)}
-          className="flex items-center gap-2 px-3 py-1.5 ios-glass rounded-xl border border-white/20 dark:border-white/5 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+          className="flex items-center gap-2 px-3 py-1.5 ios-glass rounded-xl border border-white/20 dark:border-white/5 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm sm:w-[120px] justify-center"
         >
           <currentLayout.icon size={14} className="text-blue-500" />
           <span className="text-gray-900 dark:text-white hidden sm:inline">{currentLayout.label}</span>
@@ -2820,16 +2820,16 @@ export default function App() {
                 key={coin.id}
                 layout
                 onClick={() => openCoin(coin)}
-                className="ios-surface p-3 flex items-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                className="ios-surface p-3 flex items-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-all h-[64px]"
               >
                 <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex-shrink-0 overflow-hidden">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" width={40} height={40} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-xs font-black truncate">{coin.name}</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{coin.year} • {coin.type}</p>
+                  <h3 className="text-xs font-black truncate h-[16px]">{coin.name}</h3>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest h-[14px]">{coin.year} • {coin.type}</p>
                 </div>
-                <div className="text-xs font-black text-blue-500">£{coin.amountPaid.toFixed(2)}</div>
+                <div className="text-xs font-black text-blue-500 w-16 text-right">£{coin.amountPaid.toFixed(2)}</div>
               </motion.div>
             ))}
           </div>
@@ -2837,20 +2837,20 @@ export default function App() {
 
       case 'carousel':
         return (
-          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x">
+          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x h-[340px]">
             {coinsToRender.map(coin => (
               <motion.div 
                 key={coin.id}
                 layout
                 onClick={() => openCoin(coin)}
-                className="w-64 flex-shrink-0 snap-center ios-surface p-4 space-y-4 cursor-pointer"
+                className="w-64 flex-shrink-0 snap-center ios-surface p-4 space-y-4 cursor-pointer h-[320px]"
               >
-                <div className="aspect-square rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                <div className="aspect-square rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden h-[224px]">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" width={224} height={224} />}
                 </div>
-                <div>
-                  <h3 className="text-sm font-black truncate">{coin.name}</h3>
-                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{coin.year} • {coin.type}</p>
+                <div className="h-[40px]">
+                  <h3 className="text-sm font-black truncate h-[20px]">{coin.name}</h3>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest h-[16px]">{coin.year} • {coin.type}</p>
                 </div>
               </motion.div>
             ))}
@@ -2935,12 +2935,12 @@ export default function App() {
                 key={coin.id}
                 layout
                 onClick={() => openCoin(coin)}
-                className="ios-surface overflow-hidden cursor-pointer group"
+                className="ios-surface overflow-hidden cursor-pointer group h-[240px]"
               >
-                <div className="aspect-video bg-gray-100 dark:bg-gray-800 relative">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />}
+                <div className="aspect-video bg-gray-100 dark:bg-gray-800 relative h-full">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" width={600} height={337} />}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
-                    <h3 className="text-white font-black text-xl tracking-tighter">{coin.name}</h3>
+                    <h3 className="text-white font-black text-xl tracking-tighter truncate w-full">{coin.name}</h3>
                   </div>
                 </div>
               </motion.div>
@@ -3022,12 +3022,12 @@ export default function App() {
                 onClick={() => openCoin(coin)}
                 className="ios-surface overflow-hidden flex h-32 cursor-pointer"
               >
-                <div className="w-1/3 bg-gray-100 dark:bg-gray-800">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                <div className="w-1/3 bg-gray-100 dark:bg-gray-800 h-full">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" width={128} height={128} />}
                 </div>
                 <div className="flex-1 p-4 flex flex-col justify-center">
-                  <h3 className="text-sm font-black mb-1">{coin.name}</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{coin.year} • {coin.type}</p>
+                  <h3 className="text-sm font-black mb-1 truncate h-[20px]">{coin.name}</h3>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest h-[14px]">{coin.year} • {coin.type}</p>
                 </div>
               </motion.div>
             ))}
@@ -3047,8 +3047,8 @@ export default function App() {
                   clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
                 }}
               >
-                <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 h-full w-full">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" width={96} height={112} />}
                   <div className="absolute inset-0 bg-blue-600/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-black">
                     {coin.year}
                   </div>
@@ -3206,7 +3206,7 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`rounded-[3rem] p-9 text-white relative overflow-hidden shadow-2xl premium-shadow premium-border border inner-glow ${
+            className={`rounded-[3rem] p-9 text-white relative overflow-hidden shadow-2xl premium-shadow premium-border border inner-glow h-[280px] flex flex-col justify-center ${
               profile.preferences.textMode 
                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 shadow-none' 
                 : 'bg-gray-900 dark:bg-gray-950 border-white/10 shadow-blue-500/10 dark:shadow-none'
@@ -3269,13 +3269,16 @@ export default function App() {
         {!profile.preferences.textMode && (
           <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-100 dark:bg-gray-800 flex-shrink-0`} />
         )}
-        <div className="space-y-2 min-w-0 flex-1">
-          <div className={`bg-gray-100 dark:bg-gray-800 rounded-full ${isCompact ? 'h-4 w-24' : 'h-5 w-32'}`} />
-          <div className={`bg-gray-50 dark:bg-gray-800/50 rounded-full ${isCompact ? 'h-3 w-16' : 'h-3 w-20'}`} />
+        <div className="min-w-0 flex-1">
+          <div className={`bg-gray-100 dark:bg-gray-800 rounded-full mb-1 ${isCompact ? 'h-4 w-24' : 'h-5 w-32'}`} />
+          <div className={`bg-gray-50 dark:bg-gray-800/50 rounded-full ${isCompact ? 'h-3 w-16' : 'h-4 w-20'}`} />
+          {profile.preferences.showFolder && (
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-full h-3.5 w-12 mt-1.5" />
+          )}
         </div>
       </div>
       <div className="flex flex-col items-end gap-2 ml-4 flex-shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 h-[32px]">
           {!profile.preferences.focusMode && (
             <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800" />
           )}
@@ -4555,14 +4558,14 @@ export default function App() {
                 className={isCompact ? 'space-y-3' : 'space-y-4'}
               >
                 {/* Search Bar */}
-                <div className="relative">
+                <div className={`relative ${isCompact ? 'h-[48px]' : 'h-[56px]'}`}>
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search collection..."
-                    className={`w-full pl-11 pr-4 ${isCompact ? 'py-3' : 'py-4'} ios-surface border-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-gray-400 font-medium`}
+                    className={`w-full h-full pl-11 pr-4 ios-surface border-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-gray-400 font-medium`}
                   />
                   {searchQuery && (
                     <motion.button 
@@ -4576,17 +4579,17 @@ export default function App() {
                 </div>
 
                 {/* Folder Selector */}
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar h-[44px]">
                   <button
                     onClick={() => setSelectedFolderId('all')}
-                    className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+                    className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all h-[36px] flex items-center justify-center ${
                       selectedFolderId === 'all' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
                     }`}
                   >
                     All Coins
                   </button>
                   {folders.map(folder => (
-                    <div key={folder.id} className="relative flex-shrink-0">
+                    <div key={folder.id} className="relative flex-shrink-0 h-[36px]">
                       <button
                         onClick={() => {
                           if (folder.isLocked && !unlockedFolders.includes(folder.id)) {
@@ -4612,7 +4615,7 @@ export default function App() {
                             }
                           });
                         }}
-                        className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
+                        className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 h-full ${
                           selectedFolderId === folder.id ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
                         }`}
                       >
@@ -4626,14 +4629,14 @@ export default function App() {
                 </div>
 
                 {/* Sorting & Grouping Controls */}
-                <div className="flex flex-col gap-3 bg-white dark:bg-gray-900 p-4 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm">
-                  <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 bg-white dark:bg-gray-900 p-4 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm h-[136px]">
+                  <div className="flex items-center justify-between h-[32px]">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">View Options</span>
                     <div className="flex items-center gap-2">
                       {renderLayoutSwitcher()}
                       <button 
                         onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupViewEnabled: !prev.preferences.groupViewEnabled } }))}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all w-[110px] h-[32px] justify-center ${
                           profile.preferences.groupViewEnabled 
                             ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20' 
                             : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400'
@@ -5078,10 +5081,10 @@ export default function App() {
                       <div className="space-y-8">
                         {Object.entries(groupedCoins as Record<string, Coin[]>).map(([groupName, groupCoins]) => (
                           <div key={groupName} className="space-y-3">
-                            <div className="flex items-center gap-3 px-2">
-                              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{groupName}</h3>
+                            <div className="flex items-center gap-3 px-2 h-[24px]">
+                              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] truncate max-w-[150px]">{groupName}</h3>
                               <div className="h-[1px] flex-1 bg-gray-100 dark:bg-gray-800" />
-                              <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{groupCoins.length}</span>
+                              <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest w-8 text-right">{groupCoins.length}</span>
                             </div>
                             {renderLayout(groupCoins)}
                           </div>
