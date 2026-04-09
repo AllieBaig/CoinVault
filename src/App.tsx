@@ -31,6 +31,7 @@ type Rarity = 'Common' | 'Rare' | 'Very Rare';
 type SortOption = 'year' | 'denomination' | 'date' | 'month' | 'added' | 'opened' | 'name';
 type GroupOption = 'year' | 'denomination' | 'date' | 'month' | 'none';
 type ExploreMode = 'timeline' | 'mindmap' | 'story';
+type LayoutType = 'grid' | 'list' | 'carousel' | 'masonry' | 'board' | 'timeline' | 'gallery' | 'spotlight' | 'compact' | 'split' | 'hexagon';
 
 interface Coin {
   id: string;
@@ -208,6 +209,8 @@ interface Profile {
     fixedPriceMode: boolean;
     customDenominations: string[];
     denominationPrices: { [key: string]: number };
+    layoutType: LayoutType;
+    showLayoutSwitcher: boolean;
   };
 }
 
@@ -917,6 +920,8 @@ export default function App() {
             'Threepence': 0.10, 'Sixpence': 0.20, 'Shilling': 0.50,
             'Florin': 1.00, 'Half Crown': 1.25, 'Crown': 2.50
           },
+          layoutType: parsed.preferences?.layoutType ?? 'grid',
+          showLayoutSwitcher: parsed.preferences?.showLayoutSwitcher ?? true,
         }
       };
     }
@@ -968,6 +973,8 @@ export default function App() {
           'Threepence': 0.10, 'Sixpence': 0.20, 'Shilling': 0.50,
           'Florin': 1.00, 'Half Crown': 1.25, 'Crown': 2.50
         },
+        layoutType: 'grid',
+        showLayoutSwitcher: true,
       }
     };
   });
@@ -1068,6 +1075,7 @@ export default function App() {
     return profile.preferences.compactUI;
   }, [windowWidth, profile.preferences.compactUI]);
 
+  const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [inputModal, setInputModal] = useState<{ title: string; placeholder: string; onConfirm: (value: string) => void } | null>(null);
   const [modalInputValue, setModalInputValue] = useState('');
@@ -1091,7 +1099,7 @@ export default function App() {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
   const [selectedCoinIds, setSelectedCoinIds] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
-  const [activeBulkMenu, setActiveBulkMenu] = useState<'move' | 'type' | null>(null);
+  const [activeBulkMenu, setActiveBulkMenu] = useState<'move' | 'type' | 'price' | null>(null);
   const [isApplyingBulkAction, setIsApplyingBulkAction] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -2724,6 +2732,341 @@ export default function App() {
 
   // --- Render Helpers ---
 
+  const renderLayoutSwitcher = () => {
+    if (!profile.preferences.showLayoutSwitcher) return null;
+
+    const layouts: { type: LayoutType; icon: any; label: string }[] = [
+      { type: 'grid', icon: LayoutGrid, label: 'Grid' },
+      { type: 'list', icon: ListIcon, label: 'List' },
+      { type: 'carousel', icon: PlayCircle, label: 'Carousel' },
+      { type: 'masonry', icon: Grid, label: 'Masonry' },
+      { type: 'board', icon: Columns, label: 'Board' },
+      { type: 'timeline', icon: History, label: 'Timeline' },
+      { type: 'gallery', icon: ImageIcon, label: 'Gallery' },
+      { type: 'spotlight', icon: Eye, label: 'Spotlight' },
+      { type: 'compact', icon: Smartphone, label: 'Compact' },
+      { type: 'split', icon: Layout, label: 'Split' },
+      { type: 'hexagon', icon: Zap, label: 'Hexagon' },
+    ];
+
+    const currentLayout = layouts.find(l => l.type === profile.preferences.layoutType) || layouts[0];
+
+    return (
+      <div className="relative">
+        <motion.button 
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setShowLayoutDropdown(!showLayoutDropdown)}
+          className="flex items-center gap-2 px-3 py-1.5 ios-glass rounded-xl border border-white/20 dark:border-white/5 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+        >
+          <currentLayout.icon size={14} className="text-blue-500" />
+          <span className="text-gray-900 dark:text-white hidden sm:inline">{currentLayout.label}</span>
+          <ChevronDown size={12} className={`text-gray-400 transition-transform duration-300 ${showLayoutDropdown ? 'rotate-180' : ''}`} />
+        </motion.button>
+
+        <AnimatePresence>
+          {showLayoutDropdown && (
+            <>
+              <div className="fixed inset-0 z-[100]" onClick={() => setShowLayoutDropdown(false)} />
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute top-full right-0 mt-2 w-48 ios-surface p-2 shadow-2xl z-[110] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
+              >
+                <div className="max-h-64 overflow-y-auto no-scrollbar grid grid-cols-1 gap-1">
+                  {layouts.map(l => (
+                    <button
+                      key={l.type}
+                      onClick={() => {
+                        setProfile(prev => ({
+                          ...prev,
+                          preferences: { ...prev.preferences, layoutType: l.type }
+                        }));
+                        setShowLayoutDropdown(false);
+                        addLog(`Layout changed to ${l.label}`, 'action');
+                      }}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                        profile.preferences.layoutType === l.type 
+                          ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' 
+                          : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      <l.icon size={16} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">{l.label}</span>
+                      {profile.preferences.layoutType === l.type && <Check size={12} className="ml-auto" />}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
+  const [spotlightIdx, setSpotlightIdx] = useState(0);
+
+  const renderLayout = (coinsToRender: Coin[]) => {
+    const layout = profile.preferences.layoutType;
+
+    switch (layout) {
+      case 'list':
+        return (
+          <div className="space-y-2">
+            {coinsToRender.map(coin => (
+              <motion.div 
+                key={coin.id}
+                layout
+                onClick={() => openCoin(coin)}
+                className="ios-surface p-3 flex items-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+              >
+                <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex-shrink-0 overflow-hidden">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xs font-black truncate">{coin.name}</h3>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{coin.year} • {coin.type}</p>
+                </div>
+                <div className="text-xs font-black text-blue-500">£{coin.amountPaid.toFixed(2)}</div>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case 'carousel':
+        return (
+          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x">
+            {coinsToRender.map(coin => (
+              <motion.div 
+                key={coin.id}
+                layout
+                onClick={() => openCoin(coin)}
+                className="w-64 flex-shrink-0 snap-center ios-surface p-4 space-y-4 cursor-pointer"
+              >
+                <div className="aspect-square rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                </div>
+                <div>
+                  <h3 className="text-sm font-black truncate">{coin.name}</h3>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{coin.year} • {coin.type}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case 'masonry':
+        return (
+          <div className="grid grid-cols-2 gap-4">
+            {coinsToRender.map((coin, idx) => (
+              <motion.div 
+                key={coin.id}
+                layout
+                onClick={() => openCoin(coin)}
+                className={`ios-surface p-4 flex flex-col gap-3 cursor-pointer ${idx % 3 === 0 ? 'row-span-2' : ''}`}
+              >
+                <div className={`rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden ${idx % 3 === 0 ? 'h-48' : 'h-32'}`}>
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                </div>
+                <h3 className="text-xs font-black truncate">{coin.name}</h3>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case 'board':
+        const rarities: Rarity[] = ['Common', 'Rare', 'Very Rare'];
+        return (
+          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+            {rarities.map(rarity => (
+              <div key={rarity} className="w-72 flex-shrink-0 space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">{rarity}</h3>
+                  <span className="text-[10px] font-black bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                    {coinsToRender.filter(c => c.rarity === rarity).length}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {coinsToRender.filter(c => c.rarity === rarity).map(coin => (
+                    <motion.div 
+                      key={coin.id}
+                      layout
+                      onClick={() => openCoin(coin)}
+                      className="ios-surface p-3 space-y-2 cursor-pointer"
+                    >
+                      <h4 className="text-xs font-black truncate">{coin.name}</h4>
+                      <p className="text-[10px] text-gray-400 font-bold">{coin.year}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'timeline':
+        return (
+          <div className="relative pl-8 space-y-8 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100 dark:before:bg-gray-800">
+            {[...coinsToRender].sort((a, b) => parseInt(a.year) - parseInt(b.year)).map(coin => (
+              <motion.div 
+                key={coin.id}
+                layout
+                onClick={() => openCoin(coin)}
+                className="relative ios-surface p-4 cursor-pointer"
+              >
+                <div className="absolute -left-[29px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-500 border-4 border-white dark:border-gray-900 shadow-sm" />
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-blue-500">{coin.year}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{coin.type}</span>
+                </div>
+                <h3 className="text-sm font-black">{coin.name}</h3>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case 'gallery':
+        return (
+          <div className="grid grid-cols-1 gap-6">
+            {coinsToRender.map(coin => (
+              <motion.div 
+                key={coin.id}
+                layout
+                onClick={() => openCoin(coin)}
+                className="ios-surface overflow-hidden cursor-pointer group"
+              >
+                <div className="aspect-video bg-gray-100 dark:bg-gray-800 relative">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                    <h3 className="text-white font-black text-xl tracking-tighter">{coin.name}</h3>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case 'spotlight':
+        const currentCoin = coinsToRender[spotlightIdx % coinsToRender.length];
+        if (!currentCoin) return null;
+        return (
+          <div className="space-y-6">
+            <motion.div 
+              key={currentCoin.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="ios-surface p-8 text-center space-y-6"
+            >
+              <div className="w-48 h-48 mx-auto rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shadow-2xl premium-border">
+                {currentCoin.image && <img src={currentCoin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tighter mb-2">{currentCoin.name}</h2>
+                <p className="text-sm text-gray-400 font-bold uppercase tracking-[0.2em]">{currentCoin.year} • {currentCoin.type}</p>
+              </div>
+              <button 
+                onClick={() => openCoin(currentCoin)}
+                className="px-8 py-3 bg-blue-600 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20"
+              >
+                View Details
+              </button>
+            </motion.div>
+            <div className="flex items-center justify-center gap-4">
+              <button 
+                onClick={() => setSpotlightIdx(prev => (prev - 1 + coinsToRender.length) % coinsToRender.length)}
+                className="p-4 rounded-full ios-glass"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span className="text-xs font-black text-gray-400">{(spotlightIdx % coinsToRender.length) + 1} / {coinsToRender.length}</span>
+              <button 
+                onClick={() => setSpotlightIdx(prev => (prev + 1) % coinsToRender.length)}
+                className="p-4 rounded-full ios-glass"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'compact':
+        return (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {coinsToRender.map(coin => (
+              <motion.div 
+                key={coin.id}
+                layout
+                onClick={() => openCoin(coin)}
+                className="aspect-square ios-surface p-1 cursor-pointer overflow-hidden group"
+              >
+                <div className="w-full h-full rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden relative">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] text-white font-black uppercase text-center p-1">
+                    {coin.year}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case 'split':
+        return (
+          <div className="space-y-4">
+            {coinsToRender.map(coin => (
+              <motion.div 
+                key={coin.id}
+                layout
+                onClick={() => openCoin(coin)}
+                className="ios-surface overflow-hidden flex h-32 cursor-pointer"
+              >
+                <div className="w-1/3 bg-gray-100 dark:bg-gray-800">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                </div>
+                <div className="flex-1 p-4 flex flex-col justify-center">
+                  <h3 className="text-sm font-black mb-1">{coin.name}</h3>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{coin.year} • {coin.type}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case 'hexagon':
+        return (
+          <div className="flex flex-wrap justify-center gap-4 p-4">
+            {coinsToRender.map((coin, idx) => (
+              <motion.div 
+                key={coin.id}
+                layout
+                onClick={() => openCoin(coin)}
+                className={`w-24 h-28 relative cursor-pointer group ${idx % 2 === 0 ? 'mt-8' : ''}`}
+                style={{
+                  clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
+                }}
+              >
+                <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800">
+                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                  <div className="absolute inset-0 bg-blue-600/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-black">
+                    {coin.year}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      default:
+        return (
+          <div className={isCompact ? 'space-y-3' : 'space-y-4'}>
+            {coinsToRender.map(coin => renderCoinCard(coin))}
+          </div>
+        );
+    }
+  };
+
   const renderSummaryBar = () => (
     <motion.div 
       initial={{ y: -20, opacity: 0 }}
@@ -3225,6 +3568,24 @@ export default function App() {
       addLog(`Bulk update: ${selectedCoinIds.size} coins to type ${type}`, 'action');
     };
 
+    const handleBulkPriceChange = async (price: number) => {
+      setIsApplyingBulkAction(true);
+      setActiveBulkMenu(null);
+
+      // Artificial delay for feedback
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      setCoins(prev => prev.map(coin => 
+        selectedCoinIds.has(coin.id) ? { ...coin, amountPaid: price } : coin
+      ));
+      
+      setIsMultiSelectMode(false);
+      setSelectedCoinIds(new Set());
+      setIsApplyingBulkAction(false);
+      setFeedback({ message: `Updated price for ${selectedCoinIds.size} coins to £${price.toFixed(2)}`, type: 'success' });
+      addLog(`Bulk update: ${selectedCoinIds.size} coins price to £${price}`, 'action');
+    };
+
     return (
       <motion.div
         initial={{ y: 100, opacity: 0 }}
@@ -3337,6 +3698,31 @@ export default function App() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                <button 
+                  onClick={() => {
+                    setInputModal({
+                      title: 'Set Bulk Price',
+                      placeholder: 'Enter price (e.g. 1.50)',
+                      onConfirm: (val) => {
+                        const price = parseFloat(val);
+                        if (!isNaN(price)) {
+                          setConfirmModal({
+                            title: 'Confirm Bulk Price',
+                            message: `Are you sure you want to set the price of ${selectedCoinIds.size} coins to £${price.toFixed(2)}?`,
+                            onConfirm: () => handleBulkPriceChange(price)
+                          });
+                        } else {
+                          setFeedback({ message: 'Invalid price entered', type: 'info' });
+                        }
+                      }
+                    });
+                  }}
+                  className="p-3 rounded-2xl flex items-center gap-2 transition-all bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                >
+                  <Tag size={18} />
+                  <span className="text-xs font-black uppercase tracking-widest">Price</span>
+                </button>
               </>
             )}
           </div>
@@ -4243,19 +4629,22 @@ export default function App() {
                 <div className="flex flex-col gap-3 bg-white dark:bg-gray-900 p-4 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">View Options</span>
-                    <button 
-                      onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupViewEnabled: !prev.preferences.groupViewEnabled } }))}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
-                        profile.preferences.groupViewEnabled 
-                          ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20' 
-                          : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400'
-                      }`}
-                    >
-                      <Layers size={12} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">
-                        {profile.preferences.groupViewEnabled ? 'Grouping On' : 'Grouping Off'}
-                      </span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {renderLayoutSwitcher()}
+                      <button 
+                        onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupViewEnabled: !prev.preferences.groupViewEnabled } }))}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
+                          profile.preferences.groupViewEnabled 
+                            ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20' 
+                            : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400'
+                        }`}
+                      >
+                        <Layers size={12} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">
+                          {profile.preferences.groupViewEnabled ? 'Grouping On' : 'Grouping Off'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2">
@@ -4694,16 +5083,12 @@ export default function App() {
                               <div className="h-[1px] flex-1 bg-gray-100 dark:bg-gray-800" />
                               <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{groupCoins.length}</span>
                             </div>
-                            <div className={isCompact ? 'space-y-2' : 'space-y-4'}>
-                              {groupCoins.map(coin => renderCoinCard(coin))}
-                            </div>
+                            {renderLayout(groupCoins)}
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className={isCompact ? 'space-y-2' : 'space-y-4'}>
-                        {sortedCoins.map((coin) => renderCoinCard(coin))}
-                      </div>
+                      renderLayout(sortedCoins)
                     )
                   )
                 )}
@@ -5128,6 +5513,32 @@ export default function App() {
                       value={profile.preferences.showFolder}
                       onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showFolder: !profile.preferences.showFolder } })}
                       description="Display folder name on coin cards"
+                    />
+                    <SettingToggle 
+                      label="Layout Switcher" 
+                      icon={Layout} 
+                      value={profile.preferences.showLayoutSwitcher}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showLayoutSwitcher: !profile.preferences.showLayoutSwitcher } })}
+                      description="Toggle layout selector in toolbar"
+                    />
+                    <SettingSelect 
+                      label="Default Layout" 
+                      icon={Grid} 
+                      value={profile.preferences.layoutType}
+                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, layoutType: val as any } })}
+                      options={[
+                        { value: 'grid', label: 'Grid' },
+                        { value: 'list', label: 'List' },
+                        { value: 'carousel', label: 'Carousel' },
+                        { value: 'masonry', label: 'Masonry' },
+                        { value: 'board', label: 'Board' },
+                        { value: 'timeline', label: 'Timeline' },
+                        { value: 'gallery', label: 'Gallery' },
+                        { value: 'spotlight', label: 'Spotlight' },
+                        { value: 'compact', label: 'Compact' },
+                        { value: 'split', label: 'Split' },
+                        { value: 'hexagon', label: 'Hexagon' }
+                      ]}
                     />
                   </SettingsSection>
 
