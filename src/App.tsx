@@ -27,9 +27,27 @@ const DEFAULT_DENOMINATIONS = [
   'Farthing', 'Half Penny', 'Penny', 'Threepence', 'Sixpence', 
   'Shilling', 'Florin', 'Half Crown', 'Crown'
 ];
+
+const EUROPEAN_COUNTRIES = [
+  'Austria', 'Belgium', 'France', 'Germany', 'Ireland', 'Italy', 'Netherlands', 'Spain', 'United Kingdom', 'Other'
+];
+
+const PRE_EURO_CURRENCIES: { [key: string]: string[] } = {
+  'Ireland': ['Farthing', 'Half Penny', 'Penny', 'Threepence', 'Sixpence', 'Shilling', 'Florin', 'Half Crown', 'Crown'],
+  'France': ['Franc', 'Centime'],
+  'Germany': ['Deutsche Mark', 'Pfennig'],
+  'Italy': ['Lira', 'Centesimo'],
+  'Spain': ['Peseta', 'Centimo'],
+  'Netherlands': ['Guilder', 'Cent'],
+  'Belgium': ['Franc', 'Centime'],
+  'Austria': ['Schilling', 'Groschen']
+};
+
+const MODERN_CURRENCIES = ['1c', '2c', '5c', '10c', '20c', '50c', '€1', '€2'];
+
 type Rarity = 'Common' | 'Rare' | 'Very Rare';
 type SortOption = 'year' | 'denomination' | 'date' | 'month' | 'added' | 'opened' | 'name';
-type GroupOption = 'year' | 'denomination' | 'date' | 'month' | 'none';
+type GroupOption = 'year' | 'denomination' | 'date' | 'month' | 'country' | 'none';
 type ExploreMode = 'timeline' | 'mindmap' | 'story';
 type LayoutType = 'grid' | 'list' | 'carousel' | 'masonry' | 'board' | 'timeline' | 'gallery' | 'spotlight' | 'compact' | 'split' | 'hexagon';
 
@@ -48,6 +66,8 @@ interface Coin {
   tags?: string[];
   mint?: string;
   era?: string;
+  country?: string;
+  currencyType?: 'Modern' | 'Old';
 }
 
 interface Folder {
@@ -211,6 +231,8 @@ interface Profile {
     denominationPrices: { [key: string]: number };
     layoutType: LayoutType;
     showLayoutSwitcher: boolean;
+    showOldCoins: boolean;
+    currencyFilter: 'modern' | 'old' | 'both';
   };
 }
 
@@ -922,6 +944,8 @@ export default function App() {
           },
           layoutType: parsed.preferences?.layoutType ?? 'grid',
           showLayoutSwitcher: parsed.preferences?.showLayoutSwitcher ?? true,
+          showOldCoins: parsed.preferences?.showOldCoins ?? true,
+          currencyFilter: parsed.preferences?.currencyFilter ?? 'both',
         }
       };
     }
@@ -975,6 +999,8 @@ export default function App() {
         },
         layoutType: 'grid',
         showLayoutSwitcher: true,
+        showOldCoins: true,
+        currencyFilter: 'both',
       }
     };
   });
@@ -1097,6 +1123,7 @@ export default function App() {
   const [mindMapZoom, setMindMapZoom] = useState(1);
   const [mindMapOffset, setMindMapOffset] = useState({ x: 0, y: 0 });
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [selectedCoinIds, setSelectedCoinIds] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [activeBulkMenu, setActiveBulkMenu] = useState<'move' | 'type' | 'price' | null>(null);
@@ -1886,6 +1913,23 @@ export default function App() {
   const [newAmountPaid, setNewAmountPaid] = useState('0');
   const [newMint, setNewMint] = useState('');
   const [newEra, setNewEra] = useState('');
+  const [newCountry, setNewCountry] = useState('United Kingdom');
+  const [newCurrencyType, setNewCurrencyType] = useState<'Modern' | 'Old'>('Modern');
+
+  const availableDenominations = useMemo(() => {
+    if (newCurrencyType === 'Modern') return MODERN_CURRENCIES;
+    if (newCurrencyType === 'Old' && PRE_EURO_CURRENCIES[newCountry]) {
+      return PRE_EURO_CURRENCIES[newCountry];
+    }
+    return DEFAULT_DENOMINATIONS;
+  }, [newCountry, newCurrencyType]);
+
+  const allPossibleDenominations = useMemo(() => {
+    const denoms = new Set([...DEFAULT_DENOMINATIONS, ...MODERN_CURRENCIES]);
+    Object.values(PRE_EURO_CURRENCIES).forEach(list => list.forEach(d => denoms.add(d)));
+    profile.preferences.customDenominations.forEach(d => denoms.add(d));
+    return Array.from(denoms).sort();
+  }, [profile.preferences.customDenominations]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -2227,6 +2271,8 @@ export default function App() {
       tags: newTags,
       mint: newMint,
       era: newEra,
+      country: newCountry,
+      currencyType: newCurrencyType,
     };
 
     if (isEditing) {
@@ -2343,6 +2389,8 @@ export default function App() {
     
     setNewMint('');
     setNewEra('');
+    setNewCountry('United Kingdom');
+    setNewCurrencyType('Modern');
     setIsAdding(false);
     setIsEditing(null);
   };
@@ -2358,6 +2406,8 @@ export default function App() {
     setNewAmountPaid(coin.amountPaid?.toString() || '0');
     setNewMint(coin.mint || '');
     setNewEra(coin.era || '');
+    setNewCountry(coin.country || 'United Kingdom');
+    setNewCurrencyType(coin.currencyType || 'Modern');
     setIsEditing(coin);
     setIsAdding(true);
     setSelectedCoin(null);
@@ -2549,6 +2599,13 @@ export default function App() {
       filtered = filtered.filter(c => c.folderId === selectedFolderId);
     }
 
+    // Currency Type Filter
+    if (profile.preferences.currencyFilter === 'modern') {
+      filtered = filtered.filter(c => c.currencyType === 'Modern' || !c.currencyType);
+    } else if (profile.preferences.currencyFilter === 'old') {
+      filtered = filtered.filter(c => c.currencyType === 'Old');
+    }
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(c => 
@@ -2602,6 +2659,10 @@ export default function App() {
         key = new Date(coin.dateAdded).toLocaleDateString(undefined, { dateStyle: 'medium' });
       } else if (groupBy === 'month') {
         key = new Date(coin.dateAdded).toLocaleString('default', { month: 'long', year: 'numeric' });
+      } else if (groupBy === 'country') {
+        const country = coin.country || 'United Kingdom';
+        const currency = coin.currencyType || 'Modern';
+        key = `${country} - ${currency}`;
       }
       
       if (!groups[key]) groups[key] = [];
@@ -4628,6 +4689,34 @@ export default function App() {
                   ))}
                 </div>
 
+                {/* Currency Filter */}
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar h-[40px]">
+                  <button
+                    onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, currencyFilter: 'both' } }))}
+                    className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all h-[32px] flex items-center justify-center ${
+                      profile.preferences.currencyFilter === 'both' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                    }`}
+                  >
+                    All Currencies
+                  </button>
+                  <button
+                    onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, currencyFilter: 'modern' } }))}
+                    className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all h-[32px] flex items-center justify-center ${
+                      profile.preferences.currencyFilter === 'modern' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                    }`}
+                  >
+                    Modern Only
+                  </button>
+                  <button
+                    onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, currencyFilter: 'old' } }))}
+                    className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all h-[32px] flex items-center justify-center ${
+                      profile.preferences.currencyFilter === 'old' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                    }`}
+                  >
+                    Old Only
+                  </button>
+                </div>
+
                 {/* Sorting & Grouping Controls */}
                 <div className="flex flex-col gap-3 bg-white dark:bg-gray-900 p-4 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm h-[136px]">
                   <div className="flex items-center justify-between h-[32px]">
@@ -4683,6 +4772,7 @@ export default function App() {
                           <option value="none">No Grouping</option>
                           <option value="year">Year</option>
                           <option value="denomination">Denom</option>
+                          <option value="country">Country</option>
                           <option value="date">Exact Date</option>
                           <option value="month">Month</option>
                         </select>
@@ -4758,6 +4848,40 @@ export default function App() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Country</label>
+                        <select
+                          value={newCountry}
+                          onChange={(e) => {
+                            setNewCountry(e.target.value);
+                            // Reset type if not available in new country
+                            setNewType(newCurrencyType === 'Modern' ? MODERN_CURRENCIES[0] : (PRE_EURO_CURRENCIES[e.target.value]?.[0] || DEFAULT_DENOMINATIONS[0]));
+                          }}
+                          className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
+                        >
+                          {EUROPEAN_COUNTRIES.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Currency</label>
+                        <select
+                          value={newCurrencyType}
+                          onChange={(e) => {
+                            const ct = e.target.value as 'Modern' | 'Old';
+                            setNewCurrencyType(ct);
+                            setNewType(ct === 'Modern' ? MODERN_CURRENCIES[0] : (PRE_EURO_CURRENCIES[newCountry]?.[0] || DEFAULT_DENOMINATIONS[0]));
+                          }}
+                          className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
+                        >
+                          <option value="Modern">Modern (Euro)</option>
+                          <option value="Old">Old (Pre-Euro)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
                         <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Year</label>
                         <input
                           type="number"
@@ -4782,7 +4906,10 @@ export default function App() {
                           }}
                           className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
                         >
-                          {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map(denom => (
+                          {availableDenominations.map(denom => (
+                            <option key={denom} value={denom}>{denom}</option>
+                          ))}
+                          {profile.preferences.customDenominations.map(denom => (
                             <option key={denom} value={denom}>{denom}</option>
                           ))}
                         </select>
@@ -5079,16 +5206,39 @@ export default function App() {
                   ) : (
                     profile.preferences.groupViewEnabled && groupedCoins ? (
                       <div className="space-y-8">
-                        {Object.entries(groupedCoins as Record<string, Coin[]>).map(([groupName, groupCoins]) => (
-                          <div key={groupName} className="space-y-3">
-                            <div className="flex items-center gap-3 px-2 h-[24px]">
-                              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] truncate max-w-[150px]">{groupName}</h3>
-                              <div className="h-[1px] flex-1 bg-gray-100 dark:bg-gray-800" />
-                              <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest w-8 text-right">{groupCoins.length}</span>
+                        {Object.entries(groupedCoins as Record<string, Coin[]>).map(([groupName, groupCoins]) => {
+                          const isExpanded = !collapsedGroups.has(groupName) || profile.preferences.groupBy === 'none';
+                          return (
+                            <div key={groupName} className="space-y-3">
+                              <button 
+                                onClick={() => setCollapsedGroups(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(groupName)) next.delete(groupName);
+                                  else next.add(groupName);
+                                  return next;
+                                })}
+                                className="flex items-center gap-3 px-2 h-[24px] w-full group"
+                              >
+                                <ChevronRight size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] truncate max-w-[150px] group-hover:text-blue-500 transition-colors">{groupName}</h3>
+                                <div className="h-[1px] flex-1 bg-gray-100 dark:bg-gray-800" />
+                                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest w-8 text-right">{groupCoins.length}</span>
+                              </button>
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="overflow-hidden"
+                                  >
+                                    {renderLayout(groupCoins)}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
-                            {renderLayout(groupCoins)}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       renderLayout(sortedCoins)
@@ -5581,12 +5731,19 @@ export default function App() {
                       onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, fixedPriceMode: !profile.preferences.fixedPriceMode } })}
                       description="Auto-fill price based on denomination"
                     />
+                    <SettingToggle 
+                      label="Show Old European Coins" 
+                      icon={Coins} 
+                      value={profile.preferences.showOldCoins}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showOldCoins: !profile.preferences.showOldCoins } })}
+                      description="Enable support for pre-euro currencies"
+                    />
                     {profile.preferences.fixedPriceMode && (
                       <div className="px-5 pb-5 space-y-3 bg-blue-50/10 dark:bg-blue-900/5">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Set Fixed Prices</p>
                         <div className="max-h-[300px] overflow-y-auto no-scrollbar pr-1">
                           <div className="grid grid-cols-3 gap-2">
-                            {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map(type => (
+                            {allPossibleDenominations.map(type => (
                               <div key={type} className="space-y-1">
                                 <label className="text-[9px] font-black text-gray-500 uppercase ml-1 truncate block" title={type}>{type}</label>
                                 <div className="relative">
