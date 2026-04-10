@@ -233,6 +233,7 @@ interface Profile {
     showLayoutSwitcher: boolean;
     showOldCoins: boolean;
     currencyFilter: 'modern' | 'old' | 'both';
+    visibleCountries: string[];
   };
 }
 
@@ -864,6 +865,54 @@ const AmbientBackground = ({ enabled }: { enabled: boolean }) => {
   );
 };
 
+const SAMPLE_COINS: Coin[] = [
+  {
+    id: 'sample-1',
+    name: 'Victorian Penny',
+    year: '1890',
+    type: 'Penny',
+    rarity: 'Rare',
+    summary: 'A beautiful bronze penny from the Victorian era.',
+    folderId: 'purchased',
+    dateAdded: Date.now() - 1000000,
+    lastOpened: Date.now(),
+    amountPaid: 15.50,
+    country: 'Ireland',
+    currencyType: 'Old',
+    tags: ['Victorian', 'Bronze']
+  },
+  {
+    id: 'sample-2',
+    name: 'French Franc',
+    year: '1960',
+    type: 'Franc',
+    rarity: 'Common',
+    summary: 'Standard circulation franc from mid-century France.',
+    folderId: 'purchased',
+    dateAdded: Date.now() - 2000000,
+    lastOpened: Date.now(),
+    amountPaid: 2.00,
+    country: 'France',
+    currencyType: 'Old',
+    tags: ['Franc', 'Steel']
+  },
+  {
+    id: 'sample-3',
+    name: 'German Mark',
+    year: '1975',
+    type: 'Deutsche Mark',
+    rarity: 'Common',
+    summary: 'A classic Deutsche Mark from West Germany.',
+    folderId: 'purchased',
+    dateAdded: Date.now() - 3000000,
+    lastOpened: Date.now(),
+    amountPaid: 5.00,
+    country: 'Germany',
+    currencyType: 'Old',
+    tags: ['Mark', 'West Germany']
+  }
+];
+
 export default function App() {
   // --- State ---
   
@@ -877,7 +926,8 @@ export default function App() {
   const [coins, setCoins] = useState<Coin[]>(() => {
     const key = isSafeMode ? 'coin-backup-collection' : 'coin-collection';
     const saved = storage.load(key);
-    return saved || [];
+    if (saved && saved.length > 0) return saved;
+    return SAMPLE_COINS;
   });
 
   const [folders, setFolders] = useState<Folder[]>(() => {
@@ -1001,6 +1051,7 @@ export default function App() {
         showLayoutSwitcher: true,
         showOldCoins: true,
         currencyFilter: 'both',
+        visibleCountries: EUROPEAN_COUNTRIES,
       }
     };
   });
@@ -2600,10 +2651,19 @@ export default function App() {
     }
 
     // Currency Type Filter
-    if (profile.preferences.currencyFilter === 'modern') {
-      filtered = filtered.filter(c => c.currencyType === 'Modern' || !c.currencyType);
-    } else if (profile.preferences.currencyFilter === 'old') {
-      filtered = filtered.filter(c => c.currencyType === 'Old');
+    if (!profile.preferences.showOldCoins) {
+      filtered = filtered.filter(c => c.currencyType !== 'Old');
+    } else {
+      if (profile.preferences.currencyFilter === 'modern') {
+        filtered = filtered.filter(c => c.currencyType === 'Modern' || !c.currencyType);
+      } else if (profile.preferences.currencyFilter === 'old') {
+        filtered = filtered.filter(c => c.currencyType === 'Old');
+      }
+    }
+
+    // Visible Countries Filter
+    if (profile.preferences.visibleCountries && profile.preferences.visibleCountries.length > 0) {
+      filtered = filtered.filter(c => !c.country || profile.preferences.visibleCountries.includes(c.country));
     }
 
     if (searchQuery.trim()) {
@@ -2662,7 +2722,7 @@ export default function App() {
       } else if (groupBy === 'country') {
         const country = coin.country || 'United Kingdom';
         const currency = coin.currencyType || 'Modern';
-        key = `${country} - ${currency}`;
+        key = `${country} / ${currency}`;
       }
       
       if (!groups[key]) groups[key] = [];
@@ -5102,10 +5162,14 @@ export default function App() {
                       {searchQuery ? <Search size={32} className="text-blue-500" /> : <Coins size={32} className="text-blue-500" />}
                     </div>
                     <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
-                      {searchQuery ? 'No Match Found' : 'Your Collection is Empty'}
+                      {searchQuery ? 'No Match Found' : 
+                       (profile.preferences.currencyFilter === 'old' && profile.preferences.showOldCoins) ? 'No Old Coins Available' :
+                       'Your Collection is Empty'}
                     </h3>
                     <p className="text-gray-500 dark:text-gray-400 font-medium max-w-[200px] mx-auto leading-relaxed">
-                      {searchQuery ? `We couldn't find anything for "${searchQuery}"` : 'Start your journey by adding your first coin!'}
+                      {searchQuery ? `We couldn't find anything for "${searchQuery}"` : 
+                       (profile.preferences.currencyFilter === 'old' && profile.preferences.showOldCoins) ? 'You haven\'t added any pre-euro coins to your collection yet.' :
+                       'Start your journey by adding your first coin!'}
                     </p>
                     {searchQuery ? (
                       <motion.button 
@@ -5220,7 +5284,15 @@ export default function App() {
                                 className="flex items-center gap-3 px-2 h-[24px] w-full group"
                               >
                                 <ChevronRight size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] truncate max-w-[150px] group-hover:text-blue-500 transition-colors">{groupName}</h3>
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] truncate max-w-[200px] group-hover:text-blue-500 transition-colors">
+                                  {groupName.includes(' / ') ? (
+                                    <>
+                                      <span className="text-gray-900 dark:text-white">{groupName.split(' / ')[0]}</span>
+                                      <span className="mx-2 opacity-30">/</span>
+                                      <span>{groupName.split(' / ')[1]}</span>
+                                    </>
+                                  ) : groupName}
+                                </h3>
                                 <div className="h-[1px] flex-1 bg-gray-100 dark:bg-gray-800" />
                                 <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest w-8 text-right">{groupCoins.length}</span>
                               </button>
@@ -5738,6 +5810,36 @@ export default function App() {
                       onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showOldCoins: !profile.preferences.showOldCoins } })}
                       description="Enable support for pre-euro currencies"
                     />
+                    <div className="px-5 pb-5 space-y-3">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Visible Countries</p>
+                      <div className="flex flex-wrap gap-2">
+                        {EUROPEAN_COUNTRIES.map(country => (
+                          <button
+                            key={country}
+                            onClick={() => {
+                              const current = profile.preferences.visibleCountries || [];
+                              const next = current.includes(country)
+                                ? current.filter(c => c !== country)
+                                : [...current, country];
+                              setProfile({
+                                ...profile,
+                                preferences: {
+                                  ...profile.preferences,
+                                  visibleCountries: next
+                                }
+                              });
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                              (profile.preferences.visibleCountries || []).includes(country)
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-gray-50 dark:bg-gray-800 text-gray-400 border-gray-100 dark:border-gray-700'
+                            }`}
+                          >
+                            {country}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     {profile.preferences.fixedPriceMode && (
                       <div className="px-5 pb-5 space-y-3 bg-blue-50/10 dark:bg-blue-900/5">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Set Fixed Prices</p>
