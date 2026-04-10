@@ -67,7 +67,51 @@ body {
   @apply fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center transition-all duration-500;
 }
 
-/* --- Texture Themes --- */
+/* --- UI Stability Utilities --- */
+
+.locked-viewport {
+  @apply fixed inset-0 overflow-hidden flex flex-col bg-[#F2F2F7] dark:bg-black;
+}
+
+.scroll-container {
+  @apply flex-1 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.safe-top-padding {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-bottom-padding {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px); /* Extra space for bottom nav */
+}
+
+.fixed-card {
+  @apply h-[120px] min-h-[120px] max-h-[120px] w-full flex-shrink-0;
+}
+
+.fixed-card-lg {
+  @apply h-[200px] min-h-[200px] max-h-[200px] w-full flex-shrink-0;
+}
+
+.image-reserve {
+  @apply relative overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0;
+}
+
+.text-locked-1 {
+  @apply truncate block;
+}
+
+.text-locked-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stable-button {
+  @apply inline-flex items-center justify-center transition-all active:scale-95 flex-shrink-0;
+}
 
 /* Paper Theme: Refined with subtle noise and soft lighting */
 .theme-paper {

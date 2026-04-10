@@ -1411,7 +1411,7 @@ export default function App() {
             setSelectedTimelineId(timeline.id);
             setExpandedEventIdx(null);
           }}
-          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden ${
+          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden fixed-card-lg ${
             locked
               ? 'bg-gray-100/40 dark:bg-gray-800/40 text-gray-400 cursor-not-allowed border-gray-200/30 dark:border-gray-700/30'
               : isActive 
@@ -1424,12 +1424,12 @@ export default function App() {
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <h4 className="font-black text-xl leading-tight line-clamp-1 tracking-tight">{timeline.title}</h4>
+                <h4 className="font-black text-xl leading-tight text-locked-1 tracking-tight">{timeline.title}</h4>
                 {isPersonal && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
               </div>
               {locked && <Lock size={16} className="text-gray-400/60" />}
             </div>
-            <p className={`text-[11px] font-bold leading-relaxed line-clamp-2 mb-6 ${locked ? 'text-gray-400/60' : isActive || isPersonal ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'}`}>
+            <p className={`text-[11px] font-bold leading-relaxed text-locked-2 mb-6 ${locked ? 'text-gray-400/60' : isActive || isPersonal ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'}`}>
               {locked ? getUnlockMessage(timeline) : timeline.description}
             </p>
             <div className="flex items-center justify-between mt-auto">
@@ -1749,9 +1749,9 @@ export default function App() {
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 10 }}
-        className="space-y-6 pb-24 h-[calc(100vh-180px)] flex flex-col"
+        className="space-y-6 pb-24 flex-1 flex flex-col overflow-hidden"
       >
-        <div className="flex items-center justify-between px-2 flex-shrink-0">
+        <div className="flex items-center justify-between px-2 flex-shrink-0 h-[40px]">
           <h2 className="text-2xl font-black text-gray-800 dark:text-gray-200">Explore</h2>
           <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{exploreMode} Mode</span>
         </div>
@@ -2878,7 +2878,7 @@ export default function App() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowLayoutDropdown(!showLayoutDropdown)}
-          className="flex items-center gap-2 px-3 py-1.5 ios-glass rounded-xl border border-white/20 dark:border-white/5 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm sm:w-[120px] justify-center"
+          className="flex items-center gap-2 px-3 py-1.5 ios-glass rounded-xl border border-white/20 dark:border-white/5 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm w-[120px] justify-center"
         >
           <currentLayout.icon size={14} className="text-blue-500" />
           <span className="text-gray-900 dark:text-white hidden sm:inline">{currentLayout.label}</span>
@@ -3385,10 +3385,10 @@ export default function App() {
   );
 
   const renderSkeletonCard = () => (
-    <div className={`ios-surface flex items-center justify-between animate-pulse overflow-hidden ${isCompact ? 'h-[88px] p-4' : 'h-[128px] p-6'}`}>
+    <div className={`ios-surface flex items-center justify-between animate-pulse overflow-hidden fixed-card ${isCompact ? 'p-4' : 'p-6'}`}>
       <div className="flex items-center gap-4 min-w-0 flex-1">
         {!profile.preferences.textMode && (
-          <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-100 dark:bg-gray-800 flex-shrink-0`} />
+          <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-100 dark:bg-gray-800 flex-shrink-0 image-reserve`} />
         )}
         <div className="min-w-0 flex-1">
           <div className={`bg-gray-100 dark:bg-gray-800 rounded-full mb-1 ${isCompact ? 'h-4 w-24' : 'h-5 w-32'}`} />
@@ -3553,8 +3553,8 @@ export default function App() {
             openCoin(coin);
           }
         }}
-        className={`ios-surface transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden active:bg-white/80 dark:active:bg-black/60 ${
-          isCompact ? 'h-[88px] p-4' : 'h-[128px] p-6'
+        className={`ios-surface transition-all flex items-center justify-between group cursor-pointer relative overflow-hidden active:bg-white/80 dark:active:bg-black/60 fixed-card ${
+          isCompact ? 'p-4' : 'p-6'
         } ${
           isSelected ? 'ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-900/20' :
           coin.rarity === 'Very Rare' ? 'ring-1 ring-amber-400/30 bg-amber-50/30 dark:bg-amber-900/10' : 
@@ -3570,13 +3570,12 @@ export default function App() {
             </div>
           )}
           {!profile.preferences.textMode && (
-            <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner border border-gray-100/50 dark:border-gray-800/50`}>
+            <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner border border-gray-100/50 dark:border-gray-800/50 image-reserve`}>
               {coin.image ? (
                 <img 
                   src={coin.image} 
                   alt={coin.name} 
-                  width={isCompact ? 56 : 80}
-                  height={isCompact ? 56 : 80}
+                  loading="lazy"
                   className="w-full h-full object-cover" 
                   referrerPolicy="no-referrer" 
                 />
@@ -3592,7 +3591,7 @@ export default function App() {
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1 h-[20px]">
-              <h4 className={`font-bold text-gray-900 dark:text-gray-100 leading-tight truncate ${isCompact ? 'text-sm' : 'text-base'}`}>
+              <h4 className={`font-bold text-gray-900 dark:text-gray-100 leading-tight text-locked-1 ${isCompact ? 'text-sm' : 'text-base'}`}>
                 {coin.name}
               </h4>
               {!profile.preferences.textMode && coin.rarity !== 'Common' && (
@@ -3907,7 +3906,7 @@ export default function App() {
     ];
 
     return (
-      <div className="fixed bottom-6 left-0 right-0 z-40 px-6 pointer-events-none">
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] left-0 right-0 z-40 px-6 pointer-events-none">
         <nav className="max-w-md mx-auto ios-overlay px-6 py-3 flex items-center justify-around pointer-events-auto relative overflow-hidden">
           {/* Subtle background glow for active item */}
           <div className="absolute inset-0 bg-gradient-to-t from-blue-500/5 to-transparent pointer-events-none" />
@@ -4473,7 +4472,7 @@ export default function App() {
               setActiveNarrativeStoryId(id);
             }
           }}
-          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden ${
+          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden fixed-card-lg ${
             locked
               ? 'bg-gray-100/40 dark:bg-gray-800/40 text-gray-400 cursor-not-allowed border-gray-200/30 dark:border-gray-700/30'
               : isActive 
@@ -4487,11 +4486,11 @@ export default function App() {
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isActive ? 'bg-white/20 text-white' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'}`}>
                   <Icon size={20} />
                 </div>
-                <h4 className="font-black text-lg leading-tight line-clamp-1 tracking-tight">{title}</h4>
+                <h4 className="font-black text-lg leading-tight text-locked-1 tracking-tight">{title}</h4>
               </div>
               {locked && <Lock size={16} className="text-gray-400/60" />}
             </div>
-            <p className={`text-[11px] font-bold leading-relaxed line-clamp-2 mb-6 ${locked ? 'text-gray-400/60' : isActive ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'}`}>
+            <p className={`text-[11px] font-bold leading-relaxed text-locked-2 mb-6 ${locked ? 'text-gray-400/60' : isActive ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'}`}>
               {locked ? unlockMsg : description}
             </p>
             <div className="flex items-center justify-between mt-auto">
@@ -4649,7 +4648,7 @@ export default function App() {
   return (
     <ErrorBoundary onExport={exportData}>
       <AmbientBackground enabled={profile.preferences.ambientMotionEnabled} />
-      <div className={`min-h-screen ios-base text-gray-900 dark:text-gray-100 font-sans transition-colors relative ${profile.preferences.showBottomMenu ? 'pb-24' : 'pb-12'}`}>
+      <div className="locked-viewport ios-base text-gray-900 dark:text-gray-100 font-sans transition-colors relative">
         {/* Global Texture Overlay - Extremely subtle as per request */}
         <div className="fixed inset-0 pointer-events-none opacity-[0.01] dark:opacity-[0.02] z-50 bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
         
@@ -4661,13 +4660,14 @@ export default function App() {
           className="hidden" 
         />
 
-        {renderHeader()}
-
-        <main className="max-w-md mx-auto px-[var(--spacing-fluid)] pt-4">
+        <div className="flex-none safe-top-padding">
+          {renderHeader()}
           {renderTabs()}
-          {renderBottomMenu()}
+        </div>
 
-          <AnimatePresence mode="wait">
+        <div className="scroll-container">
+          <main className="max-w-md mx-auto px-[var(--spacing-fluid)] pt-4 safe-bottom-padding">
+            <AnimatePresence mode="wait">
             {activeTab === 'explore' && renderExplore()}
             
             {activeTab === 'collection' && (
@@ -5207,7 +5207,7 @@ export default function App() {
                           Object.entries(groupedCoins as Record<string, Coin[]>).map(([groupName, groupCoins]) => (
                             <React.Fragment key={groupName}>
                               <tbody className="bg-gray-50 dark:bg-gray-800/50">
-                                <tr>
+                                <tr className="h-[32px]">
                                   <td colSpan={3} className="px-6 py-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-y border-gray-100 dark:border-gray-800">
                                     {groupName} ({groupCoins.length})
                                   </td>
@@ -5296,12 +5296,12 @@ export default function App() {
                                 <div className="h-[1px] flex-1 bg-gray-100 dark:bg-gray-800" />
                                 <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest w-8 text-right">{groupCoins.length}</span>
                               </button>
-                              <AnimatePresence>
+                              <AnimatePresence mode="wait">
                                 {isExpanded && (
                                   <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
                                     className="overflow-hidden"
                                   >
                                     {renderLayout(groupCoins)}
@@ -6267,6 +6267,9 @@ export default function App() {
             )}
           </AnimatePresence>
         </main>
+      </div>
+
+      {renderBottomMenu()}
 
         {/* Coin Detail View */}
         <AnimatePresence>
