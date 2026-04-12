@@ -12,7 +12,7 @@ import {
   Loader2, AlertCircle, Grid, List as ListIcon, Trophy, Flame,
   Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp,
   Share2, Columns, History, Lightbulb, Coins, Shield, Database, Layout,
-  Monitor, Smartphone, Activity, Award, Palette, Gauge, Layers, Moon, Map,
+  Monitor, Smartphone, Activity, Award, Palette, Gauge, Layers, Moon, Map, Flag,
   BookOpen, Puzzle, PlayCircle
 } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
@@ -185,6 +185,14 @@ interface LogEntry {
   type: 'info' | 'error' | 'action' | 'load';
 }
 
+interface FeatureFlags {
+  timelineModes: boolean;
+  imageLibrary: boolean;
+  bulkActions: boolean;
+  themes: boolean;
+  experimental: boolean;
+}
+
 interface Profile {
   name: string;
   recoveryCode: string;
@@ -238,10 +246,19 @@ interface Profile {
     showOldCoins: boolean;
     currencyFilter: 'modern' | 'old' | 'both';
     visibleCountries: string[];
+    featureFlags: FeatureFlags;
   };
 }
 
 const TARGET_PER_TYPE = 20;
+
+const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
+  timelineModes: true,
+  imageLibrary: true,
+  bulkActions: true,
+  themes: true,
+  experimental: false,
+};
 
 const LEVELS = [
   { name: 'Beginner', minPoints: 0 },
@@ -305,6 +322,24 @@ const RARITY_POINTS = {
 // IMPORTANT: Update this array whenever a new feature, UI update, or bug fix is applied.
 // Follow Semantic Versioning: Major (big features), Minor (small features), Patch (fixes).
 const APP_VERSION_HISTORY: AppVersion[] = [
+  {
+    version: '2.3.0',
+    date: '2026-04-12',
+    added: [
+      'Global Feature Flag system for dynamic control',
+      'Developer / Experimental settings section',
+      'Remote-ready configuration architecture'
+    ],
+    improved: [
+      'Settings organization with new Flag section',
+      'Navigation tab filtering based on active features',
+      'Bulk action accessibility control'
+    ],
+    fixed: [
+      'UI clutter by hiding unreleased or disabled features',
+      'Layout stability when features are toggled'
+    ]
+  },
   {
     version: '2.2.0',
     date: '2026-04-12',
@@ -1074,6 +1109,8 @@ export default function App() {
           showLayoutSwitcher: parsed.preferences?.showLayoutSwitcher ?? true,
           showOldCoins: parsed.preferences?.showOldCoins ?? true,
           currencyFilter: parsed.preferences?.currencyFilter ?? 'both',
+          visibleCountries: parsed.preferences?.visibleCountries ?? [],
+          featureFlags: parsed.preferences?.featureFlags ?? DEFAULT_FEATURE_FLAGS,
         }
       };
     }
@@ -1131,6 +1168,7 @@ export default function App() {
         showOldCoins: true,
         currencyFilter: 'both',
         visibleCountries: EUROPEAN_COUNTRIES,
+        featureFlags: DEFAULT_FEATURE_FLAGS,
       }
     };
   });
@@ -3644,6 +3682,7 @@ export default function App() {
     };
 
     const startLongPress = () => {
+      if (!profile.preferences.featureFlags.bulkActions) return;
       longPressTimer.current = setTimeout(() => {
         setIsMultiSelectMode(true);
         setSelectedCoinIds(new Set([coin.id]));
@@ -3982,10 +4021,10 @@ export default function App() {
     const tabs = [
       { id: 'collection', label: 'Collection', icon: LayoutGrid },
       { id: 'story', label: 'Story', icon: BookOpen },
-      { id: 'library', label: 'Library', icon: ImageIcon },
+      profile.preferences.featureFlags.imageLibrary && { id: 'library', label: 'Library', icon: ImageIcon },
       { id: 'stats', label: 'Stats', icon: PieChart },
       { id: 'profile', label: 'Profile', icon: User },
-    ];
+    ].filter(Boolean) as any[];
 
     return (
       <div className="max-w-md mx-auto mb-8 px-4">
@@ -4023,10 +4062,10 @@ export default function App() {
     const menuItems = [
       { id: 'collection', label: 'Home', icon: LayoutGrid },
       { id: 'explore', label: 'Explore', icon: Map },
-      { id: 'library', label: 'Library', icon: ImageIcon },
+      profile.preferences.featureFlags.imageLibrary && { id: 'library', label: 'Library', icon: ImageIcon },
       { id: 'stats', label: 'Stats', icon: PieChart },
       { id: 'profile', label: 'Profile', icon: User },
-    ];
+    ].filter(Boolean) as any[];
 
     return (
       <div className="fixed bottom-[calc(var(--safe-bottom)+1rem)] left-0 right-0 z-40 px-4 pointer-events-none">
@@ -5729,174 +5768,182 @@ export default function App() {
                 </div>
 
                 {/* Collector Identity & Timeline Section */}
-                <div className="grid grid-cols-2 gap-4">
-                  {profile.preferences.showCollectorCard && (
-                    <motion.button 
-                      whileHover={{ scale: 1.02, y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setShowCollectorCard(true)}
-                      className="p-6 bg-blue-600 text-white rounded-[2rem] font-black text-sm flex flex-col items-center justify-center gap-3 shadow-xl shadow-blue-200/50 dark:shadow-none active:scale-95 transition-all"
-                    >
-                      <User size={28} />
-                      <span className="tracking-tight">Identity Card</span>
-                    </motion.button>
-                  )}
-                  <motion.button 
-                    whileHover={{ scale: 1.02, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setActiveTab('explore');
-                      setExploreMode('timeline');
-                    }}
-                    className={`p-6 rounded-[2rem] font-black text-sm flex flex-col items-center justify-center gap-3 shadow-xl active:scale-95 transition-all ${
-                      profile.preferences.showCollectorCard ? 'ios-surface text-gray-800 dark:text-gray-100' : 'col-span-2 ios-surface text-gray-800 dark:text-gray-100'
-                    }`}
-                  >
-                    <History size={28} className="text-blue-600" />
-                    <span className="tracking-tight">Timeline Hub</span>
-                  </motion.button>
-                </div>
+                {(profile.preferences.showCollectorCard || profile.preferences.featureFlags.timelineModes) && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {profile.preferences.showCollectorCard && (
+                      <motion.button 
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowCollectorCard(true)}
+                        className={`p-6 bg-blue-600 text-white rounded-[2rem] font-black text-sm flex flex-col items-center justify-center gap-3 shadow-xl shadow-blue-200/50 dark:shadow-none active:scale-95 transition-all ${
+                          !profile.preferences.featureFlags.timelineModes ? 'col-span-2' : ''
+                        }`}
+                      >
+                        <User size={28} />
+                        <span className="tracking-tight">Identity Card</span>
+                      </motion.button>
+                    )}
+                    {profile.preferences.featureFlags.timelineModes && (
+                      <motion.button 
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          setActiveTab('explore');
+                          setExploreMode('timeline');
+                        }}
+                        className={`p-6 rounded-[2rem] font-black text-sm flex flex-col items-center justify-center gap-3 shadow-xl active:scale-95 transition-all ${
+                          profile.preferences.showCollectorCard ? 'ios-surface text-gray-800 dark:text-gray-100' : 'col-span-2 ios-surface text-gray-800 dark:text-gray-100'
+                        }`}
+                      >
+                        <History size={28} className="text-blue-600" />
+                        <span className="tracking-tight">Timeline Hub</span>
+                      </motion.button>
+                    )}
+                  </div>
+                )}
 
                 {/* Hidden Settings (Unlocked via Milestones) */}
                 {/* Settings Categories */}
                 <div className="space-y-4">
-                  <SettingsSection id="display" title="Display" icon={Layout}>
-                    <SettingSelect 
-                      label="Theme Category" 
-                      icon={Layers} 
-                      value={profile.preferences.themeCategory}
-                      onChange={(val) => {
-                        const category = THEME_CATEGORIES.find(c => c.id === val);
-                        setProfile({ 
-                          ...profile, 
-                          preferences: { 
-                            ...profile.preferences, 
-                            themeCategory: val,
-                            theme: category?.themes[0].id || 'win98'
-                          } 
-                        });
-                      }}
-                      options={THEME_CATEGORIES.map(c => ({ value: c.id, label: c.name }))}
-                    />
-                    <SettingSelect 
-                      label="Theme Style" 
-                      icon={Palette} 
-                      value={profile.preferences.theme}
-                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, theme: val } })}
-                      options={THEME_CATEGORIES.find(c => c.id === profile.preferences.themeCategory)?.themes.map(t => ({ value: t.id, label: t.name })) || []}
-                    />
-                    <SettingToggle 
-                      label="Compact UI" 
-                      icon={Smartphone} 
-                      value={isCompact}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, compactUI: !profile.preferences.compactUI } })}
-                      badge={windowWidth < 380 ? "Auto-Active" : undefined}
-                      description="Denser layout for more content"
-                    />
-                    <SettingToggle 
-                      label="Text Mode UI" 
-                      icon={ListIcon} 
-                      value={profile.preferences.textMode}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, textMode: !profile.preferences.textMode } })}
-                      description="Minimal text-only interface"
-                    />
-                    <SettingToggle 
-                      label="Show Coin Price" 
-                      icon={Coins} 
-                      value={profile.preferences.showPrice}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
-                      description="Display estimated value on coins"
-                    />
-                    <SettingToggle 
-                      label="Purchase Mode" 
-                      icon={TrendingUp} 
-                      value={profile.preferences.purchaseMode}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, purchaseMode: !profile.preferences.purchaseMode } })}
-                      description="Enable price tracking for additions"
-                    />
-                    <SettingToggle 
-                      label="Focus Mode" 
-                      icon={Target} 
-                      value={profile.preferences.focusMode}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, focusMode: !profile.preferences.focusMode } })}
-                      description="Hide non-essential UI elements"
-                    />
-                    <SettingToggle 
-                      label="Show Top Summary" 
-                      icon={Layout} 
-                      value={profile.preferences.showTopSummary}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showTopSummary: !profile.preferences.showTopSummary } })}
-                      description="Quick stats at the top of the screen"
-                    />
-                    <SettingToggle 
-                      label="Bottom Menu" 
-                      icon={Columns} 
-                      value={profile.preferences.showBottomMenu}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showBottomMenu: !profile.preferences.showBottomMenu } })}
-                      description="Toggle main navigation visibility"
-                    />
-                    <SettingToggle 
-                      label="Performance Mode" 
-                      icon={Gauge} 
-                      value={profile.preferences.performanceMode}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, performanceMode: !profile.preferences.performanceMode } })}
-                      description="Reduce animations for speed"
-                    />
-                    <SettingToggle 
-                      label="Progress Card" 
-                      icon={User} 
-                      value={profile.preferences.showProgressCard}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showProgressCard: !profile.preferences.showProgressCard } })}
-                      description="Show/Hide top profile header"
-                    />
-                    <SettingToggle 
-                      label="Rank System" 
-                      icon={Award} 
-                      value={profile.preferences.showRankSystem}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showRankSystem: !profile.preferences.showRankSystem } })}
-                      description="Show/Hide collector level & XP"
-                    />
-                    <SettingToggle 
-                      label="Ambient Motion" 
-                      icon={Activity} 
-                      value={profile.preferences.ambientMotionEnabled}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, ambientMotionEnabled: !profile.preferences.ambientMotionEnabled } })}
-                      description="Subtle background movement"
-                    />
-                    <SettingToggle 
-                      label="Show Folder" 
-                      icon={FolderIcon} 
-                      value={profile.preferences.showFolder}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showFolder: !profile.preferences.showFolder } })}
-                      description="Display folder name on coin cards"
-                    />
-                    <SettingToggle 
-                      label="Layout Switcher" 
-                      icon={Layout} 
-                      value={profile.preferences.showLayoutSwitcher}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showLayoutSwitcher: !profile.preferences.showLayoutSwitcher } })}
-                      description="Toggle layout selector in toolbar"
-                    />
-                    <SettingSelect 
-                      label="Default Layout" 
-                      icon={Grid} 
-                      value={profile.preferences.layoutType}
-                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, layoutType: val as any } })}
-                      options={[
-                        { value: 'grid', label: 'Grid' },
-                        { value: 'list', label: 'List' },
-                        { value: 'carousel', label: 'Carousel' },
-                        { value: 'masonry', label: 'Masonry' },
-                        { value: 'board', label: 'Board' },
-                        { value: 'timeline', label: 'Timeline' },
-                        { value: 'gallery', label: 'Gallery' },
-                        { value: 'spotlight', label: 'Spotlight' },
-                        { value: 'compact', label: 'Compact' },
-                        { value: 'split', label: 'Split' },
-                        { value: 'hexagon', label: 'Hexagon' }
-                      ]}
-                    />
-                  </SettingsSection>
+                  {profile.preferences.featureFlags.themes && (
+                    <SettingsSection id="display" title="Display" icon={Layout}>
+                      <SettingSelect 
+                        label="Theme Category" 
+                        icon={Layers} 
+                        value={profile.preferences.themeCategory}
+                        onChange={(val) => {
+                          const category = THEME_CATEGORIES.find(c => c.id === val);
+                          setProfile({ 
+                            ...profile, 
+                            preferences: { 
+                              ...profile.preferences, 
+                              themeCategory: val,
+                              theme: category?.themes[0].id || 'win98'
+                            } 
+                          });
+                        }}
+                        options={THEME_CATEGORIES.map(c => ({ value: c.id, label: c.name }))}
+                      />
+                      <SettingSelect 
+                        label="Theme Style" 
+                        icon={Palette} 
+                        value={profile.preferences.theme}
+                        onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, theme: val } })}
+                        options={THEME_CATEGORIES.find(c => c.id === profile.preferences.themeCategory)?.themes.map(t => ({ value: t.id, label: t.name })) || []}
+                      />
+                      <SettingToggle 
+                        label="Compact UI" 
+                        icon={Smartphone} 
+                        value={isCompact}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, compactUI: !profile.preferences.compactUI } })}
+                        badge={windowWidth < 380 ? "Auto-Active" : undefined}
+                        description="Denser layout for more content"
+                      />
+                      <SettingToggle 
+                        label="Text Mode UI" 
+                        icon={ListIcon} 
+                        value={profile.preferences.textMode}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, textMode: !profile.preferences.textMode } })}
+                        description="Minimal text-only interface"
+                      />
+                      <SettingToggle 
+                        label="Show Coin Price" 
+                        icon={Coins} 
+                        value={profile.preferences.showPrice}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
+                        description="Display estimated value on coins"
+                      />
+                      <SettingToggle 
+                        label="Purchase Mode" 
+                        icon={TrendingUp} 
+                        value={profile.preferences.purchaseMode}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, purchaseMode: !profile.preferences.purchaseMode } })}
+                        description="Enable price tracking for additions"
+                      />
+                      <SettingToggle 
+                        label="Focus Mode" 
+                        icon={Target} 
+                        value={profile.preferences.focusMode}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, focusMode: !profile.preferences.focusMode } })}
+                        description="Hide non-essential UI elements"
+                      />
+                      <SettingToggle 
+                        label="Show Top Summary" 
+                        icon={Layout} 
+                        value={profile.preferences.showTopSummary}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showTopSummary: !profile.preferences.showTopSummary } })}
+                        description="Quick stats at the top of the screen"
+                      />
+                      <SettingToggle 
+                        label="Bottom Menu" 
+                        icon={Columns} 
+                        value={profile.preferences.showBottomMenu}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showBottomMenu: !profile.preferences.showBottomMenu } })}
+                        description="Toggle main navigation visibility"
+                      />
+                      <SettingToggle 
+                        label="Performance Mode" 
+                        icon={Gauge} 
+                        value={profile.preferences.performanceMode}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, performanceMode: !profile.preferences.performanceMode } })}
+                        description="Reduce animations for speed"
+                      />
+                      <SettingToggle 
+                        label="Progress Card" 
+                        icon={User} 
+                        value={profile.preferences.showProgressCard}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showProgressCard: !profile.preferences.showProgressCard } })}
+                        description="Show/Hide top profile header"
+                      />
+                      <SettingToggle 
+                        label="Rank System" 
+                        icon={Award} 
+                        value={profile.preferences.showRankSystem}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showRankSystem: !profile.preferences.showRankSystem } })}
+                        description="Show/Hide collector level & XP"
+                      />
+                      <SettingToggle 
+                        label="Ambient Motion" 
+                        icon={Activity} 
+                        value={profile.preferences.ambientMotionEnabled}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, ambientMotionEnabled: !profile.preferences.ambientMotionEnabled } })}
+                        description="Subtle background movement"
+                      />
+                      <SettingToggle 
+                        label="Show Folder" 
+                        icon={FolderIcon} 
+                        value={profile.preferences.showFolder}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showFolder: !profile.preferences.showFolder } })}
+                        description="Display folder name on coin cards"
+                      />
+                      <SettingToggle 
+                        label="Layout Switcher" 
+                        icon={Layout} 
+                        value={profile.preferences.showLayoutSwitcher}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showLayoutSwitcher: !profile.preferences.showLayoutSwitcher } })}
+                        description="Toggle layout selector in toolbar"
+                      />
+                      <SettingSelect 
+                        label="Default Layout" 
+                        icon={Grid} 
+                        value={profile.preferences.layoutType}
+                        onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, layoutType: val as any } })}
+                        options={[
+                          { value: 'grid', label: 'Grid' },
+                          { value: 'list', label: 'List' },
+                          { value: 'carousel', label: 'Carousel' },
+                          { value: 'masonry', label: 'Masonry' },
+                          { value: 'board', label: 'Board' },
+                          { value: 'timeline', label: 'Timeline' },
+                          { value: 'gallery', label: 'Gallery' },
+                          { value: 'spotlight', label: 'Spotlight' },
+                          { value: 'compact', label: 'Compact' },
+                          { value: 'split', label: 'Split' },
+                          { value: 'hexagon', label: 'Hexagon' }
+                        ]}
+                      />
+                    </SettingsSection>
+                  )}
 
                   <SettingsSection id="coins" title="Coin Management" icon={Database}>
                     <SettingToggle 
@@ -5920,13 +5967,15 @@ export default function App() {
                       onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, autoRemoveBackground: !profile.preferences.autoRemoveBackground } })}
                       description="Auto-clean coin photos (AI)"
                     />
-                    <SettingToggle 
-                      label="Experimental Features" 
-                      icon={Lightbulb} 
-                      value={profile.preferences.experimentalFeatures}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, experimentalFeatures: !profile.preferences.experimentalFeatures } })}
-                      description="Try out new unreleased tools"
-                    />
+                    {profile.preferences.featureFlags.experimental && (
+                      <SettingToggle 
+                        label="Experimental Features" 
+                        icon={Lightbulb} 
+                        value={profile.preferences.experimentalFeatures}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, experimentalFeatures: !profile.preferences.experimentalFeatures } })}
+                        description="Try out new unreleased tools"
+                      />
+                    )}
                     <SettingToggle 
                       label="Fixed Price Mode" 
                       icon={Tag} 
@@ -6394,6 +6443,77 @@ export default function App() {
                           {showAllVersions ? 'Show Less' : `Show ${APP_VERSION_HISTORY.length - 1} Older Versions`}
                         </button>
                       )}
+                    </div>
+                  </SettingsSection>
+
+                  <SettingsSection id="feature-flags" title="Feature Flags" icon={Flag}>
+                    <div className="p-5 space-y-2">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Control app features dynamically</p>
+                      <SettingToggle 
+                        label="Timeline Modes" 
+                        icon={History} 
+                        value={profile.preferences.featureFlags.timelineModes}
+                        onChange={() => setProfile({ 
+                          ...profile, 
+                          preferences: { 
+                            ...profile.preferences, 
+                            featureFlags: { ...profile.preferences.featureFlags, timelineModes: !profile.preferences.featureFlags.timelineModes } 
+                          } 
+                        })}
+                        description="Enable timeline, mindmap, and story modes"
+                      />
+                      <SettingToggle 
+                        label="Image Library" 
+                        icon={ImageIcon} 
+                        value={profile.preferences.featureFlags.imageLibrary}
+                        onChange={() => setProfile({ 
+                          ...profile, 
+                          preferences: { 
+                            ...profile.preferences, 
+                            featureFlags: { ...profile.preferences.featureFlags, imageLibrary: !profile.preferences.featureFlags.imageLibrary } 
+                          } 
+                        })}
+                        description="Access global coin asset library"
+                      />
+                      <SettingToggle 
+                        label="Bulk Actions" 
+                        icon={Layers} 
+                        value={profile.preferences.featureFlags.bulkActions}
+                        onChange={() => setProfile({ 
+                          ...profile, 
+                          preferences: { 
+                            ...profile.preferences, 
+                            featureFlags: { ...profile.preferences.featureFlags, bulkActions: !profile.preferences.featureFlags.bulkActions } 
+                          } 
+                        })}
+                        description="Enable multi-coin selection and editing"
+                      />
+                      <SettingToggle 
+                        label="Advanced Themes" 
+                        icon={Palette} 
+                        value={profile.preferences.featureFlags.themes}
+                        onChange={() => setProfile({ 
+                          ...profile, 
+                          preferences: { 
+                            ...profile.preferences, 
+                            featureFlags: { ...profile.preferences.featureFlags, themes: !profile.preferences.featureFlags.themes } 
+                          } 
+                        })}
+                        description="Access premium OS and texture themes"
+                      />
+                      <SettingToggle 
+                        label="Experimental Lab" 
+                        icon={Lightbulb} 
+                        value={profile.preferences.featureFlags.experimental}
+                        onChange={() => setProfile({ 
+                          ...profile, 
+                          preferences: { 
+                            ...profile.preferences, 
+                            featureFlags: { ...profile.preferences.featureFlags, experimental: !profile.preferences.featureFlags.experimental } 
+                          } 
+                        })}
+                        description="Unstable tools and early access features"
+                      />
                     </div>
                   </SettingsSection>
 
