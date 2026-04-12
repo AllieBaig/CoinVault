@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, FormEvent, useRef, ErrorInfo, ReactNode, ChangeEvent } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionTemplate } from 'motion/react';
 import { 
   Plus, Trash2, PieChart, LayoutGrid, Info, CheckCircle2, Star, 
   Folder as FolderIcon, Image as ImageIcon, Download, Upload, 
@@ -1219,6 +1219,15 @@ export default function App() {
 
   const isMini = useMemo(() => windowWidth < 370, [windowWidth]);
   const isLarge = useMemo(() => windowWidth > 420, [windowWidth]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { scrollY } = useScroll({ container: scrollRef });
+  
+  const headerScale = useTransform(scrollY, [0, 150], [1, 0.96]);
+  const headerOpacity = useTransform(scrollY, [0, 150], [1, 0.98]);
+  const headerY = useTransform(scrollY, [0, 150], [0, -8]);
+  const headerBlur = useTransform(scrollY, [0, 150], [0, 4]);
+  const blurTemplate = useMotionTemplate`blur(${headerBlur}px)`;
 
   const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
@@ -3298,7 +3307,15 @@ export default function App() {
     const spacing = isMini ? 'mb-4' : isCompact ? 'mb-6' : isLarge ? 'mb-12' : 'mb-8';
 
     return (
-      <header className={`px-4 ${headerPaddingTop} ${headerPaddingBottom} relative z-10 transition-all duration-300 overflow-hidden`}>
+      <motion.header 
+        style={{ 
+          scale: activeTab === 'profile' ? 1 : headerScale, 
+          opacity: activeTab === 'profile' ? 1 : headerOpacity,
+          y: activeTab === 'profile' ? 0 : headerY,
+          filter: activeTab === 'profile' ? 'none' : blurTemplate
+        }}
+        className={`px-4 ${headerPaddingTop} ${headerPaddingBottom} relative z-10 transition-all duration-300 overflow-hidden`}
+      >
         {/* Mesh background effect - subtle and blended */}
         <div className="absolute inset-0 mesh-gradient opacity-20 pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
@@ -3454,7 +3471,7 @@ export default function App() {
             </div>
           </motion.div>
         </div>
-      </header>
+      </motion.header>
     );
   };
 
@@ -4734,12 +4751,23 @@ export default function App() {
           className="hidden" 
         />
 
-        <div className="flex-none safe-top-padding">
-          {renderHeader()}
-          {renderTabs()}
+        <div className="flex-none">
+          {/* Fixed header/tabs only for settings or when explicitly needed */}
+          {activeTab === 'profile' && (
+            <div className="safe-top-padding">
+              {renderHeader()}
+              {renderTabs()}
+            </div>
+          )}
         </div>
 
-        <div className="scroll-container">
+        <div className="scroll-container" ref={scrollRef}>
+          {activeTab !== 'profile' && (
+            <div className="safe-top-padding">
+              {renderHeader()}
+              {renderTabs()}
+            </div>
+          )}
           <main className="max-w-md mx-auto px-4 pt-4 safe-bottom-padding">
             {profile.preferences.showTopSummary && renderSummaryBar()}
             <AnimatePresence mode="wait">
