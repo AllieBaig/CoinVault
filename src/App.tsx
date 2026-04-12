@@ -1890,7 +1890,7 @@ export default function App() {
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
           onClick={() => toggleSection(id)}
-          className={`w-full flex items-center justify-between p-5 rounded-[2rem] transition-all ${
+          className={`w-full flex items-center justify-between p-4 rounded-[2rem] transition-all ${
             isExpanded ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'ios-surface'
           } border premium-border`}
         >
@@ -1940,7 +1940,7 @@ export default function App() {
     description?: string,
     badge?: string
   }) => (
-    <div className={`px-5 h-[88px] flex items-center justify-between transition-all ${value ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''}`}>
+    <div className={`px-4 h-[88px] flex items-center justify-between transition-all ${value ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''}`}>
       <div className="flex items-center gap-4">
         <div className={`p-2.5 rounded-xl transition-all ${value ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'bg-gray-100/50 dark:bg-gray-800/50 text-gray-400'}`}>
           <Icon size={18} />
@@ -1979,7 +1979,7 @@ export default function App() {
     onChange: (val: string) => void, 
     options: { value: string, label: string }[] 
   }) => (
-    <div className="px-5 h-[72px] flex items-center justify-between">
+    <div className="px-4 h-[72px] flex items-center justify-between">
       <div className="flex items-center gap-4">
         <div className="p-2.5 rounded-xl bg-gray-100/50 dark:bg-gray-800/50 text-gray-400">
           <Icon size={18} />
@@ -3289,7 +3289,7 @@ export default function App() {
   const renderHeader = () => (
     <>
       {profile.preferences.showTopSummary && renderSummaryBar()}
-      <header className={`px-4 ${isCompact ? 'pt-6 pb-4' : 'pt-10 pb-8'} relative z-10 transition-colors overflow-hidden`}>
+      <header className={`px-4 ${isCompact ? 'pt-6 pb-4' : 'pt-8 pb-4'} relative z-10 transition-colors overflow-hidden`}>
         {/* Mesh background effect - subtle and blended */}
         <div className="absolute inset-0 mesh-gradient opacity-20 pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
@@ -3374,7 +3374,7 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="ios-surface p-5 flex items-center gap-4 relative overflow-hidden h-full"
+                  className="ios-surface p-4 flex items-center gap-4 relative overflow-hidden h-full"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-blue-600/30" />
                   <div className="w-11 h-11 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex-shrink-0 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-inner">
@@ -3392,7 +3392,7 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`rounded-[3rem] p-9 text-white relative overflow-hidden shadow-2xl premium-shadow premium-border border inner-glow h-[280px] flex flex-col justify-center ${
+            className={`rounded-[3rem] p-8 text-white relative overflow-hidden shadow-2xl premium-shadow premium-border border inner-glow h-[280px] flex flex-col justify-center ${
               profile.preferences.textMode 
                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 shadow-none' 
                 : 'bg-gray-900 dark:bg-gray-950 border-white/10 shadow-blue-500/10 dark:shadow-none'
@@ -3930,8 +3930,8 @@ export default function App() {
     ];
 
     return (
-      <div className="max-w-md mx-auto mb-10 px-4">
-        <div className="flex ios-surface p-1.5 rounded-[2.25rem] relative overflow-hidden">
+      <div className="max-w-md mx-auto mb-8 px-4">
+        <div className="flex ios-surface p-2 rounded-[2.25rem] relative overflow-hidden">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -3971,8 +3971,8 @@ export default function App() {
     ];
 
     return (
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] left-0 right-0 z-40 px-6 pointer-events-none">
-        <nav className="max-w-md mx-auto ios-overlay px-6 py-3 flex items-center justify-around pointer-events-auto relative overflow-hidden">
+      <div className="fixed bottom-[calc(var(--safe-bottom)+1rem)] left-0 right-0 z-40 px-4 pointer-events-none">
+        <nav className="max-w-md mx-auto ios-overlay px-6 py-4 flex items-center justify-around pointer-events-auto relative overflow-hidden">
           {/* Subtle background glow for active item */}
           <div className="absolute inset-0 bg-gradient-to-t from-blue-500/5 to-transparent pointer-events-none" />
           
@@ -4099,12 +4099,12 @@ export default function App() {
         exit={{ opacity: 0, x: -20 }}
         className="max-w-md mx-auto px-4 pb-24"
       >
-        <div className="flex items-center gap-4 mb-10">
+        <div className="flex items-center gap-4 mb-8">
           <motion.button 
             whileHover={{ scale: 1.1, x: -4 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setActiveGameMode(null)}
-            className="w-12 h-12 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
+            className="w-11 h-11 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
           >
             <ChevronLeft size={24} />
           </motion.button>
@@ -4114,7 +4114,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-6">
           {ERAS.map((era) => {
             const { percent, completedCount, totalCount } = getEraProgress(era);
             return (
@@ -4122,7 +4122,7 @@ export default function App() {
                 key={era.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="ios-surface p-8 relative overflow-hidden"
+                className="ios-surface p-6 relative overflow-hidden"
               >
                 <div className="flex justify-between items-start mb-6">
                   <div>
@@ -4193,12 +4193,12 @@ export default function App() {
         exit={{ opacity: 0, x: -20 }}
         className="max-w-md mx-auto px-4 pb-24"
       >
-        <div className="flex items-center gap-4 mb-10">
+        <div className="flex items-center gap-4 mb-8">
           <motion.button 
             whileHover={{ scale: 1.1, x: -4 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setActiveGameMode(null)}
-            className="w-12 h-12 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
+            className="w-11 h-11 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
           >
             <ChevronLeft size={24} />
           </motion.button>
@@ -4208,16 +4208,16 @@ export default function App() {
           </div>
         </div>
 
-        <div className="ios-surface p-10 relative overflow-hidden text-center">
+        <div className="ios-surface p-8 relative overflow-hidden text-center">
           <div className="w-24 h-24 bg-blue-50 dark:bg-blue-900/20 rounded-[2rem] flex items-center justify-center text-blue-600 dark:text-blue-400 mx-auto mb-8 shadow-inner">
             <Puzzle size={48} />
           </div>
           <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-4">Broken Timelines</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-10">
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-8">
             The historical record has been fragmented. Drag and drop events into their correct chronological order to restore the timeline and earn massive XP.
           </p>
           
-          <div className="space-y-4 mb-10">
+          <div className="space-y-4 mb-8">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-16 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-300 font-bold text-xs uppercase tracking-widest">
                 Slot {i}
@@ -4227,7 +4227,7 @@ export default function App() {
 
           <button 
             onClick={() => setFeedback({ message: 'Puzzle Mode coming in next update!', type: 'info' })}
-            className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-blue-500/30 active:scale-95 transition-all"
+            className="w-full py-4 bg-blue-600 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-blue-500/30 active:scale-95 transition-all h-14"
           >
             Start Solving
           </button>
@@ -4249,7 +4249,7 @@ export default function App() {
         exit={{ opacity: 0, x: -20 }}
         className="max-w-md mx-auto px-4 pb-24"
       >
-        <div className="flex items-center gap-4 mb-10">
+        <div className="flex items-center gap-4 mb-8">
           <motion.button 
             whileHover={{ scale: 1.1, x: -4 }}
             whileTap={{ scale: 0.9 }}
@@ -4257,7 +4257,7 @@ export default function App() {
               setActiveNarrativeStoryId(null);
               setSelectedChapterId(null);
             }}
-            className="w-12 h-12 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
+            className="w-11 h-11 ios-button rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
           >
             <ChevronLeft size={24} />
           </motion.button>
@@ -4292,17 +4292,17 @@ export default function App() {
                       generateChapterStory(story.id, chapter.id);
                     }
                   }}
-                  className="w-full p-8 text-left flex items-center justify-between"
+                  className="w-full p-6 text-left flex items-center justify-between"
                 >
-                  <div className="flex items-center gap-5">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl ${
+                  <div className="flex items-center gap-4">
+                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-lg ${
                       isUnlocked ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                     }`}>
                       {index + 1}
                     </div>
                     <div>
-                      <h4 className="font-black text-lg text-gray-900 dark:text-white leading-tight">{chapter.title}</h4>
-                      <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">
+                      <h4 className="font-black text-base text-gray-900 dark:text-white leading-tight">{chapter.title}</h4>
+                      <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">
                         {isUnlocked ? 'Chapter Unlocked' : 'Locked'}
                       </p>
                     </div>
@@ -4320,14 +4320,14 @@ export default function App() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="px-8 pb-8"
+                      className="px-6 pb-6"
                     >
                       <div className="h-[1px] w-full bg-gray-100 dark:bg-gray-800 mb-6" />
                       <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6 italic">
                         {chapter.description}
                       </p>
                       
-                      <div className="p-6 rounded-3xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/20">
+                      <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/20">
                         {hasStory ? (
                           <div className="space-y-4">
                             <div className="flex items-center gap-2 mb-2">
@@ -4537,7 +4537,7 @@ export default function App() {
               setActiveNarrativeStoryId(id);
             }
           }}
-          className={`flex-shrink-0 w-64 p-7 rounded-[2.75rem] text-left transition-all relative overflow-hidden fixed-card-lg ${
+          className={`flex-shrink-0 w-64 p-6 rounded-[2.75rem] text-left transition-all relative overflow-hidden fixed-card-lg ${
             locked
               ? 'bg-gray-100/40 dark:bg-gray-800/40 text-gray-400 cursor-not-allowed border-gray-200/30 dark:border-gray-700/30'
               : isActive 
@@ -4603,7 +4603,7 @@ export default function App() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 1.05 }}
-        className="max-w-md mx-auto px-4 pb-24 space-y-12"
+        className="max-w-md mx-auto px-4 pb-24 space-y-8"
       >
         <div className="flex items-center justify-between">
           <div>
@@ -4627,13 +4627,13 @@ export default function App() {
 
         {lastItem && (
           <section>
-            <div className="flex items-center gap-2 mb-5">
+            <div className="flex items-center gap-2 mb-4">
               <div className="w-6 h-6 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
                 <PlayCircle size={12} className="text-blue-600 dark:text-blue-400" />
               </div>
               <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Continue Exploring</h3>
             </div>
-            <div className="flex gap-5 overflow-x-auto no-scrollbar pb-2 px-1 snap-x">
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 px-1 snap-x">
               <div className="snap-start">
                 {renderStoryCard(lastItem as any, lastItemType as any)}
               </div>
@@ -4642,13 +4642,13 @@ export default function App() {
         )}
 
         <section>
-          <div className="flex items-center gap-2 mb-5">
+          <div className="flex items-center gap-2 mb-4">
             <div className="w-6 h-6 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
               <BookOpen size={12} className="text-purple-600 dark:text-purple-400" />
             </div>
             <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Narrative Stories</h3>
           </div>
-          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
             {NARRATIVE_STORIES.map(story => (
               <div key={story.id} className="snap-start">
                 {renderStoryCard(story, 'narrative')}
@@ -4658,13 +4658,13 @@ export default function App() {
         </section>
 
         <section>
-          <div className="flex items-center gap-2 mb-5">
+          <div className="flex items-center gap-2 mb-4">
             <div className="w-6 h-6 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
               <History size={12} className="text-orange-600 dark:text-orange-400" />
             </div>
             <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Timelines</h3>
           </div>
-          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
             {allAvailableTimelines.map(t => (
               <div key={t.id} className="snap-start">
                 {renderStoryCard(t, 'timeline')}
@@ -4674,13 +4674,13 @@ export default function App() {
         </section>
 
         <section>
-          <div className="flex items-center gap-2 mb-5">
+          <div className="flex items-center gap-2 mb-4">
             <div className="w-6 h-6 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
               <Trophy size={12} className="text-purple-600 dark:text-purple-400" />
             </div>
             <h3 className="text-[11px] font-black text-gray-400/80 dark:text-gray-500 uppercase tracking-[0.2em]">Game Modes</h3>
           </div>
-          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6 px-1 snap-x">
             {GAME_MODES.map(m => (
               <div key={m.id} className="snap-start">
                 {renderStoryCard(m, 'mode')}
@@ -4731,7 +4731,7 @@ export default function App() {
         </div>
 
         <div className="scroll-container">
-          <main className="max-w-md mx-auto px-[var(--spacing-fluid)] pt-4 safe-bottom-padding">
+          <main className="max-w-md mx-auto px-4 pt-4 safe-bottom-padding">
             <AnimatePresence mode="wait">
             {activeTab === 'explore' && renderExplore()}
             
@@ -5508,7 +5508,7 @@ export default function App() {
                       const count = stats.counts[type] || 0;
                       const percent = Math.min((count / TARGET_PER_TYPE) * 100, 100);
                       return (
-                        <div key={type} className="bg-white dark:bg-gray-900 p-5 h-[108px] rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4 flex flex-col justify-center">
+                        <div key={type} className="bg-white dark:bg-gray-900 p-4 h-[108px] rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4 flex flex-col justify-center">
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-3">
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${
@@ -5558,7 +5558,7 @@ export default function App() {
                       const date = new Date(parseInt(year), parseInt(m) - 1);
                       const monthName = date.toLocaleString('default', { month: 'long' });
                       return (
-                        <div key={month} className="p-5 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <div key={month} className="p-4 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                           <div className="flex flex-col">
                             <span className="font-bold text-gray-600 dark:text-gray-400">{monthName} {year}</span>
                             <span className="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest">£{spend.toFixed(2)} Spent</span>
@@ -5582,7 +5582,7 @@ export default function App() {
                     <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Duplicates Tracked</h3>
                     <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
                       {stats.duplicateList.map(({ count, coin, dates }) => (
-                        <div key={coin.id} className="p-5 flex flex-col gap-3 group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <div key={coin.id} className="p-4 flex flex-col gap-3 group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-[10px] font-black text-gray-400 shadow-inner">

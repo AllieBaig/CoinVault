@@ -30,6 +30,16 @@
   
   --shadow-ios: 0 4px 24px -1px rgba(0, 0, 0, 0.06), 0 2px 8px -1px rgba(0, 0, 0, 0.04);
   --shadow-ios-lg: 0 12px 48px -4px rgba(0, 0, 0, 0.12), 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+
+  /* Apple 8pt Spacing System */
+  --spacing-8: 8px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-height: 80px;
 }
 
 :root {
@@ -280,16 +290,23 @@ body {
 }
 
 .scroll-container {
-  @apply flex-1 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain;
+  @apply flex-1 overflow-y-auto overflow-x-hidden overscroll-contain;
   -webkit-overflow-scrolling: touch;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scroll-container::-webkit-scrollbar {
+  display: none;
 }
 
 .safe-top-padding {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--safe-top);
 }
 
 .safe-bottom-padding {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px); /* Extra space for bottom nav */
+  /* nav height + safe area + 8pt */
+  padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--spacing-8));
 }
 
 .fixed-card {
