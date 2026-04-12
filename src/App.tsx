@@ -207,7 +207,8 @@ interface Profile {
     sortBy: SortOption;
     groupBy: GroupOption;
     groupViewEnabled: boolean;
-    theme: 'light' | 'dark' | 'system' | 'paper' | 'glass' | 'wood' | 'metal' | 'fabric';
+    theme: string;
+    themeCategory: string;
     compactUI: boolean;
     showBottomMenu: boolean;
     textMode: boolean;
@@ -244,6 +245,51 @@ const LEVELS = [
   { name: 'Collector', minPoints: 100 },
   { name: 'Expert', minPoints: 500 },
   { name: 'Master', minPoints: 2000 },
+];
+
+const THEME_CATEGORIES = [
+  {
+    id: 'os',
+    name: 'OS Based',
+    themes: [
+      { id: 'win98', name: 'Windows 98' },
+      { id: 'winxp', name: 'Windows XP' },
+      { id: 'redhat', name: 'Red Hat' },
+      { id: 'playstation', name: 'PlayStation' },
+      { id: 'xbox', name: 'Xbox' },
+    ]
+  },
+  {
+    id: 'texture',
+    name: 'Texture Based',
+    themes: [
+      { id: 'paper', name: 'Paper' },
+      { id: 'glass', name: 'Glass' },
+      { id: 'wood', name: 'Wood' },
+      { id: 'metal', name: 'Metal' },
+      { id: 'fabric', name: 'Fabric' },
+    ]
+  },
+  {
+    id: 'cartoon',
+    name: 'Cartoon Style',
+    themes: [
+      { id: 'scooby', name: 'Scooby-Doo' },
+      { id: 'jetsons', name: 'Jetsons' },
+      { id: 'ben10', name: 'Ben 10' },
+      { id: 'flintstones', name: 'Flintstones' },
+    ]
+  },
+  {
+    id: 'movie',
+    name: 'Movie Palette',
+    themes: [
+      { id: 'noir', name: 'Noir' },
+      { id: 'cyberpunk', name: 'Cyberpunk' },
+      { id: 'wes', name: 'Wes Anderson' },
+      { id: 'matrix', name: 'Matrix' },
+    ]
+  }
 ];
 
 const RARITY_POINTS = {
@@ -965,7 +1011,8 @@ export default function App() {
           sortBy: parsed.preferences?.sortBy ?? 'added',
           groupBy: parsed.preferences?.groupBy ?? 'none',
           groupViewEnabled: parsed.preferences?.groupViewEnabled ?? false,
-          theme: parsed.preferences?.theme ?? 'system',
+          theme: parsed.preferences?.theme ?? 'win98',
+          themeCategory: parsed.preferences?.themeCategory ?? 'os',
           compactUI: parsed.preferences?.compactUI ?? false,
           showBottomMenu: parsed.preferences?.showBottomMenu ?? true,
           textMode: parsed.preferences?.textMode ?? false,
@@ -1020,7 +1067,8 @@ export default function App() {
         sortBy: 'added',
         groupBy: 'none',
         groupViewEnabled: false,
-        theme: 'system',
+        theme: 'win98',
+        themeCategory: 'os',
         compactUI: false,
         showBottomMenu: true,
         textMode: false,
@@ -1145,6 +1193,23 @@ export default function App() {
       }
     });
   }, [recentlyViewedIds, coins]);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const handleChange = () => {
+      if (mediaQuery.matches) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    };
+    
+    handleChange();
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   const isCompact = useMemo(() => {
     // Automatically use compact layout for small screens (iPhone mini threshold)
@@ -4648,7 +4713,7 @@ export default function App() {
   return (
     <ErrorBoundary onExport={exportData}>
       <AmbientBackground enabled={profile.preferences.ambientMotionEnabled} />
-      <div className="locked-viewport ios-base text-gray-900 dark:text-gray-100 font-sans transition-colors relative">
+      <div className={`locked-viewport ios-base text-gray-900 dark:text-gray-100 font-sans transition-colors relative theme-${profile.preferences.theme}`}>
         {/* Global Texture Overlay - Extremely subtle as per request */}
         <div className="fixed inset-0 pointer-events-none opacity-[0.01] dark:opacity-[0.02] z-50 bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
         
@@ -5595,11 +5660,11 @@ export default function App() {
 
                 {/* Collector Stats Grid */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="ios-surface p-5">
+                  <div className="ios-surface p-4">
                     <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Total Value</p>
                     <p className="text-2xl font-black text-green-600 dark:text-green-400 tracking-tight">£{stats.totalSpend.toFixed(2)}</p>
                   </div>
-                  <div className="ios-surface p-5">
+                  <div className="ios-surface p-4">
                     <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Total Points</p>
                     <p className="text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tight">{profile.points}</p>
                   </div>
@@ -5639,20 +5704,28 @@ export default function App() {
                 <div className="space-y-4">
                   <SettingsSection id="display" title="Display" icon={Layout}>
                     <SettingSelect 
-                      label="Theme Mode" 
+                      label="Theme Category" 
+                      icon={Layers} 
+                      value={profile.preferences.themeCategory}
+                      onChange={(val) => {
+                        const category = THEME_CATEGORIES.find(c => c.id === val);
+                        setProfile({ 
+                          ...profile, 
+                          preferences: { 
+                            ...profile.preferences, 
+                            themeCategory: val,
+                            theme: category?.themes[0].id || 'win98'
+                          } 
+                        });
+                      }}
+                      options={THEME_CATEGORIES.map(c => ({ value: c.id, label: c.name }))}
+                    />
+                    <SettingSelect 
+                      label="Theme Style" 
                       icon={Palette} 
                       value={profile.preferences.theme}
-                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, theme: val as any } })}
-                      options={[
-                        { value: 'system', label: 'System' },
-                        { value: 'light', label: 'Light' },
-                        { value: 'dark', label: 'Dark' },
-                        { value: 'paper', label: 'Paper' },
-                        { value: 'glass', label: 'Glass' },
-                        { value: 'wood', label: 'Wood' },
-                        { value: 'metal', label: 'Metal' },
-                        { value: 'fabric', label: 'Fabric' }
-                      ]}
+                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, theme: val } })}
+                      options={THEME_CATEGORIES.find(c => c.id === profile.preferences.themeCategory)?.themes.map(t => ({ value: t.id, label: t.name })) || []}
                     />
                     <SettingToggle 
                       label="Compact UI" 

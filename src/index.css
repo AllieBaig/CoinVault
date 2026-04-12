@@ -32,45 +32,251 @@
   --shadow-ios-lg: 0 12px 48px -4px rgba(0, 0, 0, 0.12), 0 4px 16px -2px rgba(0, 0, 0, 0.08);
 }
 
-body {
-  @apply antialiased selection:bg-blue-100 selection:text-blue-900 transition-colors duration-300;
-  background-color: #F2F2F7; /* iOS System Background Light */
+:root {
+  --theme-bg: #F2F2F7;
+  --theme-surface: #FFFFFF;
+  --theme-surface-secondary: #F2F2F7;
+  --theme-text: #000000;
+  --theme-text-secondary: #8E8E93;
+  --theme-accent: #007AFF;
+  --theme-border: rgba(0, 0, 0, 0.05);
+  --theme-radius: 24px;
+  --theme-radius-sm: 12px;
+  --theme-radius-lg: 32px;
 }
 
-.dark body {
-  background-color: #000000; /* iOS System Background Dark */
+.dark {
+  --theme-bg: #1C1C1E;
+  --theme-surface: #2C2C2E;
+  --theme-surface-secondary: #1C1C1E;
+  --theme-text: #E5E5EA;
+  --theme-text-secondary: #8E8E93;
+  --theme-accent: #0A84FF;
+  --theme-border: rgba(255, 255, 255, 0.1);
+}
+
+/* --- OS Based Themes --- */
+
+.theme-win98 {
+  --theme-bg: #008080;
+  --theme-surface: #C0C0C0;
+  --theme-border: #FFFFFF #808080 #808080 #FFFFFF;
+  --theme-accent: #000080;
+  --theme-radius: 0px;
+  --theme-radius-sm: 0px;
+  --theme-radius-lg: 0px;
+}
+.theme-win98 .ios-surface {
+  border-style: solid;
+  border-width: 2px;
+  box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #0a0a0a;
+}
+
+.theme-winxp {
+  --theme-bg: #245ED7;
+  --theme-surface: #ECE9D8;
+  --theme-accent: #3D9549;
+  --theme-radius: 8px;
+}
+
+.theme-redhat {
+  --theme-bg: #2B2B2B;
+  --theme-surface: #3C3C3C;
+  --theme-accent: #CC0000;
+  --theme-text: #FFFFFF;
+}
+
+.theme-playstation {
+  --theme-bg: #003087;
+  --theme-surface: #003791;
+  --theme-accent: #00A1DE;
+  --theme-text: #FFFFFF;
+}
+
+.theme-xbox {
+  --theme-bg: #0E1E0E;
+  --theme-surface: #1A2E1A;
+  --theme-accent: #107C10;
+  --theme-text: #FFFFFF;
+}
+
+/* --- Texture Based Themes --- */
+
+.theme-paper {
+  --theme-bg: #FDF9F3;
+  --theme-surface: #FFFFFF;
+  --theme-accent: #8B4513;
+}
+.theme-paper::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  opacity: 0.05;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.theme-glass {
+  --theme-bg: linear-gradient(165deg, #f8fafc 0%, #e2e8f0 40%, #cbd5e1 100%);
+  --theme-surface: rgba(255, 255, 255, 0.4);
+  --theme-border: rgba(255, 255, 255, 0.6);
+}
+
+.theme-wood {
+  --theme-bg: #3D2B1F;
+  --theme-surface: #5D4037;
+  --theme-accent: #D2B48C;
+  --theme-text: #F5F5F5;
+}
+
+.theme-metal {
+  --theme-bg: #2C3E50;
+  --theme-surface: #34495E;
+  --theme-accent: #BDC3C7;
+  --theme-text: #ECF0F1;
+}
+
+.theme-fabric {
+  --theme-bg: #2C3E50;
+  --theme-surface: #34495E;
+  --theme-accent: #3498DB;
+  --theme-text: #FFFFFF;
+}
+
+/* --- Cartoon Style Themes --- */
+
+.theme-scooby {
+  --theme-bg: #2E1A47;
+  --theme-surface: #3D2B56;
+  --theme-accent: #00B2B2;
+  --theme-text: #F4A460;
+}
+
+.theme-jetsons {
+  --theme-bg: #E0F7FA;
+  --theme-surface: #FFFFFF;
+  --theme-accent: #FF7043;
+  --theme-text: #006064;
+}
+
+.theme-ben10 {
+  --theme-bg: #000000;
+  --theme-surface: #1A1A1A;
+  --theme-accent: #00FF00;
+  --theme-text: #FFFFFF;
+}
+
+.theme-flintstones {
+  --theme-bg: #8D6E63;
+  --theme-surface: #A1887F;
+  --theme-accent: #FF9800;
+  --theme-text: #3E2723;
+}
+
+/* --- Movie Palette Themes --- */
+
+.theme-noir {
+  --theme-bg: #121212;
+  --theme-surface: #1E1E1E;
+  --theme-accent: #FFFFFF;
+  --theme-text: #E0E0E0;
+}
+
+.theme-cyberpunk {
+  --theme-bg: #0B0E14;
+  --theme-surface: #151921;
+  --theme-accent: #FCEE09;
+  --theme-text: #00F0FF;
+}
+
+.theme-wes {
+  --theme-bg: #F4E1D2;
+  --theme-surface: #F8F1E5;
+  --theme-accent: #E8A87C;
+  --theme-text: #413C3C;
+}
+
+.theme-matrix {
+  --theme-bg: #000000;
+  --theme-surface: #0D0D0D;
+  --theme-accent: #00FF41;
+  --theme-text: #00FF41;
+}
+
+/* --- Soft Dark Mode Adjustments --- */
+.dark[class*="theme-"] {
+  --theme-bg: #1C1C1E;
+  --theme-surface: #2C2C2E;
+  --theme-text: #E5E5EA;
+  --theme-border: rgba(255, 255, 255, 0.08);
+}
+
+/* Specific dark mode overrides for themes that need to keep their "vibe" */
+.dark.theme-win98 { --theme-bg: #004040; --theme-surface: #404040; }
+.dark.theme-winxp { --theme-bg: #1A3A8A; --theme-surface: #2A2A2A; }
+.dark.theme-ben10 { --theme-bg: #000000; --theme-surface: #111111; }
+.dark.theme-matrix { --theme-bg: #000000; --theme-surface: #050505; }
+.dark.theme-cyberpunk { --theme-bg: #050505; --theme-surface: #101010; }
+
+body {
+  @apply antialiased selection:bg-blue-100 selection:text-blue-900 transition-colors duration-300;
+  background-color: var(--theme-bg);
+  color: var(--theme-text);
 }
 
 /* --- iOS Material Layers --- */
 
 .ios-base {
-  @apply bg-[#F2F2F7] dark:bg-black transition-colors duration-500;
+  background-color: var(--theme-bg);
+  transition: background-color 0.5s ease;
 }
 
 .ios-surface {
-  @apply bg-white dark:bg-[#1C1C1E] shadow-[var(--shadow-ios)] rounded-[var(--radius-ios)] border border-black/[0.02] dark:border-white/[0.02] transition-all duration-300;
+  background-color: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius);
+  box-shadow: var(--shadow-ios);
+  transition: all 0.3s ease;
 }
 
 .ios-overlay {
-  @apply bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-[var(--shadow-ios-lg)] rounded-[var(--radius-ios-lg)] transition-all duration-500;
+  background-color: color-mix(in srgb, var(--theme-surface) 80%, transparent);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-lg);
+  box-shadow: var(--shadow-ios-lg);
+  transition: all 0.5s ease;
 }
 
 .ios-glass {
-  @apply bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-sm transition-all duration-300;
+  background-color: color-mix(in srgb, var(--theme-surface) 60%, transparent);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--theme-border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
 }
 
 .ios-button {
-  @apply bg-white dark:bg-[#2C2C2E] rounded-[var(--radius-ios-sm)] shadow-sm border border-black/[0.05] dark:border-white/[0.05] active:scale-[0.97] transition-all duration-200;
+  background-color: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-radius-sm);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.ios-button:active {
+  transform: scale(0.97);
 }
 
 .ios-modal-backdrop {
-  @apply fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center transition-all duration-500;
+  @apply fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center transition-all duration-500;
 }
 
 /* --- UI Stability Utilities --- */
 
 .locked-viewport {
-  @apply fixed inset-0 overflow-hidden flex flex-col bg-[#F2F2F7] dark:bg-black;
+  @apply fixed inset-0 overflow-hidden flex flex-col;
+  background-color: var(--theme-bg);
 }
 
 .scroll-container {
