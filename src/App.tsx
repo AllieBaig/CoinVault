@@ -152,7 +152,10 @@ interface Era {
 interface AppVersion {
   version: string;
   date: string;
-  notes: string;
+  added?: string[];
+  improved?: string[];
+  fixed?: string[];
+  notes?: string;
 }
 
 interface NarrativeChapter {
@@ -298,25 +301,53 @@ const RARITY_POINTS = {
   'Very Rare': 100,
 };
 
+// APP VERSION HISTORY
+// IMPORTANT: Update this array whenever a new feature, UI update, or bug fix is applied.
+// Follow Semantic Versioning: Major (big features), Minor (small features), Patch (fixes).
 const APP_VERSION_HISTORY: AppVersion[] = [
+  {
+    version: '2.2.0',
+    date: '2026-04-12',
+    added: [
+      'Dynamic Version History system',
+      'Apple-native header scroll behavior',
+      'Show Collector Card visibility toggle'
+    ],
+    improved: [
+      'Header collapse and blur effects on scroll',
+      'Profile screen layout responsiveness',
+      'Safe area inset handling for all screen sizes'
+    ],
+    fixed: [
+      'Sticky header behavior on profile tab',
+      'Empty layout gaps when header is disabled',
+      'Duplicate header instances in certain navigation states'
+    ]
+  },
   { 
     version: '2.1.0', 
     date: '2026-04-01', 
-    notes: 'Introduced the Timeline Hub with 6 historical and fictional coin stories. Added App Version History to settings.' 
+    added: ['Timeline Hub with 6 historical stories'],
+    improved: ['App Version History in settings'],
+    notes: 'Introduced the Timeline Hub with 6 historical and fictional coin stories.' 
   },
   { 
     version: '2.0.5', 
     date: '2026-03-25', 
+    improved: ['Background removal AI', 'Support for custom folder icons'],
     notes: 'Improved background removal AI and added support for custom folder icons.' 
   },
   { 
     version: '2.0.0', 
     date: '2026-03-10', 
+    added: ['Rank System', 'XP rewards'],
+    improved: ['Glass and Metal themes redesign'],
     notes: 'Major redesign with new Glass and Metal themes. Introduced the Rank System and XP rewards.' 
   },
   { 
     version: '1.5.0', 
     date: '2026-02-15', 
+    added: ['Data import/export functionality', 'Local backup system'],
     notes: 'Added data import/export functionality and local backup system.' 
   },
   { 
@@ -1230,6 +1261,7 @@ export default function App() {
   const blurTemplate = useMotionTemplate`blur(${headerBlur}px)`;
 
   const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
+  const [showAllVersions, setShowAllVersions] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [inputModal, setInputModal] = useState<{ title: string; placeholder: string; onConfirm: (value: string) => void } | null>(null);
   const [modalInputValue, setModalInputValue] = useState('');
@@ -6282,24 +6314,86 @@ export default function App() {
                   </SettingsSection>
 
                   <SettingsSection id="version" title="App Version History" icon={History}>
-                    <div className="p-5 space-y-6">
-                      {APP_VERSION_HISTORY.map((item, idx) => (
-                        <div key={item.version} className="relative pl-6">
-                          {idx !== APP_VERSION_HISTORY.length - 1 && (
-                            <div className="absolute left-[7px] top-4 bottom-[-24px] w-0.5 bg-gray-100 dark:bg-gray-800" />
+                    <div className="p-5 space-y-8">
+                      {(showAllVersions ? APP_VERSION_HISTORY : APP_VERSION_HISTORY.slice(0, 1)).map((item, idx) => (
+                        <div key={item.version} className="relative pl-8">
+                          {((showAllVersions && idx !== APP_VERSION_HISTORY.length - 1) || (!showAllVersions && idx === 0 && APP_VERSION_HISTORY.length > 1)) && (
+                            <div className="absolute left-[7px] top-6 bottom-[-32px] w-0.5 bg-gray-100 dark:bg-gray-800" />
                           )}
-                          <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 bg-blue-600 shadow-sm" />
+                          <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 shadow-sm z-10 ${idx === 0 ? 'bg-blue-600 animate-pulse' : 'bg-gray-300 dark:bg-gray-700'}`} />
+                          
                           <div className="flex flex-col">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-black text-gray-900 dark:text-white">v{item.version}</span>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-gray-900 dark:text-white">v{item.version}</span>
+                                {idx === 0 && (
+                                  <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider">New</span>
+                                )}
+                              </div>
                               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.date}</span>
                             </div>
-                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed font-medium">
-                              {item.notes}
-                            </p>
+
+                            {item.notes && (
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed font-medium mb-3 italic">
+                                "{item.notes}"
+                              </p>
+                            )}
+
+                            <div className="space-y-3">
+                              {item.added && item.added.length > 0 && (
+                                <div>
+                                  <p className="text-[9px] font-black text-green-600 dark:text-green-400 uppercase tracking-[0.15em] mb-1.5">Added</p>
+                                  <ul className="space-y-1">
+                                    {item.added.map((change, i) => (
+                                      <li key={i} className="text-[11px] text-gray-600 dark:text-gray-300 flex items-start gap-2">
+                                        <span className="w-1 h-1 rounded-full bg-green-500/50 mt-1.5 flex-shrink-0" />
+                                        {change}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {item.improved && item.improved.length > 0 && (
+                                <div>
+                                  <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.15em] mb-1.5">Improved</p>
+                                  <ul className="space-y-1">
+                                    {item.improved.map((change, i) => (
+                                      <li key={i} className="text-[11px] text-gray-600 dark:text-gray-300 flex items-start gap-2">
+                                        <span className="w-1 h-1 rounded-full bg-blue-500/50 mt-1.5 flex-shrink-0" />
+                                        {change}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {item.fixed && item.fixed.length > 0 && (
+                                <div>
+                                  <p className="text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-[0.15em] mb-1.5">Fixed</p>
+                                  <ul className="space-y-1">
+                                    {item.fixed.map((change, i) => (
+                                      <li key={i} className="text-[11px] text-gray-600 dark:text-gray-300 flex items-start gap-2">
+                                        <span className="w-1 h-1 rounded-full bg-orange-500/50 mt-1.5 flex-shrink-0" />
+                                        {change}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
+                      
+                      {APP_VERSION_HISTORY.length > 1 && (
+                        <button 
+                          onClick={() => setShowAllVersions(!showAllVersions)}
+                          className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-95"
+                        >
+                          {showAllVersions ? 'Show Less' : `Show ${APP_VERSION_HISTORY.length - 1} Older Versions`}
+                        </button>
+                      )}
                     </div>
                   </SettingsSection>
 
