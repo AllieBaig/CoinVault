@@ -1217,6 +1217,9 @@ export default function App() {
     return profile.preferences.compactUI;
   }, [windowWidth, profile.preferences.compactUI]);
 
+  const isMini = useMemo(() => windowWidth < 370, [windowWidth]);
+  const isLarge = useMemo(() => windowWidth > 420, [windowWidth]);
+
   const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [inputModal, setInputModal] = useState<{ title: string; placeholder: string; onConfirm: (value: string) => void } | null>(null);
@@ -3257,21 +3260,21 @@ export default function App() {
     <motion.div 
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className={`bg-white/80 dark:bg-black/80 backdrop-blur-md text-gray-900 dark:text-white ${isCompact ? 'h-[36px]' : 'h-[44px]'} px-5 relative z-[60] border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-black uppercase tracking-[0.25em] shadow-sm inner-glow`}
+      className={`ios-surface p-4 mb-6 flex items-center justify-between ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-black uppercase tracking-[0.25em] shadow-sm inner-glow relative z-10`}
     >
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-2.5 group cursor-default">
-          <Coins size={isCompact ? 10 : 13} className="text-blue-500 transition-transform group-hover:scale-110" />
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 group cursor-default">
+          <Coins size={isCompact ? 10 : 12} className="text-blue-500 transition-transform group-hover:scale-110" />
           <span className="flex items-center gap-1.5">{stats.total} <span className="text-gray-400 dark:text-gray-500 font-bold">Coins</span></span>
         </div>
-        <div className="flex items-center gap-2.5 group cursor-default">
-          <Zap size={isCompact ? 10 : 13} className="text-amber-500 transition-transform group-hover:scale-110" />
+        <div className="flex items-center gap-2 group cursor-default">
+          <Zap size={isCompact ? 10 : 12} className="text-amber-500 transition-transform group-hover:scale-110" />
           <span className="flex items-center gap-1.5">{profile.points} <span className="text-gray-400 dark:text-gray-500 font-bold">XP</span></span>
         </div>
       </div>
-      <div className="flex items-center gap-5">
-        <div className="flex items-center gap-3">
-          <div className={`${isCompact ? 'w-12' : 'w-24'} h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden shadow-inner`}>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2.5">
+          <div className={`${isCompact ? 'w-12' : 'w-20'} h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden shadow-inner`}>
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${progressToNextLevel}%` }}
@@ -3281,43 +3284,49 @@ export default function App() {
           <span className="text-blue-600 dark:text-blue-400 font-black">{progressToNextLevel}%</span>
         </div>
         <div className="w-px h-3 bg-gray-200 dark:bg-white/10" />
-        <span className="text-gray-500 dark:text-gray-400 font-bold">{currentLevel.name}</span>
+        <span className="text-gray-500 dark:text-gray-400 font-bold truncate max-w-[60px]">{currentLevel.name}</span>
       </div>
     </motion.div>
   );
 
-  const renderHeader = () => (
-    <>
-      {profile.preferences.showTopSummary && renderSummaryBar()}
-      <header className={`px-4 ${isCompact ? 'pt-6 pb-4' : 'pt-8 pb-4'} relative z-10 transition-colors overflow-hidden`}>
+  const renderHeader = () => {
+    const headerPaddingTop = isMini ? 'pt-4' : isCompact ? 'pt-6' : isLarge ? 'pt-14' : 'pt-10';
+    const headerPaddingBottom = isMini ? 'pb-2' : isCompact ? 'pb-4' : isLarge ? 'pb-10' : 'pb-6';
+    const titleSize = isMini ? 'text-2xl' : isCompact ? 'text-3xl' : isLarge ? 'text-5xl' : 'text-4xl';
+    const iconSize = isMini ? 'w-10 h-10' : isCompact ? 'w-12 h-12' : isLarge ? 'w-20 h-20' : 'w-16 h-16';
+    const starSize = isMini ? 20 : isCompact ? 24 : isLarge ? 40 : 32;
+    const spacing = isMini ? 'mb-4' : isCompact ? 'mb-6' : isLarge ? 'mb-12' : 'mb-8';
+
+    return (
+      <header className={`px-4 ${headerPaddingTop} ${headerPaddingBottom} relative z-10 transition-all duration-300 overflow-hidden`}>
         {/* Mesh background effect - subtle and blended */}
         <div className="absolute inset-0 mesh-gradient opacity-20 pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
         
         <div className="max-w-md mx-auto relative z-10">
-          <div className={`flex items-center justify-between ${isCompact ? 'mb-4' : 'mb-8'}`}>
-            <div className="flex items-center gap-5">
+          <div className={`flex items-center justify-between ${spacing}`}>
+            <div className="flex items-center gap-4">
               <motion.div 
                 whileHover={{ rotate: 5, scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`${isCompact ? 'w-12 h-12' : 'w-16 h-16'} bg-gradient-to-br from-blue-500 to-blue-600 rounded-[1.75rem] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 transition-transform premium-border border border-blue-400/20 inner-glow`}
+                className={`${iconSize} bg-gradient-to-br from-blue-500 to-blue-600 rounded-[1.75rem] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 transition-transform premium-border border border-blue-400/20 inner-glow`}
               >
-                <Star size={isCompact ? 24 : 32} className="fill-white" />
+                <Star size={starSize} className="fill-white" />
               </motion.div>
               <div>
-                <h1 className={`${isCompact ? 'text-2xl' : 'text-4xl'} font-black tracking-tighter leading-none text-gradient-blue`}>Coinly</h1>
+                <h1 className={`${titleSize} font-black tracking-tighter leading-none text-gradient-blue`}>Coinly</h1>
                 {!profile.preferences.focusMode && (
-                  <div className="flex items-center gap-4 mt-3">
+                  <div className={`flex items-center gap-3 ${isMini ? 'mt-1.5' : 'mt-3'}`}>
                     <motion.div 
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="flex items-center gap-2 ios-glass px-3 py-1 rounded-full border border-white/20 dark:border-white/5 shadow-sm cursor-default inner-glow"
+                      className="flex items-center gap-2 ios-glass px-2.5 py-0.5 rounded-full border border-white/20 dark:border-white/5 shadow-sm cursor-default inner-glow"
                     >
-                      <Flame size={14} className="text-orange-500 fill-orange-500/20" />
-                      <span className="text-xs font-black text-orange-600 dark:text-orange-400 tracking-tight">{profile.streak.current}</span>
+                      <Flame size={isMini ? 12 : 14} className="text-orange-500 fill-orange-500/20" />
+                      <span className={`${isMini ? 'text-[10px]' : 'text-xs'} font-black text-orange-600 dark:text-orange-400 tracking-tight`}>{profile.streak.current}</span>
                     </motion.div>
                     <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full" />
-                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.25em]">{currentLevel.name}</p>
+                    <p className={`${isMini ? 'text-[8px]' : 'text-[10px]'} font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.25em]`}>{currentLevel.name}</p>
                   </div>
                 )}
               </div>
@@ -3329,14 +3338,14 @@ export default function App() {
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLuckySpin}
                   disabled={isSpinning}
-                  className={`${isCompact ? 'p-2.5' : 'p-3.5'} rounded-[1.25rem] transition-all relative overflow-hidden ios-button ${
+                  className={`${isMini ? 'p-2' : isCompact ? 'p-2.5' : 'p-3.5'} rounded-[1.25rem] transition-all relative overflow-hidden ios-button ${
                     isSpinning 
                       ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 animate-spin' 
                       : 'text-blue-600 dark:text-blue-400'
                   }`}
                   title="Daily Lucky Spin"
                 >
-                  <Gift size={22} />
+                  <Gift size={isMini ? 18 : 22} />
                 </motion.button>
               )}
               <div className="flex gap-1">
@@ -3347,20 +3356,20 @@ export default function App() {
                       whileTap={{ scale: 0.95 }} 
                       id="refresh-app-btn" 
                       onClick={() => window.location.reload()} 
-                      className="p-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button" 
+                      className={`${isMini ? 'p-2' : 'p-3.5'} text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button`} 
                       title="Refresh App"
                     >
-                      <Clock size={22} />
+                      <Clock size={isMini ? 18 : 22} />
                     </motion.button>
                     <motion.button 
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }} 
                       id="export-data-btn" 
                       onClick={exportData} 
-                      className="p-3.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button" 
+                      className={`${isMini ? 'p-2' : 'p-3.5'} text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button`} 
                       title="Export Data"
                     >
-                      <Download size={22} />
+                      <Download size={isMini ? 18 : 22} />
                     </motion.button>
                   </>
                 )}
@@ -3446,8 +3455,8 @@ export default function App() {
           </motion.div>
         </div>
       </header>
-    </>
-  );
+    );
+  };
 
   const renderSkeletonCard = () => (
     <div className={`ios-surface flex items-center justify-between animate-pulse overflow-hidden fixed-card ${isCompact ? 'p-4' : 'p-6'}`}>
@@ -4732,6 +4741,7 @@ export default function App() {
 
         <div className="scroll-container">
           <main className="max-w-md mx-auto px-4 pt-4 safe-bottom-padding">
+            {profile.preferences.showTopSummary && renderSummaryBar()}
             <AnimatePresence mode="wait">
             {activeTab === 'explore' && renderExplore()}
             
