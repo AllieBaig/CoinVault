@@ -247,6 +247,8 @@ interface Profile {
     currencyFilter: 'modern' | 'old' | 'both';
     visibleCountries: string[];
     featureFlags: FeatureFlags;
+    appearanceMode: 'light' | 'dark' | 'system';
+    fontFamily: string;
   };
 }
 
@@ -312,6 +314,14 @@ const THEME_CATEGORIES = [
   }
 ];
 
+const FONTS = [
+  { id: 'default', name: 'App Default', family: '"Inter", ui-sans-serif, system-ui, sans-serif' },
+  { id: 'serif', name: 'Editorial Serif', family: '"Playfair Display", serif' },
+  { id: 'mono', name: 'Technical Mono', family: '"JetBrains Mono", monospace' },
+  { id: 'rounded', name: 'Soft Rounded', family: '"Outfit", sans-serif' },
+  { id: 'system', name: 'System Sans', family: 'system-ui, -apple-system, sans-serif' },
+];
+
 const RARITY_POINTS = {
   'Common': 10,
   'Rare': 50,
@@ -322,6 +332,24 @@ const RARITY_POINTS = {
 // IMPORTANT: Update this array whenever a new feature, UI update, or bug fix is applied.
 // Follow Semantic Versioning: Major (big features), Minor (small features), Patch (fixes).
 const APP_VERSION_HISTORY: AppVersion[] = [
+  {
+    version: '2.4.0',
+    date: '2026-04-12',
+    added: [
+      'Appearance Mode: Light, Dark, and System Auto-Switching',
+      'Custom Font Selector with reset capability',
+      'Manual Compact UI control'
+    ],
+    improved: [
+      'Soft Dark Mode for all themes (no pure black)',
+      'Settings reactivity and instant application',
+      'Apple-native toggle switch behavior'
+    ],
+    fixed: [
+      'Auto-compact UI on small screens (now manual only)',
+      'Theme consistency across system mode changes'
+    ]
+  },
   {
     version: '2.3.0',
     date: '2026-04-12',
@@ -1111,6 +1139,8 @@ export default function App() {
           currencyFilter: parsed.preferences?.currencyFilter ?? 'both',
           visibleCountries: parsed.preferences?.visibleCountries ?? [],
           featureFlags: parsed.preferences?.featureFlags ?? DEFAULT_FEATURE_FLAGS,
+          appearanceMode: parsed.preferences?.appearanceMode ?? 'system',
+          fontFamily: parsed.preferences?.fontFamily ?? 'default',
         }
       };
     }
@@ -1169,6 +1199,8 @@ export default function App() {
         currencyFilter: 'both',
         visibleCountries: EUROPEAN_COUNTRIES,
         featureFlags: DEFAULT_FEATURE_FLAGS,
+        appearanceMode: 'system',
+        fontFamily: 'default',
       }
     };
   });
@@ -1265,26 +1297,48 @@ export default function App() {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const body = window.document.body;
+    const theme = profile.preferences.theme;
+    const appearance = profile.preferences.appearanceMode;
+    const fontId = profile.preferences.fontFamily;
     
-    const handleChange = () => {
-      if (mediaQuery.matches) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
+    // Remove all theme classes
+    const themeClasses = THEME_CATEGORIES.flatMap(c => c.themes.map(t => `theme-${t.id}`));
+    body.classList.remove(...themeClasses);
+    
+    const applyAppearance = (isDark: boolean) => {
+      root.classList.toggle('dark', isDark);
     };
-    
-    handleChange();
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+
+    // Handle Appearance Mode
+    if (appearance === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      applyAppearance(mediaQuery.matches);
+      
+      const listener = (e: MediaQueryListEvent) => applyAppearance(e.matches);
+      mediaQuery.addEventListener('change', listener);
+      
+      // Apply Theme Class
+      body.classList.add(`theme-${theme}`);
+      
+      // Apply Font
+      const selectedFont = FONTS.find(f => f.id === fontId) || FONTS[0];
+      root.style.setProperty('--font-sans', selectedFont.family);
+      
+      return () => mediaQuery.removeEventListener('change', listener);
+    } else {
+      applyAppearance(appearance === 'dark');
+      body.classList.add(`theme-${theme}`);
+      
+      // Apply Font
+      const selectedFont = FONTS.find(f => f.id === fontId) || FONTS[0];
+      root.style.setProperty('--font-sans', selectedFont.family);
+    }
+  }, [profile.preferences.theme, profile.preferences.appearanceMode, profile.preferences.fontFamily]);
 
   const isCompact = useMemo(() => {
-    // Automatically use compact layout for small screens (iPhone mini threshold)
-    if (windowWidth < 380) return true;
     return profile.preferences.compactUI;
-  }, [windowWidth, profile.preferences.compactUI]);
+  }, [profile.preferences.compactUI]);
 
   const isMini = useMemo(() => windowWidth < 370, [windowWidth]);
   const isLarge = useMemo(() => windowWidth > 420, [windowWidth]);
@@ -2372,36 +2426,6 @@ export default function App() {
       }
     }
   }, [profile.points, xpGain]);
-
-  useEffect(() => {
-    const root = window.document.documentElement;
-    const body = window.document.body;
-    const theme = profile.preferences.theme;
-    
-    // Remove all theme classes
-    const themeClasses = ['theme-paper', 'theme-glass', 'theme-wood', 'theme-metal', 'theme-fabric'];
-    body.classList.remove(...themeClasses);
-    
-    const applyTheme = (isDark: boolean) => {
-      root.classList.toggle('dark', isDark);
-    };
-
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      applyTheme(mediaQuery.matches);
-      
-      const listener = (e: MediaQueryListEvent) => applyTheme(e.matches);
-      mediaQuery.addEventListener('change', listener);
-      return () => mediaQuery.removeEventListener('change', listener);
-    } else if (theme === 'light' || theme === 'dark') {
-      applyTheme(theme === 'dark');
-    } else {
-      // Texture themes
-      body.classList.add(`theme-${theme}`);
-      // Texture themes are designed as light themes for readability
-      applyTheme(false);
-    }
-  }, [profile.preferences.theme]);
 
   // --- Actions ---
 
@@ -5808,6 +5832,34 @@ export default function App() {
                   {profile.preferences.featureFlags.themes && (
                     <SettingsSection id="display" title="Display" icon={Layout}>
                       <SettingSelect 
+                        label="Appearance" 
+                        icon={Moon} 
+                        value={profile.preferences.appearanceMode}
+                        onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, appearanceMode: val as any } })}
+                        options={[
+                          { value: 'light', label: 'Light' },
+                          { value: 'dark', label: 'Dark' },
+                          { value: 'system', label: 'System' }
+                        ]}
+                      />
+                      <SettingSelect 
+                        label="App Font" 
+                        icon={BookOpen} 
+                        value={profile.preferences.fontFamily}
+                        onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, fontFamily: val } })}
+                        options={FONTS.map(f => ({ value: f.id, label: f.name }))}
+                      />
+                      {profile.preferences.fontFamily !== 'default' && (
+                        <div className="px-5 pb-4">
+                          <button 
+                            onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, fontFamily: 'default' } })}
+                            className="w-full py-2 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-95"
+                          >
+                            Reset Font to Default
+                          </button>
+                        </div>
+                      )}
+                      <SettingSelect 
                         label="Theme Category" 
                         icon={Layers} 
                         value={profile.preferences.themeCategory}
@@ -5834,9 +5886,8 @@ export default function App() {
                       <SettingToggle 
                         label="Compact UI" 
                         icon={Smartphone} 
-                        value={isCompact}
+                        value={profile.preferences.compactUI}
                         onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, compactUI: !profile.preferences.compactUI } })}
-                        badge={windowWidth < 380 ? "Auto-Active" : undefined}
                         description="Denser layout for more content"
                       />
                       <SettingToggle 
