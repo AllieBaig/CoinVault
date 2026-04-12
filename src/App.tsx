@@ -3309,10 +3309,10 @@ export default function App() {
     return (
       <motion.header 
         style={{ 
-          scale: activeTab === 'profile' ? 1 : headerScale, 
-          opacity: activeTab === 'profile' ? 1 : headerOpacity,
-          y: activeTab === 'profile' ? 0 : headerY,
-          filter: activeTab === 'profile' ? 'none' : blurTemplate
+          scale: headerScale, 
+          opacity: headerOpacity,
+          y: headerY,
+          filter: blurTemplate
         }}
         className={`px-4 ${headerPaddingTop} ${headerPaddingBottom} relative z-10 transition-all duration-300 overflow-hidden`}
       >
@@ -4751,23 +4751,11 @@ export default function App() {
           className="hidden" 
         />
 
-        <div className="flex-none">
-          {/* Fixed header/tabs only for settings or when explicitly needed */}
-          {activeTab === 'profile' && (
-            <div className="safe-top-padding">
-              {renderHeader()}
-              {renderTabs()}
-            </div>
-          )}
-        </div>
-
         <div className="scroll-container" ref={scrollRef}>
-          {activeTab !== 'profile' && (
-            <div className="safe-top-padding">
-              {renderHeader()}
-              {renderTabs()}
-            </div>
-          )}
+          <div className="safe-top-padding">
+            {profile.preferences.showCollectorCard && renderHeader()}
+            {renderTabs()}
+          </div>
           <main className="max-w-md mx-auto px-4 pt-4 safe-bottom-padding">
             {profile.preferences.showTopSummary && renderSummaryBar()}
             <AnimatePresence mode="wait">
@@ -5884,7 +5872,7 @@ export default function App() {
                       icon={User} 
                       value={profile.preferences.showCollectorCard}
                       onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showCollectorCard: !profile.preferences.showCollectorCard } })}
-                      description="Quick access to identity card"
+                      description="Show or hide the main app header and identity card"
                     />
                     <SettingToggle 
                       label="Quick Add Mode" 
