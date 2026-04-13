@@ -57,13 +57,25 @@
 }
 
 .dark {
-  --theme-bg: #1C1C1E;
-  --theme-surface: #2C2C2E;
-  --theme-surface-secondary: #1C1C1E;
-  --theme-text: #E5E5EA;
+  --theme-bg: #121214;
+  --theme-surface: #1C1C1E;
+  --theme-surface-secondary: #121214;
+  --theme-text: #F2F2F7;
   --theme-text-secondary: #8E8E93;
   --theme-accent: #0A84FF;
-  --theme-border: rgba(255, 255, 255, 0.1);
+  --theme-border: rgba(255, 255, 255, 0.06);
+}
+
+.dark-purple {
+  --theme-bg: #141218;
+  --theme-surface: #1D1B22;
+  --theme-accent: #BF5AF2;
+}
+
+.dark-blue {
+  --theme-bg: #0A111F;
+  --theme-surface: #141D2E;
+  --theme-accent: #5AC8FA;
 }
 
 /* --- OS Based Themes --- */
@@ -216,10 +228,20 @@
 
 /* --- Soft Dark Mode Adjustments --- */
 .dark[class*="theme-"] {
-  --theme-bg: #1C1C1E;
-  --theme-surface: #2C2C2E;
-  --theme-text: #E5E5EA;
-  --theme-border: rgba(255, 255, 255, 0.08);
+  --theme-bg: #121214;
+  --theme-surface: #1C1C1E;
+  --theme-text: #F2F2F7;
+  --theme-border: rgba(255, 255, 255, 0.06);
+}
+
+.dark-purple[class*="theme-"] {
+  --theme-bg: #141218;
+  --theme-surface: #1D1B22;
+}
+
+.dark-blue[class*="theme-"] {
+  --theme-bg: #0A111F;
+  --theme-surface: #141D2E;
 }
 
 /* Specific dark mode overrides for themes that need to keep their "vibe" */

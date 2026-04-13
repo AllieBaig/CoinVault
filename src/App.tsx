@@ -249,7 +249,9 @@ interface Profile {
     visibleCountries: string[];
     featureFlags: FeatureFlags;
     appearanceMode: 'light' | 'dark' | 'system';
+    darkModeStyle: 'purple' | 'blue';
     fontFamily: string;
+    customFont?: string;
   };
 }
 
@@ -272,19 +274,17 @@ const LEVELS = [
 
 const THEME_CATEGORIES = [
   {
-    id: 'os',
-    name: 'OS Based',
+    id: 'system',
+    name: 'System',
     themes: [
-      { id: 'win98', name: 'Windows 98' },
-      { id: 'winxp', name: 'Windows XP' },
-      { id: 'redhat', name: 'Red Hat' },
-      { id: 'playstation', name: 'PlayStation' },
-      { id: 'xbox', name: 'Xbox' },
+      { id: 'light', name: 'Light Mode' },
+      { id: 'dark', name: 'Dark Mode' },
+      { id: 'system', name: 'Follow System' },
     ]
   },
   {
     id: 'texture',
-    name: 'Texture Based',
+    name: 'Texture Themes',
     themes: [
       { id: 'paper', name: 'Paper' },
       { id: 'glass', name: 'Glass' },
@@ -294,8 +294,19 @@ const THEME_CATEGORIES = [
     ]
   },
   {
+    id: 'os',
+    name: 'OS Themes',
+    themes: [
+      { id: 'win98', name: 'Windows 98' },
+      { id: 'winxp', name: 'Windows XP' },
+      { id: 'redhat', name: 'Red Hat' },
+      { id: 'playstation', name: 'PlayStation' },
+      { id: 'xbox', name: 'Xbox' },
+    ]
+  },
+  {
     id: 'cartoon',
-    name: 'Cartoon Style',
+    name: 'Fun/Cartoon Themes',
     themes: [
       { id: 'scooby', name: 'Scooby-Doo' },
       { id: 'jetsons', name: 'Jetsons' },
@@ -305,7 +316,7 @@ const THEME_CATEGORIES = [
   },
   {
     id: 'movie',
-    name: 'Movie Palette',
+    name: 'Movie Palettes',
     themes: [
       { id: 'noir', name: 'Noir' },
       { id: 'cyberpunk', name: 'Cyberpunk' },
@@ -1345,6 +1356,7 @@ export default function App() {
         visibleCountries: EUROPEAN_COUNTRIES,
         featureFlags: DEFAULT_FEATURE_FLAGS,
         appearanceMode: 'system',
+        darkModeStyle: 'blue',
         fontFamily: 'default',
       }
     };
@@ -1445,22 +1457,33 @@ export default function App() {
     const body = window.document.body;
     const theme = profile.preferences.theme;
     const appearance = profile.preferences.appearanceMode;
+    const darkModeStyle = profile.preferences.darkModeStyle;
     const fontId = profile.preferences.fontFamily;
+    const customFont = profile.preferences.customFont;
     
     // Remove all theme classes
     const themeClasses = THEME_CATEGORIES.flatMap(c => c.themes.map(t => `theme-${t.id}`));
     body.classList.remove(...themeClasses);
+    body.classList.remove('dark-purple', 'dark-blue');
     
     const isDark = appearance === 'system' ? systemIsDark : appearance === 'dark';
     root.classList.toggle('dark', isDark);
+    
+    if (isDark) {
+      body.classList.add(`dark-${darkModeStyle}`);
+    }
     
     // Apply Theme Class
     body.classList.add(`theme-${theme}`);
     
     // Apply Font
-    const selectedFont = FONTS.find(f => f.id === fontId) || FONTS[0];
-    root.style.setProperty('--font-sans', selectedFont.family);
-  }, [profile.preferences.theme, profile.preferences.appearanceMode, profile.preferences.fontFamily, systemIsDark]);
+    if (customFont) {
+      root.style.setProperty('--font-sans', customFont);
+    } else {
+      const selectedFont = FONTS.find(f => f.id === fontId) || FONTS[0];
+      root.style.setProperty('--font-sans', selectedFont.family);
+    }
+  }, [profile.preferences.theme, profile.preferences.appearanceMode, profile.preferences.darkModeStyle, profile.preferences.fontFamily, profile.preferences.customFont, systemIsDark]);
 
   const shouldReduceMotion = useReducedMotion();
   const springConfig = shouldReduceMotion ? { type: 'tween', duration: 0.2 } : SPRING_CONFIG;
@@ -2319,6 +2342,51 @@ export default function App() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const fontInputRef = useRef<HTMLInputElement>(null);
+
+  const refreshApp = () => {
+    const savedCoins = storage.load('coin-collection');
+    const savedFolders = storage.load('coin-folders');
+    const savedProfile = storage.load('coin-profile');
+    
+    if (savedCoins) setCoins(savedCoins);
+    if (savedFolders) setFolders(savedFolders);
+    if (savedProfile) setProfile(savedProfile);
+    
+    setFeedback({ message: 'App state refreshed from storage', type: 'load' });
+    addLog('User action: Refresh App', 'action');
+  };
+
+  const handleFontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const fontData = event.target?.result as string;
+        const fontUrl = URL.createObjectURL(file);
+        const fontName = `CustomFont-${Date.now()}`;
+        const style = document.createElement('style');
+        style.textContent = `
+          @font-face {
+            font-family: "${fontName}";
+            src: url("${fontUrl}");
+          }
+        `;
+        document.head.appendChild(style);
+        
+        setProfile({
+          ...profile,
+          preferences: {
+            ...profile.preferences,
+            fontFamily: 'custom',
+            customFont: `"${fontName}", sans-serif`
+          }
+        });
+        setFeedback({ message: 'Custom font applied!', type: 'load' });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  };
 
   // --- Effects ---
 
@@ -5041,6 +5109,14 @@ export default function App() {
           className="hidden" 
         />
 
+        <input 
+          type="file" 
+          ref={fontInputRef} 
+          onChange={handleFontUpload} 
+          accept=".ttf,.otf,.woff,.woff2" 
+          className="hidden" 
+        />
+
         <div className="scroll-container" ref={scrollRef}>
           <div className="safe-top-padding">
             {profile.preferences.showCollectorCard && renderHeader()}
@@ -6035,287 +6111,166 @@ export default function App() {
 
                 {/* Hidden Settings (Unlocked via Milestones) */}
                 {/* Settings Categories */}
-                <div className="space-y-4">
-                  {profile.preferences.featureFlags.themes && (
-                    <SettingsSection id="display" title="Display" icon={Layout}>
+                <div className="space-y-6">
+                  {/* Appearance Section */}
+                  <SettingsSection id="appearance" title="Appearance" icon={Palette}>
+                    <SettingSelect 
+                      label="Theme Mode" 
+                      icon={Moon} 
+                      value={profile.preferences.appearanceMode}
+                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, appearanceMode: val as any } })}
+                      options={[
+                        { value: 'light', label: 'Light' },
+                        { value: 'dark', label: 'Dark' },
+                        { value: 'system', label: 'Follow System' }
+                      ]}
+                    />
+                    
+                    {(profile.preferences.appearanceMode === 'dark' || (profile.preferences.appearanceMode === 'system' && systemIsDark)) && (
                       <SettingSelect 
-                        label="Appearance" 
-                        icon={Moon} 
-                        value={profile.preferences.appearanceMode}
-                        onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, appearanceMode: val as any } })}
+                        label="Dark Style" 
+                        icon={Zap} 
+                        value={profile.preferences.darkModeStyle || 'blue'}
+                        onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, darkModeStyle: val as any } })}
                         options={[
-                          { value: 'light', label: 'Light' },
-                          { value: 'dark', label: 'Dark' },
-                          { value: 'system', label: 'System' }
+                          { value: 'blue', label: 'Soft Blue' },
+                          { value: 'purple', label: 'Soft Purple' }
                         ]}
                       />
-                      <SettingSelect 
-                        label="App Font" 
-                        icon={BookOpen} 
-                        value={profile.preferences.fontFamily}
-                        onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, fontFamily: val } })}
-                        options={FONTS.map(f => ({ value: f.id, label: f.name }))}
-                      />
-                      {profile.preferences.fontFamily !== 'default' && (
-                          <div className="px-5 pb-4">
-                            <motion.button 
-                              whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
-                              transition={springConfig}
-                              onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, fontFamily: 'default' } })}
-                              className="w-full py-2 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all"
-                            >
-                              Reset Font to Default
-                            </motion.button>
-                          </div>
-                      )}
-                      <SettingSelect 
-                        label="Theme Category" 
-                        icon={Layers} 
-                        value={profile.preferences.themeCategory}
-                        onChange={(val) => {
-                          const category = THEME_CATEGORIES.find(c => c.id === val);
-                          setProfile({ 
-                            ...profile, 
-                            preferences: { 
-                              ...profile.preferences, 
-                              themeCategory: val,
-                              theme: category?.themes[0].id || 'win98'
-                            } 
-                          });
-                        }}
-                        options={THEME_CATEGORIES.map(c => ({ value: c.id, label: c.name }))}
-                      />
-                      <SettingSelect 
-                        label="Theme Style" 
-                        icon={Palette} 
-                        value={profile.preferences.theme}
-                        onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, theme: val } })}
-                        options={THEME_CATEGORIES.find(c => c.id === profile.preferences.themeCategory)?.themes.map(t => ({ value: t.id, label: t.name })) || []}
-                      />
-                      <SettingToggle 
-                        label="Compact UI" 
-                        icon={Smartphone} 
-                        value={profile.preferences.compactUI}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, compactUI: !profile.preferences.compactUI } })}
-                        description="Denser layout for more content"
-                      />
-                      <SettingToggle 
-                        label="Text Mode UI" 
-                        icon={ListIcon} 
-                        value={profile.preferences.textMode}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, textMode: !profile.preferences.textMode } })}
-                        description="Minimal text-only interface"
-                      />
-                      <SettingToggle 
-                        label="Show Coin Price" 
-                        icon={Coins} 
-                        value={profile.preferences.showPrice}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
-                        description="Display estimated value on coins"
-                      />
-                      <SettingToggle 
-                        label="Purchase Mode" 
-                        icon={TrendingUp} 
-                        value={profile.preferences.purchaseMode}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, purchaseMode: !profile.preferences.purchaseMode } })}
-                        description="Enable price tracking for additions"
-                      />
-                      <SettingToggle 
-                        label="Focus Mode" 
-                        icon={Target} 
-                        value={profile.preferences.focusMode}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, focusMode: !profile.preferences.focusMode } })}
-                        description="Hide non-essential UI elements"
-                      />
-                      <SettingToggle 
-                        label="Show Top Summary" 
-                        icon={Layout} 
-                        value={profile.preferences.showTopSummary}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showTopSummary: !profile.preferences.showTopSummary } })}
-                        description="Quick stats at the top of the screen"
-                      />
-                      <SettingToggle 
-                        label="Bottom Menu" 
-                        icon={Columns} 
-                        value={profile.preferences.showBottomMenu}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showBottomMenu: !profile.preferences.showBottomMenu } })}
-                        description="Toggle main navigation visibility"
-                      />
-                      <SettingToggle 
-                        label="Performance Mode" 
-                        icon={Gauge} 
-                        value={profile.preferences.performanceMode}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, performanceMode: !profile.preferences.performanceMode } })}
-                        description="Reduce animations for speed"
-                      />
-                      <SettingToggle 
-                        label="Progress Card" 
-                        icon={User} 
-                        value={profile.preferences.showProgressCard}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showProgressCard: !profile.preferences.showProgressCard } })}
-                        description="Show/Hide top profile header"
-                      />
-                      <SettingToggle 
-                        label="Rank System" 
-                        icon={Award} 
-                        value={profile.preferences.showRankSystem}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showRankSystem: !profile.preferences.showRankSystem } })}
-                        description="Show/Hide collector level & XP"
-                      />
-                      <SettingToggle 
-                        label="Ambient Motion" 
-                        icon={Activity} 
-                        value={profile.preferences.ambientMotionEnabled}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, ambientMotionEnabled: !profile.preferences.ambientMotionEnabled } })}
-                        description="Subtle background movement"
-                      />
-                      <SettingToggle 
-                        label="Show Folder" 
-                        icon={FolderIcon} 
-                        value={profile.preferences.showFolder}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showFolder: !profile.preferences.showFolder } })}
-                        description="Display folder name on coin cards"
-                      />
-                      <SettingToggle 
-                        label="Layout Switcher" 
-                        icon={Layout} 
-                        value={profile.preferences.showLayoutSwitcher}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showLayoutSwitcher: !profile.preferences.showLayoutSwitcher } })}
-                        description="Toggle layout selector in toolbar"
-                      />
-                      <SettingSelect 
-                        label="Default Layout" 
-                        icon={Grid} 
-                        value={profile.preferences.layoutType}
-                        onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, layoutType: val as any } })}
-                        options={[
-                          { value: 'grid', label: 'Grid' },
-                          { value: 'list', label: 'List' },
-                          { value: 'carousel', label: 'Carousel' },
-                          { value: 'masonry', label: 'Masonry' },
-                          { value: 'board', label: 'Board' },
-                          { value: 'timeline', label: 'Timeline' },
-                          { value: 'gallery', label: 'Gallery' },
-                          { value: 'spotlight', label: 'Spotlight' },
-                          { value: 'compact', label: 'Compact' },
-                          { value: 'split', label: 'Split' },
-                          { value: 'hexagon', label: 'Hexagon' }
-                        ]}
-                      />
-                    </SettingsSection>
-                  )}
+                    )}
 
-                  <SettingsSection id="coins" title="Coin Management" icon={Database}>
-                    <SettingToggle 
-                      label="Show Collector Card" 
-                      icon={User} 
-                      value={profile.preferences.showCollectorCard}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showCollectorCard: !profile.preferences.showCollectorCard } })}
-                      description="Show or hide the main app header and identity card"
-                    />
-                    <SettingToggle 
-                      label="Quick Add Mode" 
-                      icon={Zap} 
-                      value={profile.preferences.quickAddMode}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, quickAddMode: !profile.preferences.quickAddMode } })}
-                      description="Skip details when adding coins"
-                    />
-                    <SettingToggle 
-                      label="Background Removal" 
+                    <div className="border-t border-gray-50 dark:border-gray-800/50 my-1" />
+
+                    <SettingSelect 
+                      label="Theme Category" 
                       icon={Layers} 
-                      value={profile.preferences.autoRemoveBackground}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, autoRemoveBackground: !profile.preferences.autoRemoveBackground } })}
-                      description="Auto-clean coin photos (AI)"
+                      value={profile.preferences.themeCategory}
+                      onChange={(val) => {
+                        const category = THEME_CATEGORIES.find(c => c.id === val);
+                        setProfile({ 
+                          ...profile, 
+                          preferences: { 
+                            ...profile.preferences, 
+                            themeCategory: val,
+                            theme: category?.themes[0].id || 'win98'
+                          } 
+                        });
+                      }}
+                      options={THEME_CATEGORIES.map(c => ({ value: c.id, label: c.name }))}
                     />
-                    {profile.preferences.featureFlags.experimental && (
-                      <SettingToggle 
-                        label="Experimental Features" 
-                        icon={Lightbulb} 
-                        value={profile.preferences.experimentalFeatures}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, experimentalFeatures: !profile.preferences.experimentalFeatures } })}
-                        description="Try out new unreleased tools"
-                      />
-                    )}
-                    <SettingToggle 
-                      label="Fixed Price Mode" 
-                      icon={Tag} 
-                      value={profile.preferences.fixedPriceMode}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, fixedPriceMode: !profile.preferences.fixedPriceMode } })}
-                      description="Auto-fill price based on denomination"
+                    <SettingSelect 
+                      label="Active Theme" 
+                      icon={Palette} 
+                      value={profile.preferences.theme}
+                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, theme: val } })}
+                      options={THEME_CATEGORIES.find(c => c.id === profile.preferences.themeCategory)?.themes.map(t => ({ value: t.id, label: t.name })) || []}
+                    />
+                  </SettingsSection>
+
+                  {/* Display & Layout Section */}
+                  <SettingsSection id="display" title="Display & Layout" icon={Layout}>
+                    <SettingSelect 
+                      label="Default View" 
+                      icon={Grid} 
+                      value={profile.preferences.layoutType}
+                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, layoutType: val as any } })}
+                      options={[
+                        { value: 'grid', label: 'Grid' },
+                        { value: 'list', label: 'List' },
+                        { value: 'carousel', label: 'Carousel' },
+                        { value: 'masonry', label: 'Masonry' },
+                        { value: 'board', label: 'Board' },
+                        { value: 'timeline', label: 'Timeline' },
+                        { value: 'gallery', label: 'Gallery' },
+                        { value: 'spotlight', label: 'Spotlight' },
+                        { value: 'compact', label: 'Compact' },
+                        { value: 'split', label: 'Split' },
+                        { value: 'hexagon', label: 'Hexagon' }
+                      ]}
                     />
                     <SettingToggle 
-                      label="Show Old European Coins" 
+                      label="Compact Mode" 
+                      icon={Smartphone} 
+                      value={profile.preferences.compactUI}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, compactUI: !profile.preferences.compactUI } })}
+                      description="Denser layout for more content"
+                    />
+                    <SettingToggle 
+                      label="Text Only UI" 
+                      icon={ListIcon} 
+                      value={profile.preferences.textMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, textMode: !profile.preferences.textMode } })}
+                      description="Minimal interface without images"
+                    />
+                    <SettingToggle 
+                      label="Show Coin Price" 
                       icon={Coins} 
-                      value={profile.preferences.showOldCoins}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showOldCoins: !profile.preferences.showOldCoins } })}
-                      description="Enable support for pre-euro currencies"
+                      value={profile.preferences.showPrice}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
                     />
-                    <div className="px-5 pb-5 space-y-3">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Visible Countries</p>
-                      <div className="flex flex-wrap gap-2">
-                        {EUROPEAN_COUNTRIES.map(country => (
-                          <button
-                            key={country}
-                            onClick={() => {
-                              const current = profile.preferences.visibleCountries || [];
-                              const next = current.includes(country)
-                                ? current.filter(c => c !== country)
-                                : [...current, country];
-                              setProfile({
-                                ...profile,
-                                preferences: {
-                                  ...profile.preferences,
-                                  visibleCountries: next
-                                }
-                              });
-                            }}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                              (profile.preferences.visibleCountries || []).includes(country)
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-gray-50 dark:bg-gray-800 text-gray-400 border-gray-100 dark:border-gray-700'
-                            }`}
-                          >
-                            {country}
-                          </button>
-                        ))}
-                      </div>
+                    <SettingToggle 
+                      label="Show Top Summary" 
+                      icon={Layout} 
+                      value={profile.preferences.showTopSummary}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showTopSummary: !profile.preferences.showTopSummary } })}
+                    />
+                    <SettingToggle 
+                      label="Progress Card" 
+                      icon={User} 
+                      value={profile.preferences.showProgressCard}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showProgressCard: !profile.preferences.showProgressCard } })}
+                    />
+                    <SettingToggle 
+                      label="Rank System" 
+                      icon={Award} 
+                      value={profile.preferences.showRankSystem}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showRankSystem: !profile.preferences.showRankSystem } })}
+                    />
+                    <SettingToggle 
+                      label="Show Folder" 
+                      icon={FolderIcon} 
+                      value={profile.preferences.showFolder}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showFolder: !profile.preferences.showFolder } })}
+                    />
+
+                    <div className="border-t border-gray-50 dark:border-gray-800/50 my-1" />
+
+                    <SettingSelect 
+                      label="App Font" 
+                      icon={BookOpen} 
+                      value={profile.preferences.fontFamily}
+                      onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, fontFamily: val } })}
+                      options={[
+                        ...FONTS.map(f => ({ value: f.id, label: f.name })),
+                        { value: 'custom', label: 'Custom Upload' }
+                      ]}
+                    />
+
+                    <div className="px-5 pb-4 space-y-2">
+                      <motion.button 
+                        whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                        transition={springConfig}
+                        onClick={() => fontInputRef.current?.click()}
+                        className="w-full py-2.5 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Upload size={12} /> Upload Custom Font
+                      </motion.button>
+                      
+                      {(profile.preferences.fontFamily !== 'default' || profile.preferences.customFont) && (
+                        <motion.button 
+                          whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                          transition={springConfig}
+                          onClick={() => setProfile({ ...profile, preferences: { ...profile.preferences, fontFamily: 'default', customFont: undefined } })}
+                          className="w-full py-2.5 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                        >
+                          Reset to System Font
+                        </motion.button>
+                      )}
                     </div>
-                    {profile.preferences.fixedPriceMode && (
-                      <div className="px-5 pb-5 space-y-3 bg-blue-50/10 dark:bg-blue-900/5">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Set Fixed Prices</p>
-                        <div className="max-h-[300px] overflow-y-auto no-scrollbar pr-1">
-                          <div className="grid grid-cols-3 gap-2">
-                            {allPossibleDenominations.map(type => (
-                              <div key={type} className="space-y-1">
-                                <label className="text-[9px] font-black text-gray-500 uppercase ml-1 truncate block" title={type}>{type}</label>
-                                <div className="relative">
-                                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">£</span>
-                                  <input 
-                                    type="number"
-                                    step="0.01"
-                                    value={profile.preferences.denominationPrices[type] || 0}
-                                    onChange={(e) => {
-                                      const val = parseFloat(e.target.value) || 0;
-                                      setProfile({
-                                        ...profile,
-                                        preferences: {
-                                          ...profile.preferences,
-                                          denominationPrices: {
-                                            ...profile.preferences.denominationPrices,
-                                            [type]: val
-                                          }
-                                        }
-                                      });
-                                    }}
-                                    className="w-full h-[36px] pl-6 pr-2 py-2.5 bg-white dark:bg-gray-800 rounded-xl text-xs font-bold border border-gray-100 dark:border-gray-800 focus:ring-2 focus:ring-blue-500/50 transition-all"
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                  </SettingsSection>
+
+                  {/* Experience & Motion Section */}
+                  <SettingsSection id="experience" title="Experience" icon={Zap}>
                     <SettingSelect 
                       label="Sort By" 
                       icon={Clock} 
@@ -6343,6 +6298,78 @@ export default function App() {
                         { value: 'month', label: 'Month' }
                       ]}
                     />
+                    <SettingToggle 
+                      label="Purchase Mode" 
+                      icon={TrendingUp} 
+                      value={profile.preferences.purchaseMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, purchaseMode: !profile.preferences.purchaseMode } })}
+                      description="Enable price tracking for additions"
+                    />
+                    <SettingToggle 
+                      label="Ambient Motion" 
+                      icon={Activity} 
+                      value={profile.preferences.ambientMotionEnabled}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, ambientMotionEnabled: !profile.preferences.ambientMotionEnabled } })}
+                      description="Subtle background movement"
+                    />
+                    <SettingToggle 
+                      label="Performance Mode" 
+                      icon={Gauge} 
+                      value={profile.preferences.performanceMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, performanceMode: !profile.preferences.performanceMode } })}
+                      description="Reduce animations for speed"
+                    />
+                    <SettingToggle 
+                      label="Focus Mode" 
+                      icon={Target} 
+                      value={profile.preferences.focusMode}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, focusMode: !profile.preferences.focusMode } })}
+                      description="Hide non-essential UI elements"
+                    />
+                    <SettingToggle 
+                      label="Haptic Feedback" 
+                      icon={Smartphone} 
+                      value={profile.preferences.hapticsEnabled}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, hapticsEnabled: !profile.preferences.hapticsEnabled } })}
+                      description="Vibrate on key interactions"
+                    />
+                  </SettingsSection>
+
+                  {/* Collection Management Section */}
+                  <SettingsSection id="collection" title="Collection" icon={Database}>
+                    <div className="p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-700 dark:text-gray-300 block">Folders</span>
+                        <button 
+                          onClick={() => {
+                            setModalInputValue('');
+                            setInputModal({
+                              title: 'New Folder',
+                              placeholder: 'Folder Name',
+                              onConfirm: (name) => setFolders([...folders, { id: crypto.randomUUID(), name }])
+                            });
+                          }}
+                          className="text-blue-600 dark:text-blue-400 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {folders.map(folder => (
+                          <div key={folder.id} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                            <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{folder.name}</span>
+                            {!folder.isDefault && (
+                              <button onClick={() => setFolders(folders.filter(f => f.id !== folder.id))} className="text-red-400 hover:text-red-600">
+                                <X size={10} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-50 dark:border-gray-800/50 my-1" />
+
                     <div className="p-5 space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-gray-700 dark:text-gray-300 block">Custom Denominations</span>
@@ -6372,230 +6399,82 @@ export default function App() {
                           <Plus size={16} />
                         </button>
                       </div>
-                      <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
                         {profile.preferences.customDenominations.map(denom => (
-                          <div key={denom} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
-                            <div className="flex items-center gap-3">
-                              <Tag size={16} className="text-gray-400" />
-                              <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{denom}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button 
-                                onClick={() => {
-                                  setModalInputValue(denom);
-                                  setInputModal({
-                                    title: 'Edit Denomination',
-                                    placeholder: 'Denomination Name',
-                                    onConfirm: (newName) => {
-                                      if (newName === denom) return;
-                                      if (DEFAULT_DENOMINATIONS.includes(newName) || profile.preferences.customDenominations.includes(newName)) {
-                                        setFeedback({ message: 'Denomination already exists!', type: 'error' });
-                                        return;
-                                      }
-                                      const newDenoms = profile.preferences.customDenominations.map(d => d === denom ? newName : d);
-                                      const newPrices = { ...profile.preferences.denominationPrices };
-                                      if (newPrices[denom] !== undefined) {
-                                        newPrices[newName] = newPrices[denom];
-                                        delete newPrices[denom];
-                                      }
-                                      setProfile({
-                                        ...profile,
-                                        preferences: {
-                                          ...profile.preferences,
-                                          customDenominations: newDenoms,
-                                          denominationPrices: newPrices
-                                        }
-                                      });
-                                    }
-                                  });
-                                }}
-                                className="text-gray-400 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-                              >
-                                <Settings size={14} />
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  setConfirmModal({
-                                    title: 'Delete Denomination',
-                                    message: `Are you sure you want to delete "${denom}"?`,
-                                    onConfirm: () => {
-                                      const newDenoms = profile.preferences.customDenominations.filter(d => d !== denom);
-                                      const newPrices = { ...profile.preferences.denominationPrices };
-                                      delete newPrices[denom];
-                                      setProfile({
-                                        ...profile,
-                                        preferences: {
-                                          ...profile.preferences,
-                                          customDenominations: newDenoms,
-                                          denominationPrices: newPrices
-                                        }
-                                      });
-                                    }
-                                  });
-                                }}
-                                className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
+                          <div key={denom} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                            <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{denom}</span>
+                            <button 
+                              onClick={() => {
+                                const newDenoms = profile.preferences.customDenominations.filter(d => d !== denom);
+                                setProfile({ ...profile, preferences: { ...profile.preferences, customDenominations: newDenoms } });
+                              }} 
+                              className="text-red-400 hover:text-red-600"
+                            >
+                              <X size={10} />
+                            </button>
                           </div>
                         ))}
-                      </div>
-                    </div>
-                    <div className="p-5 space-y-4">
-                      <span className="font-bold text-gray-700 dark:text-gray-300 block">Folders</span>
-                      <div className="space-y-2">
-                        {folders.map(folder => (
-                          <div key={folder.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
-                            <div className="flex items-center gap-3">
-                              <FolderIcon size={16} className="text-gray-400" />
-                              <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{folder.name}</span>
-                            </div>
-                            {!folder.isDefault && (
-                              <button 
-                                onClick={() => setFolders(folders.filter(f => f.id !== folder.id))}
-                                className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        <button 
-                          onClick={() => {
-                            setModalInputValue('');
-                            setInputModal({
-                              title: 'New Folder',
-                              placeholder: 'Folder Name',
-                              onConfirm: (name) => setFolders([...folders, { id: crypto.randomUUID(), name }])
-                            });
-                          }}
-                          className="w-full p-3 text-blue-600 dark:text-blue-400 font-black text-xs flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors rounded-2xl border border-dashed border-blue-200 dark:border-blue-900/30"
-                        >
-                          <Plus size={14} /> Add New Folder
-                        </button>
                       </div>
                     </div>
                   </SettingsSection>
 
-                  <SettingsSection id="game" title="Gamification" icon={Award}>
-                    {profile.unlockedMilestones?.includes('milestone-20') && (
-                      <SettingToggle 
-                        icon={Moon}
-                        label="Night Bonus Mode"
-                        description="Earn +50% XP during night hours (8PM-6AM)"
-                        value={profile.preferences.nightBonusEnabled}
-                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, nightBonusEnabled: !profile.preferences.nightBonusEnabled } })}
+                  {/* Navigation & Hubs Section */}
+                  <SettingsSection id="navigation" title="Navigation" icon={Columns}>
+                    <SettingToggle 
+                      label="Bottom Menu" 
+                      icon={Columns} 
+                      value={profile.preferences.showBottomMenu}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showBottomMenu: !profile.preferences.showBottomMenu } })}
+                      description="Main navigation visibility"
+                    />
+                    <SettingToggle 
+                      label="Timeline Hub" 
+                      icon={History} 
+                      value={profile.preferences.featureFlags.timelineModes}
+                      onChange={() => setProfile({ 
+                        ...profile, 
+                        preferences: { 
+                          ...profile.preferences, 
+                          featureFlags: { ...profile.preferences.featureFlags, timelineModes: !profile.preferences.featureFlags.timelineModes } 
+                        } 
+                      })}
+                      description="Enable timeline & mindmap views"
+                    />
+                    <SettingToggle 
+                      label="Layout Switcher" 
+                      icon={Layout} 
+                      value={profile.preferences.showLayoutSwitcher}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showLayoutSwitcher: !profile.preferences.showLayoutSwitcher } })}
+                      description="Toggle layout selector in toolbar"
+                    />
+                  </SettingsSection>
+
+                  {/* Data & System Section */}
+                  <SettingsSection id="data" title="Data & System" icon={Database}>
+                    <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+                      <SettingAction 
+                        icon={RefreshCcw}
+                        title="Refresh App"
+                        description="Reload state from local storage"
+                        onClick={refreshApp}
                       />
-                    )}
-                    
-                    <div className="p-5 space-y-4">
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <Target size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Daily Missions</span>
-                      </div>
-                      <div className="space-y-2">
-                        {profile.missions.map(mission => (
-                          <div key={mission.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-transparent hover:border-blue-100 dark:hover:border-blue-900/30 transition-colors">
-                            <div className="flex-1">
-                              <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{mission.name}</p>
-                              <p className="text-[10px] text-gray-400">{mission.description}</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[10px] font-black text-blue-600 dark:text-blue-400">+{mission.points} XP</span>
-                              {mission.isCompleted ? (
-                                <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center">
-                                  <Check size={14} />
-                                </div>
-                              ) : (
-                                <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full" />
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="p-5 space-y-4">
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <Award size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Achievements</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {profile.badges.map(badge => (
-                          <div 
-                            key={badge.id} 
-                            className={`p-3 rounded-2xl border flex flex-col items-center text-center gap-2 transition-all ${
-                              badge.isUnlocked 
-                                ? 'bg-white dark:bg-gray-900 border-blue-100 dark:border-blue-900/30 shadow-sm' 
-                                : 'bg-gray-50 dark:bg-gray-800/50 border-transparent grayscale opacity-50'
-                            }`}
-                          >
-                            <div className={`p-2 rounded-xl ${badge.isUnlocked ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
-                              {badge.icon === 'Trophy' && <Trophy size={16} />}
-                              {badge.icon === 'Star' && <Star size={16} />}
-                              {badge.icon === 'FolderIcon' && <FolderIcon size={16} />}
-                              {badge.icon === 'Zap' && <Zap size={16} />}
-                              {badge.icon === 'Flame' && <Flame size={16} />}
-                            </div>
-                            <p className="text-[8px] font-black uppercase tracking-tighter leading-tight text-gray-700 dark:text-gray-300">{badge.name}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </SettingsSection>
-
-                  <SettingsSection id="data" title="Import/Export" icon={RefreshCcw}>
-                    <div className="divide-y divide-gray-50 dark:divide-gray-800">
                       <SettingAction 
                         icon={Download}
-                        title="Export Data"
-                        description="Download your collection as a JSON file"
+                        title="Export Collection"
+                        description="Save as JSON backup file"
                         onClick={exportData}
                       />
                       <SettingAction 
                         icon={Upload}
-                        title="Import Data"
-                        description="Upload a previously exported JSON file"
+                        title="Import Collection"
+                        description="Restore from JSON backup"
                         onClick={() => importInputRef.current?.click()}
                       />
                       <SettingAction 
-                        icon={Clock}
-                        title="Restore Backup"
-                        description="Load the most recent local backup"
-                        onClick={loadRecentData}
-                      />
-                      <SettingAction 
-                        icon={RefreshCcw}
-                        title="Convert Format"
-                        description="Ensure data is in the latest app format"
-                        onClick={() => setFeedback({ message: 'Auto-conversion is active on import.', type: 'info' })}
-                      />
-                    </div>
-                  </SettingsSection>
-
-                  <SettingsSection id="backup" title="Backup" icon={Shield}>
-                    <div className="p-5 space-y-4">
-                      <div className="flex items-center gap-2 text-amber-600">
-                        <Info size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Recovery Code</span>
-                      </div>
-                      <p className="text-[10px] text-gray-400 leading-relaxed">Save this code to recover your data if you lose access to this device.</p>
-                      <div className="bg-amber-50 dark:bg-amber-900/20 p-5 rounded-3xl text-center font-mono text-xl font-black tracking-[0.2em] border border-amber-100 dark:border-amber-900/30 text-amber-800 dark:text-amber-400 shadow-inner">
-                        {profile.recoveryCode}
-                      </div>
-                    </div>
-
-                    <SettingToggle 
-                      icon={Zap}
-                      label="Safe Mode"
-                      description="Load last working backup on crash"
-                      value={true}
-                      onChange={() => {}}
-                    />
-
-                    <div className="p-4">
-                      <button 
+                        icon={Trash2}
+                        title="Reset All Data"
+                        description="Permanently delete everything"
+                        color="text-red-600"
                         onClick={() => {
                           setConfirmModal({
                             title: 'Clear All Data',
@@ -6606,176 +6485,54 @@ export default function App() {
                             }
                           });
                         }}
-                        className="w-full p-4 flex items-center justify-between text-red-600 bg-red-50/50 dark:bg-red-900/10 rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors group"
+                      />
+                    </div>
+                  </SettingsSection>
+
+                  {/* Version History */}
+                  <SettingsSection id="version" title="App Version" icon={History}>
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-gray-900 dark:text-white">v{APP_VERSION_HISTORY[0].version}</span>
+                          <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider">Latest</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{APP_VERSION_HISTORY[0].date}</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed font-medium mb-4 italic">
+                        "{APP_VERSION_HISTORY[0].notes}"
+                      </p>
+                      <motion.button 
+                        whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                        transition={springConfig}
+                        onClick={() => setShowAllVersions(!showAllVersions)}
+                        className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Trash2 size={20} />
-                          </div>
-                          <div className="flex flex-col items-start">
-                            <span className="font-bold text-sm">Clear All Data</span>
-                            <span className="text-[10px] text-red-400 font-medium">Permanently delete everything</span>
-                          </div>
-                        </div>
-                        <ChevronRight size={16} className="text-red-300 group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-                  </SettingsSection>
-
-                  <SettingsSection id="version" title="App Version History" icon={History}>
-                    <div className="p-5 space-y-8">
-                      {(showAllVersions ? APP_VERSION_HISTORY : APP_VERSION_HISTORY.slice(0, 1)).map((item, idx) => (
-                        <div key={item.version} className="relative pl-8">
-                          {((showAllVersions && idx !== APP_VERSION_HISTORY.length - 1) || (!showAllVersions && idx === 0 && APP_VERSION_HISTORY.length > 1)) && (
-                            <div className="absolute left-[7px] top-6 bottom-[-32px] w-0.5 bg-gray-100 dark:bg-gray-800" />
-                          )}
-                          <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 shadow-sm z-10 ${idx === 0 ? 'bg-blue-600 animate-pulse' : 'bg-gray-300 dark:bg-gray-700'}`} />
-                          
-                          <div className="flex flex-col">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-black text-gray-900 dark:text-white">v{item.version}</span>
-                                {idx === 0 && (
-                                  <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider">New</span>
-                                )}
-                              </div>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.date}</span>
-                            </div>
-
-                            {item.notes && (
-                              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed font-medium mb-3 italic">
-                                "{item.notes}"
-                              </p>
-                            )}
-
-                            <div className="space-y-3">
-                              {item.added && item.added.length > 0 && (
-                                <div>
-                                  <p className="text-[9px] font-black text-green-600 dark:text-green-400 uppercase tracking-[0.15em] mb-1.5">Added</p>
-                                  <ul className="space-y-1">
-                                    {item.added.map((change, i) => (
-                                      <li key={i} className="text-[11px] text-gray-600 dark:text-gray-300 flex items-start gap-2">
-                                        <span className="w-1 h-1 rounded-full bg-green-500/50 mt-1.5 flex-shrink-0" />
-                                        {change}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {item.improved && item.improved.length > 0 && (
-                                <div>
-                                  <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.15em] mb-1.5">Improved</p>
-                                  <ul className="space-y-1">
-                                    {item.improved.map((change, i) => (
-                                      <li key={i} className="text-[11px] text-gray-600 dark:text-gray-300 flex items-start gap-2">
-                                        <span className="w-1 h-1 rounded-full bg-blue-500/50 mt-1.5 flex-shrink-0" />
-                                        {change}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {item.fixed && item.fixed.length > 0 && (
-                                <div>
-                                  <p className="text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-[0.15em] mb-1.5">Fixed</p>
-                                  <ul className="space-y-1">
-                                    {item.fixed.map((change, i) => (
-                                      <li key={i} className="text-[11px] text-gray-600 dark:text-gray-300 flex items-start gap-2">
-                                        <span className="w-1 h-1 rounded-full bg-orange-500/50 mt-1.5 flex-shrink-0" />
-                                        {change}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                        {showAllVersions ? 'Hide History' : 'View Full History'}
+                      </motion.button>
                       
-                      {APP_VERSION_HISTORY.length > 1 && (
-                        <motion.button 
-                          whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
-                          transition={springConfig}
-                          onClick={() => setShowAllVersions(!showAllVersions)}
-                          className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all"
-                        >
-                          {showAllVersions ? 'Show Less' : `Show ${APP_VERSION_HISTORY.length - 1} Older Versions`}
-                        </motion.button>
-                      )}
-                    </div>
-                  </SettingsSection>
-
-                  <SettingsSection id="feature-flags" title="Feature Flags" icon={Flag}>
-                    <div className="p-5 space-y-2">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Control app features dynamically</p>
-                      <SettingToggle 
-                        label="Timeline Modes" 
-                        icon={History} 
-                        value={profile.preferences.featureFlags.timelineModes}
-                        onChange={() => setProfile({ 
-                          ...profile, 
-                          preferences: { 
-                            ...profile.preferences, 
-                            featureFlags: { ...profile.preferences.featureFlags, timelineModes: !profile.preferences.featureFlags.timelineModes } 
-                          } 
-                        })}
-                        description="Enable timeline, mindmap, and story modes"
-                      />
-                      <SettingToggle 
-                        label="Image Library" 
-                        icon={ImageIcon} 
-                        value={profile.preferences.featureFlags.imageLibrary}
-                        onChange={() => setProfile({ 
-                          ...profile, 
-                          preferences: { 
-                            ...profile.preferences, 
-                            featureFlags: { ...profile.preferences.featureFlags, imageLibrary: !profile.preferences.featureFlags.imageLibrary } 
-                          } 
-                        })}
-                        description="Access global coin asset library"
-                      />
-                      <SettingToggle 
-                        label="Bulk Actions" 
-                        icon={Layers} 
-                        value={profile.preferences.featureFlags.bulkActions}
-                        onChange={() => setProfile({ 
-                          ...profile, 
-                          preferences: { 
-                            ...profile.preferences, 
-                            featureFlags: { ...profile.preferences.featureFlags, bulkActions: !profile.preferences.featureFlags.bulkActions } 
-                          } 
-                        })}
-                        description="Enable multi-coin selection and editing"
-                      />
-                      <SettingToggle 
-                        label="Advanced Themes" 
-                        icon={Palette} 
-                        value={profile.preferences.featureFlags.themes}
-                        onChange={() => setProfile({ 
-                          ...profile, 
-                          preferences: { 
-                            ...profile.preferences, 
-                            featureFlags: { ...profile.preferences.featureFlags, themes: !profile.preferences.featureFlags.themes } 
-                          } 
-                        })}
-                        description="Access premium OS and texture themes"
-                      />
-                      <SettingToggle 
-                        label="Experimental Lab" 
-                        icon={Lightbulb} 
-                        value={profile.preferences.featureFlags.experimental}
-                        onChange={() => setProfile({ 
-                          ...profile, 
-                          preferences: { 
-                            ...profile.preferences, 
-                            featureFlags: { ...profile.preferences.featureFlags, experimental: !profile.preferences.featureFlags.experimental } 
-                          } 
-                        })}
-                        description="Unstable tools and early access features"
-                      />
+                      <AnimatePresence>
+                        {showAllVersions && (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden mt-6 space-y-8"
+                          >
+                            {APP_VERSION_HISTORY.slice(1).map((item) => (
+                              <div key={item.version} className="relative pl-6 border-l-2 border-gray-100 dark:border-gray-800">
+                                <div className="flex flex-col">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-black text-gray-700 dark:text-gray-300">v{item.version}</span>
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{item.date}</span>
+                                  </div>
+                                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed mb-2">{item.notes}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </SettingsSection>
 
