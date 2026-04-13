@@ -59,6 +59,7 @@ interface Coin {
   rarity: Rarity;
   summary: string;
   image?: string;
+  imageId?: string;
   folderId: string;
   dateAdded: number;
   lastOpened: number;
@@ -740,9 +741,66 @@ class ErrorBoundary extends React.Component<any, any> {
 
 // --- Storage Helper ---
 
+const imageStorage = {
+  dbName: 'coin-images-db',
+  storeName: 'images',
+  
+  init: (): Promise<IDBDatabase> => {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(imageStorage.dbName, 1);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains(imageStorage.storeName)) {
+          request.result.createObjectStore(imageStorage.storeName);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  },
+
+  save: async (id: string, blob: Blob | string) => {
+    try {
+      const db = await imageStorage.init();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(imageStorage.storeName, 'readwrite');
+        transaction.objectStore(imageStorage.storeName).put(blob, id);
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(transaction.error);
+      });
+    } catch (e) {
+      console.error('Failed to save image to IndexedDB:', e);
+      return false;
+    }
+  },
+
+  load: async (id: string): Promise<string | null> => {
+    try {
+      const db = await imageStorage.init();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(imageStorage.storeName, 'readonly');
+        const request = transaction.objectStore(imageStorage.storeName).get(id);
+        request.onsuccess = () => {
+          const result = request.result;
+          if (!result) return resolve(null);
+          if (result instanceof Blob) {
+            resolve(URL.createObjectURL(result));
+          } else {
+            resolve(result);
+          }
+        };
+        request.onerror = () => reject(request.error);
+      });
+    } catch (e) {
+      console.error('Failed to load image from IndexedDB:', e);
+      return null;
+    }
+  }
+};
+
 const storage = {
   save: (key: string, data: any) => {
     try {
+      if (data === undefined || data === null) return;
       const json = JSON.stringify(data);
       const compressed = LZString.compressToUTF16(json);
       localStorage.setItem(key, compressed);
@@ -751,21 +809,26 @@ const storage = {
     }
   },
   load: (key: string) => {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
     try {
-      // Try decompressing
-      const decompressed = LZString.decompressFromUTF16(raw);
-      if (decompressed) return JSON.parse(decompressed);
-      // Fallback to plain JSON
-      return JSON.parse(raw);
-    } catch (e) {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      
+      let parsed;
       try {
-        return JSON.parse(raw);
-      } catch (e2) {
-        console.error('Failed to load data:', e2);
-        return null;
+        const decompressed = LZString.decompressFromUTF16(raw);
+        parsed = decompressed ? JSON.parse(decompressed) : JSON.parse(raw);
+      } catch (e) {
+        parsed = JSON.parse(raw);
       }
+      
+      // Basic validation
+      if (key.includes('collection') && !Array.isArray(parsed)) return null;
+      if (key.includes('profile') && typeof parsed !== 'object') return null;
+      
+      return parsed;
+    } catch (e) {
+      console.error('Failed to load data:', e);
+      return null;
     }
   }
 };
@@ -773,6 +836,44 @@ const storage = {
 // --- Main App ---
 
 // --- Components ---
+
+const CoinImage = React.memo(({ coin, className, motionProps }: { coin: Coin; className?: string; motionProps?: any }) => {
+  const [src, setSrc] = useState<string | undefined>(coin.image);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (coin.imageId) {
+      imageStorage.load(coin.imageId).then(url => {
+        if (url && isMounted) setSrc(url);
+      });
+    } else {
+      setSrc(coin.image);
+    }
+    return () => { isMounted = false; };
+  }, [coin.imageId, coin.image]);
+
+  if (motionProps) {
+    return (
+      <motion.img 
+        src={src || 'https://picsum.photos/seed/coin/200/200'} 
+        alt={coin.name}
+        className={className}
+        referrerPolicy="no-referrer"
+        {...motionProps}
+      />
+    );
+  }
+
+  return (
+    <img 
+      src={src || 'https://picsum.photos/seed/coin/200/200'} 
+      alt={coin.name}
+      className={className}
+      referrerPolicy="no-referrer"
+      loading="lazy"
+    />
+  );
+});
 
 interface MindMapProps {
   coins: Coin[];
@@ -784,7 +885,7 @@ interface MindMapProps {
   setExpandedNodes: (nodes: Set<string>) => void;
 }
 
-const MindMap = ({ coins, expandedNodes, toggleNode, openCoin, addLog, setActiveTab, setExpandedNodes }: MindMapProps) => {
+const MindMap = React.memo(({ coins, expandedNodes, toggleNode, openCoin, addLog, setActiveTab, setExpandedNodes }: MindMapProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const shouldReduceMotion = useReducedMotion();
   const springConfig = shouldReduceMotion ? { type: 'tween', duration: 0.2 } : SPRING_CONFIG;
@@ -1001,7 +1102,7 @@ const MindMap = ({ coins, expandedNodes, toggleNode, openCoin, addLog, setActive
       </div>
     </div>
   );
-};
+});
 
 const AmbientBackground = ({ enabled }: { enabled: boolean }) => {
   if (!enabled) return null;
@@ -1092,6 +1193,17 @@ export default function App() {
   const [isSafeMode, setIsSafeMode] = useState(() => {
     return localStorage.getItem('coin-safe-mode') === 'true';
   });
+
+  const [systemIsDark, setSystemIsDark] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setSystemIsDark(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => setSystemIsDark(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
 
   const [isAppReady, setIsAppReady] = useState(false);
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
@@ -1339,35 +1451,16 @@ export default function App() {
     const themeClasses = THEME_CATEGORIES.flatMap(c => c.themes.map(t => `theme-${t.id}`));
     body.classList.remove(...themeClasses);
     
-    const applyAppearance = (isDark: boolean) => {
-      root.classList.toggle('dark', isDark);
-    };
-
-    // Handle Appearance Mode
-    if (appearance === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      applyAppearance(mediaQuery.matches);
-      
-      const listener = (e: MediaQueryListEvent) => applyAppearance(e.matches);
-      mediaQuery.addEventListener('change', listener);
-      
-      // Apply Theme Class
-      body.classList.add(`theme-${theme}`);
-      
-      // Apply Font
-      const selectedFont = FONTS.find(f => f.id === fontId) || FONTS[0];
-      root.style.setProperty('--font-sans', selectedFont.family);
-      
-      return () => mediaQuery.removeEventListener('change', listener);
-    } else {
-      applyAppearance(appearance === 'dark');
-      body.classList.add(`theme-${theme}`);
-      
-      // Apply Font
-      const selectedFont = FONTS.find(f => f.id === fontId) || FONTS[0];
-      root.style.setProperty('--font-sans', selectedFont.family);
-    }
-  }, [profile.preferences.theme, profile.preferences.appearanceMode, profile.preferences.fontFamily]);
+    const isDark = appearance === 'system' ? systemIsDark : appearance === 'dark';
+    root.classList.toggle('dark', isDark);
+    
+    // Apply Theme Class
+    body.classList.add(`theme-${theme}`);
+    
+    // Apply Font
+    const selectedFont = FONTS.find(f => f.id === fontId) || FONTS[0];
+    root.style.setProperty('--font-sans', selectedFont.family);
+  }, [profile.preferences.theme, profile.preferences.appearanceMode, profile.preferences.fontFamily, systemIsDark]);
 
   const shouldReduceMotion = useReducedMotion();
   const springConfig = shouldReduceMotion ? { type: 'tween', duration: 0.2 } : SPRING_CONFIG;
@@ -2518,9 +2611,17 @@ export default function App() {
     }
   };
 
-  const addCoin = (e: FormEvent) => {
+  const addCoin = async (e: FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
+
+    let imageId = isEditing?.imageId;
+    if (!newImage) {
+      imageId = undefined;
+    } else if (newImage !== isEditing?.image) {
+      imageId = crypto.randomUUID();
+      await imageStorage.save(imageId, newImage);
+    }
 
     const coinData = {
       name: newName.trim(),
@@ -2529,6 +2630,7 @@ export default function App() {
       rarity: newRarity,
       summary: newSummary,
       image: newImage,
+      imageId,
       folderId: newFolderId,
       amountPaid: parseFloat(newAmountPaid) || 0,
       tags: newTags,
@@ -2585,6 +2687,8 @@ export default function App() {
     }
 
     resetForm();
+    setIsAdding(false);
+    setIsEditing(null);
   };
 
   const handleFusion = (ids: string[]) => {
@@ -3155,8 +3259,12 @@ export default function App() {
                 onClick={() => openCoin(coin)}
                 className="ios-surface p-3 flex items-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-all h-[64px]"
               >
-                <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex-shrink-0 overflow-hidden">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" width={40} height={40} />}
+                <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  {coin.image || coin.imageId ? (
+                    <CoinImage coin={coin} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-black text-gray-400">{coin.type}</span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-xs font-black truncate h-[16px]">{coin.name}</h3>
@@ -3178,8 +3286,12 @@ export default function App() {
                 onClick={() => openCoin(coin)}
                 className="w-64 flex-shrink-0 snap-center ios-surface p-4 space-y-4 cursor-pointer h-[320px]"
               >
-                <div className="aspect-square rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden h-[224px]">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" width={224} height={224} />}
+                <div className="aspect-square rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center">
+                  {coin.image || coin.imageId ? (
+                    <CoinImage coin={coin} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-4xl font-black text-gray-300">{coin.type}</span>
+                  )}
                 </div>
                 <div className="h-[40px]">
                   <h3 className="text-sm font-black truncate h-[20px]">{coin.name}</h3>
@@ -3200,8 +3312,12 @@ export default function App() {
                 onClick={() => openCoin(coin)}
                 className={`ios-surface p-4 flex flex-col gap-3 cursor-pointer ${idx % 3 === 0 ? 'row-span-2' : ''}`}
               >
-                <div className={`rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden ${idx % 3 === 0 ? 'h-48' : 'h-32'}`}>
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                <div className={`rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center ${idx % 3 === 0 ? 'h-48' : 'h-32'}`}>
+                  {coin.image || coin.imageId ? (
+                    <CoinImage coin={coin} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-black text-gray-300">{coin.type}</span>
+                  )}
                 </div>
                 <h3 className="text-xs font-black truncate">{coin.name}</h3>
               </motion.div>
@@ -3270,8 +3386,12 @@ export default function App() {
                 onClick={() => openCoin(coin)}
                 className="ios-surface overflow-hidden cursor-pointer group h-[240px]"
               >
-                <div className="aspect-video bg-gray-100 dark:bg-gray-800 relative h-full">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" width={600} height={337} />}
+                <div className="aspect-video bg-gray-100 dark:bg-gray-800 relative h-full flex items-center justify-center overflow-hidden">
+                  {coin.image || coin.imageId ? (
+                    <CoinImage coin={coin} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  ) : (
+                    <span className="text-4xl font-black text-gray-200 dark:text-gray-700">{coin.type}</span>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
                     <h3 className="text-white font-black text-xl tracking-tighter truncate w-full">{coin.name}</h3>
                   </div>
@@ -3292,8 +3412,12 @@ export default function App() {
               animate={{ opacity: 1, scale: 1 }}
               className="ios-surface p-8 text-center space-y-6"
             >
-              <div className="w-48 h-48 mx-auto rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shadow-2xl premium-border">
-                {currentCoin.image && <img src={currentCoin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+              <div className="w-48 h-48 mx-auto rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shadow-2xl premium-border flex items-center justify-center">
+                {currentCoin.image || currentCoin.imageId ? (
+                  <CoinImage coin={currentCoin} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl font-black text-gray-300">{currentCoin.type}</span>
+                )}
               </div>
               <div>
                 <h2 className="text-2xl font-black tracking-tighter mb-2">{currentCoin.name}</h2>
@@ -3334,8 +3458,12 @@ export default function App() {
                 onClick={() => openCoin(coin)}
                 className="aspect-square ios-surface p-1 cursor-pointer overflow-hidden group"
               >
-                <div className="w-full h-full rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden relative">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                <div className="w-full h-full rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden relative flex items-center justify-center">
+                  {coin.image || coin.imageId ? (
+                    <CoinImage coin={coin} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-lg font-black text-gray-300">{coin.type}</span>
+                  )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] text-white font-black uppercase text-center p-1">
                     {coin.year}
                   </div>
@@ -3355,8 +3483,12 @@ export default function App() {
                 onClick={() => openCoin(coin)}
                 className="ios-surface overflow-hidden flex h-32 cursor-pointer"
               >
-                <div className="w-1/3 bg-gray-100 dark:bg-gray-800 h-full">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" width={128} height={128} />}
+                <div className="w-1/3 bg-gray-100 dark:bg-gray-800 h-full flex items-center justify-center overflow-hidden">
+                  {coin.image || coin.imageId ? (
+                    <CoinImage coin={coin} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-black text-gray-300">{coin.type}</span>
+                  )}
                 </div>
                 <div className="flex-1 p-4 flex flex-col justify-center">
                   <h3 className="text-sm font-black mb-1 truncate h-[20px]">{coin.name}</h3>
@@ -3380,8 +3512,12 @@ export default function App() {
                   clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
                 }}
               >
-                <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 h-full w-full">
-                  {coin.image && <img src={coin.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" width={96} height={112} />}
+                <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 h-full w-full flex items-center justify-center overflow-hidden">
+                  {coin.image || coin.imageId ? (
+                    <CoinImage coin={coin} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl font-black text-gray-300">{coin.type}</span>
+                  )}
                   <div className="absolute inset-0 bg-blue-600/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-black">
                     {coin.year}
                   </div>
@@ -3810,13 +3946,10 @@ export default function App() {
           )}
           {!profile.preferences.textMode && (
             <div className={`${isCompact ? 'w-14 h-14' : 'w-20 h-20'} rounded-2xl bg-gray-50 dark:bg-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner border border-gray-100/50 dark:border-gray-800/50 image-reserve`}>
-              {coin.image ? (
-                <img 
-                  src={coin.image} 
-                  alt={coin.name} 
-                  loading="lazy"
+              {coin.image || coin.imageId ? (
+                <CoinImage 
+                  coin={coin}
                   className="w-full h-full object-cover" 
-                  referrerPolicy="no-referrer" 
                 />
               ) : (
                 <span className={`${isCompact ? 'text-lg' : 'text-2xl'} font-black ${
@@ -5609,18 +5742,16 @@ export default function App() {
                   </motion.div>
                 ) : (
                   <div className="grid grid-cols-3 gap-3">
-                    {coins.filter(c => c.image).map(coin => (
+                    {coins.filter(c => c.image || c.imageId).map(coin => (
                       <motion.button
                         key={coin.id}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => openCoin(coin)}
-                        className="aspect-square bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-2 shadow-sm overflow-hidden"
+                        className="aspect-square bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-2 shadow-sm overflow-hidden flex items-center justify-center"
                       >
-                        <img 
-                          src={coin.image!} 
-                          alt={coin.name} 
+                        <CoinImage 
+                          coin={coin}
                           className="w-full h-full object-contain"
-                          referrerPolicy="no-referrer"
                         />
                       </motion.button>
                     ))}
@@ -6746,14 +6877,14 @@ export default function App() {
                     }`} />
                   )}
 
-                  {selectedCoin.image ? (
-                    <motion.img 
-                      initial={{ scale: 1.2, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      src={selectedCoin.image} 
-                      alt={selectedCoin.name} 
+                  {selectedCoin.image || selectedCoin.imageId ? (
+                    <CoinImage 
+                      coin={selectedCoin}
                       className="w-full h-full object-cover relative z-10" 
-                      referrerPolicy="no-referrer"
+                      motionProps={{
+                        initial: { scale: 1.2, opacity: 0 },
+                        animate: { scale: 1, opacity: 1 }
+                      }}
                     />
                   ) : (
                     <motion.div 
@@ -7231,8 +7362,8 @@ export default function App() {
                         className="bg-white dark:bg-gray-900 rounded-[2.5rem] p-6 flex flex-col items-center text-center"
                       >
                         <div className="w-32 h-32 bg-gray-50 dark:bg-gray-800 rounded-3xl mb-6 flex items-center justify-center overflow-hidden shadow-inner">
-                          {coin.image ? (
-                            <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" />
+                          {coin.image || coin.imageId ? (
+                            <CoinImage coin={coin} className="w-full h-full object-cover" />
                           ) : (
                             <span className="text-4xl font-black text-gray-300">{coin.type}</span>
                           )}
