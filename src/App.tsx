@@ -13,8 +13,20 @@ import {
   Zap, Target, Gift, RefreshCw, RefreshCcw, Eye, EyeOff, Check, Lock, Unlock, Tag, TrendingUp,
   Share2, Columns, History, Lightbulb, Coins, Shield, Database, Layout,
   Monitor, Smartphone, Activity, Award, Palette, Gauge, Layers, Moon, Map, Flag,
-  BookOpen, Puzzle, PlayCircle
+  BookOpen, Puzzle, PlayCircle, BarChart2, Calendar, Maximize2
 } from 'lucide-react';
+import { 
+  ResponsiveContainer, 
+  PieChart as RePieChart, 
+  Pie, 
+  Cell, 
+  Tooltip as ReTooltip, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid 
+} from 'recharts';
 import { removeBackground } from '@imgly/background-removal';
 import LZString from 'lz-string';
 import { GoogleGenAI } from "@google/genai";
@@ -1532,6 +1544,8 @@ export default function App() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [selectedCoinIds, setSelectedCoinIds] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [expandedChart, setExpandedChart] = useState<string | null>(null);
+  const [activeInsightIndex, setActiveInsightIndex] = useState(0);
   const [activeBulkMenu, setActiveBulkMenu] = useState<'move' | 'type' | 'price' | null>(null);
   const [isApplyingBulkAction, setIsApplyingBulkAction] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -2561,6 +2575,15 @@ export default function App() {
       setProfile(prev => ({ ...prev, narrativeProgress: newNarrativeProgress }));
     }
   }, [coins.length]);
+
+  useEffect(() => {
+    if (activeTab === 'stats') {
+      const interval = setInterval(() => {
+        setActiveInsightIndex(prev => (prev + 1) % 4);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     // Mission: Data Analyst
@@ -5838,179 +5861,343 @@ export default function App() {
             {activeTab === 'stats' && (
               <motion.div
                 key="stats"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                className="space-y-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="space-y-8 pb-32"
               >
-                {/* Suggestion */}
-                <div className="bg-blue-600 p-6 rounded-[2.5rem] text-white shadow-xl shadow-blue-100 dark:shadow-none relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                {/* Top: Progress Card */}
+                <motion.div 
+                  layoutId="stats-hero"
+                  className="ios-surface p-8 bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-2xl shadow-blue-500/20 relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl animate-pulse" />
                   <div className="relative z-10">
-                    <p className="text-blue-100 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Daily Suggestion</p>
-                    <h3 className="text-2xl font-black leading-tight italic">"{suggestion}"</h3>
-                  </div>
-                </div>
+                    <div className="flex justify-between items-start mb-8">
+                      <div>
+                        <p className="text-blue-100/80 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Current Rank</p>
+                        <h2 className="text-4xl font-black tracking-tighter italic">{currentLevel.name}</h2>
+                      </div>
+                      <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+                        <Trophy size={32} className="text-white drop-shadow-lg" />
+                      </div>
+                    </div>
 
-                {/* Pattern Insights */}
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-end">
+                        <p className="text-blue-100/80 text-[10px] font-black uppercase tracking-[0.2em]">XP Progress</p>
+                        <p className="text-xs font-black tracking-tight">{profile.points} / {nextLevel?.minPoints || 'MAX'} XP</p>
+                      </div>
+                      <div className="h-3 bg-white/10 rounded-full overflow-hidden shadow-inner border border-white/5">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progressToNextLevel}%` }}
+                          transition={{ duration: 1.5, ease: "circOut" }}
+                          className="h-full bg-gradient-to-r from-blue-300 to-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                        />
+                      </div>
+                      {nextLevel && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <Zap size={12} className="text-blue-200" />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-blue-100/60">
+                            Next Level: {nextLevel.name}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Section 1: Highlights (Horizontal Scroll) */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-2">
-                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200">Pattern Insights</h3>
-                    <TrendingUp size={18} className="text-blue-600" />
+                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200">Highlights</h3>
+                    <Star size={18} className="text-amber-500" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="ios-surface p-5 h-[86px] flex flex-col justify-center">
+                  <div className="flex gap-4 overflow-x-auto no-scrollbar px-2 pb-4 -mx-2">
+                    {/* Most Collected */}
+                    <motion.div 
+                      whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                      className="flex-shrink-0 w-[200px] ios-surface p-5 bg-blue-50/50 dark:bg-blue-900/10 border-blue-100/50 dark:border-blue-800/30"
+                    >
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 mb-4">
+                        <Grid size={20} />
+                      </div>
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Most Collected</p>
-                      <p className="text-xl font-black text-gray-800 dark:text-gray-200 truncate">{stats.insights.mostCollectedType}</p>
-                    </div>
-                    <div className="ios-surface p-5 h-[86px] flex flex-col justify-center">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Peak Year</p>
-                      <p className="text-xl font-black text-gray-800 dark:text-gray-200 truncate">{stats.insights.mostCollectedYear || 'N/A'}</p>
-                    </div>
-                    <div className="ios-surface p-5 col-span-2 h-[86px] flex flex-col justify-center">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Avg. Paid per Coin</p>
-                      <p className="text-xl font-black text-green-600 dark:text-green-400 truncate">£{stats.insights.averagePaid.toFixed(2)}</p>
-                    </div>
+                      <p className="text-lg font-black text-gray-800 dark:text-gray-200 truncate">{stats.insights.mostCollectedType}</p>
+                      <p className="text-[10px] font-bold text-blue-600 mt-2">{stats.counts[stats.insights.mostCollectedType]} Coins</p>
+                    </motion.div>
+
+                    {/* Rarest Coin */}
+                    {stats.insights.rarestCoin && (
+                      <motion.div 
+                        whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                        onClick={() => openCoin(stats.insights.rarestCoin!)}
+                        className="flex-shrink-0 w-[200px] ios-surface p-5 bg-amber-50/50 dark:bg-amber-900/10 border-amber-100/50 dark:border-amber-800/30"
+                      >
+                        <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center text-amber-600 mb-4">
+                          <Award size={20} />
+                        </div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Rarest Find</p>
+                        <p className="text-lg font-black text-gray-800 dark:text-gray-200 truncate">{stats.insights.rarestCoin.name}</p>
+                        <p className="text-[10px] font-bold text-amber-600 mt-2">{stats.insights.rarestCoin.rarity}</p>
+                      </motion.div>
+                    )}
+
+                    {/* Monthly Activity */}
+                    <motion.div 
+                      whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                      className="flex-shrink-0 w-[200px] ios-surface p-5 bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100/50 dark:border-emerald-800/30"
+                    >
+                      <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
+                        <Activity size={20} />
+                      </div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Recent Activity</p>
+                      <p className="text-lg font-black text-gray-800 dark:text-gray-200 truncate">
+                        {(Object.values(stats.monthlyTotals).slice(-1)[0] as { count: number })?.count || 0} Added
+                      </p>
+                      <p className="text-[10px] font-bold text-emerald-600 mt-2">This Month</p>
+                    </motion.div>
                   </div>
                 </div>
 
-                {/* Smart Goals */}
+                {/* Section 2: Achievements (Badges Grid) */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Collection Goals</h3>
-                  <div className="grid gap-4">
-                    {stats.goals.map(goal => (
-                      <div key={goal.id} className="bg-white dark:bg-gray-900 p-5 h-[84px] rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden flex flex-col justify-center">
-                        {goal.isCompleted && (
-                          <div className="absolute top-0 right-0 bg-green-500 text-white px-3 py-1 rounded-bl-xl text-[8px] font-black uppercase tracking-widest">Completed</div>
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200">Achievements</h3>
+                    <Trophy size={18} className="text-blue-600" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    {profile.badges.map(badge => (
+                      <motion.div 
+                        key={badge.id}
+                        whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                        onClick={() => setFeedback({ message: badge.isUnlocked ? `${badge.name}: ${badge.description}` : `Locked: ${badge.description}`, type: 'info' })}
+                        className={`ios-surface p-4 flex flex-col items-center justify-center text-center relative overflow-hidden ${!badge.isUnlocked ? 'opacity-50 grayscale' : ''}`}
+                      >
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${
+                          badge.isUnlocked ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                        }`}>
+                          {badge.id.includes('collector') ? <LayoutGrid size={24} /> :
+                           badge.id.includes('rare') ? <Star size={24} /> :
+                           badge.id.includes('streak') ? <Flame size={24} /> : <Award size={24} />}
+                        </div>
+                        <p className="text-[9px] font-black uppercase tracking-widest leading-tight line-clamp-2">{badge.name}</p>
+                        {!badge.isUnlocked && (
+                          <div className="absolute inset-0 bg-white/20 dark:bg-black/20 backdrop-blur-[2px] flex items-center justify-center">
+                            <Lock size={14} className="text-gray-400" />
+                          </div>
                         )}
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="font-bold text-gray-800 dark:text-gray-200 truncate pr-4">{goal.title}</span>
-                          <span className="text-xs font-black text-gray-400 flex-shrink-0">{Math.round(goal.current)} / {goal.target}</span>
-                        </div>
-                        <div className="h-2 bg-gray-50 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.min((goal.current / goal.target) * 100, 100)}%` }}
-                            className={`h-full rounded-full ${goal.isCompleted ? 'bg-green-500' : 'bg-blue-500'}`}
-                          />
-                        </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
 
-                {/* Progress Bars */}
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between px-2">
-                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200">Progress by Type</h3>
-                    <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{stats.completion}% Total</span>
-                  </div>
-                  <div className="grid gap-4">
-                    {[...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations].map((type) => {
-                      const count = stats.counts[type] || 0;
-                      const percent = Math.min((count / TARGET_PER_TYPE) * 100, 100);
-                      return (
-                        <div key={type} className="bg-white dark:bg-gray-900 p-4 h-[108px] rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4 flex flex-col justify-center">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${
-                                type === '50p' ? 'bg-blue-50 text-blue-600' :
-                                type === '£1' ? 'bg-indigo-50 text-indigo-600' : 
-                                type === '£2' ? 'bg-purple-50 text-purple-600' : 
-                                ['Farthing', 'Half Penny', 'Penny'].includes(type) ? 'bg-amber-50 text-amber-600' :
-                                ['Threepence', 'Sixpence', 'Shilling'].includes(type) ? 'bg-emerald-50 text-emerald-600' :
-                                ['Florin', 'Half Crown', 'Crown'].includes(type) ? 'bg-rose-50 text-rose-600' :
-                                'bg-gray-50 text-gray-600'
-                              }`}>
-                                {type}
-                              </div>
-                              <span className="font-black text-gray-800 dark:text-gray-200 truncate">{type} Coins</span>
-                            </div>
-                            <span className="text-sm font-black text-gray-400 flex-shrink-0">{count} / {TARGET_PER_TYPE}</span>
-                          </div>
-                          <div className="h-3 bg-gray-50 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${percent}%` }}
-                              transition={{ duration: 1, ease: "easeOut" }}
-                              className={`h-full rounded-full ${
-                                type === '50p' ? 'bg-blue-500' :
-                                type === '£1' ? 'bg-indigo-500' :
-                                type === '£2' ? 'bg-purple-500' :
-                                ['Farthing', 'Half Penny', 'Penny'].includes(type) ? 'bg-amber-500' :
-                                ['Threepence', 'Sixpence', 'Shilling'].includes(type) ? 'bg-emerald-500' :
-                                ['Florin', 'Half Crown', 'Crown'].includes(type) ? 'bg-rose-500' :
-                                'bg-gray-400'
-                              }`}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Monthly Totals */}
+                {/* Section 3: Charts */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Collection History</h3>
-                  <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
-                    {Object.entries(stats.monthlyTotals).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6).map(([month, data]) => {
-                      const { count, spend } = data as { count: number; spend: number };
-                      const [year, m] = month.split('-');
-                      const date = new Date(parseInt(year), parseInt(m) - 1);
-                      const monthName = date.toLocaleString('default', { month: 'long' });
-                      return (
-                        <div key={month} className="p-4 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-gray-600 dark:text-gray-400">{monthName} {year}</span>
-                            <span className="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest">£{spend.toFixed(2)} Spent</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-blue-600 dark:text-blue-400">+{count}</span>
-                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Coins</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {Object.keys(stats.monthlyTotals).length === 0 && (
-                      <div className="p-10 text-center text-gray-400 italic font-medium">No history yet. Start adding coins!</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Duplicates */}
-                {stats.duplicateList.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200 px-2">Duplicates Tracked</h3>
-                    <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden shadow-sm">
-                      {stats.duplicateList.map(({ count, coin, dates }) => (
-                        <div key={coin.id} className="p-4 flex flex-col gap-3 group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-[10px] font-black text-gray-400 shadow-inner">
-                                {coin.type}
-                              </div>
-                              <div>
-                                <p className="font-bold text-gray-800 dark:text-gray-200">{coin.name}</p>
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{coin.year}</p>
-                              </div>
-                            </div>
-                            <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
-                              {count} Owned
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {dates.sort((a, b) => b - a).map((date, idx) => (
-                              <span key={idx} className="text-[9px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md">
-                                {new Date(date).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200">Analytics</h3>
+                    <div className="flex gap-2">
+                      <motion.button 
+                        whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                        onClick={() => setExpandedChart(expandedChart === 'pie' ? null : 'pie')}
+                        className={`p-2 rounded-xl transition-colors ${expandedChart === 'pie' ? 'bg-blue-600 text-white' : 'ios-button text-gray-400'}`}
+                      >
+                        <PieChart size={18} />
+                      </motion.button>
+                      <motion.button 
+                        whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                        onClick={() => setExpandedChart(expandedChart === 'timeline' ? null : 'timeline')}
+                        className={`p-2 rounded-xl transition-colors ${expandedChart === 'timeline' ? 'bg-blue-600 text-white' : 'ios-button text-gray-400'}`}
+                      >
+                        <BarChart2 size={18} />
+                      </motion.button>
                     </div>
                   </div>
-                )}
+
+                  <div className="grid gap-4">
+                    {/* Denomination Split (Pie) */}
+                    <motion.div 
+                      layout
+                      className={`ios-surface p-6 overflow-hidden ${expandedChart === 'pie' ? 'fixed inset-4 z-[100] h-auto flex flex-col' : 'h-[300px]'}`}
+                    >
+                      <div className="flex justify-between items-center mb-6">
+                        <div>
+                          <h4 className="font-black text-gray-800 dark:text-gray-200">Denomination Split</h4>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Collection Diversity</p>
+                        </div>
+                        {expandedChart === 'pie' && (
+                          <button onClick={() => setExpandedChart(null)} className="p-2 ios-button text-gray-400"><X size={20} /></button>
+                        )}
+                      </div>
+                      <div className="flex-1 min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RePieChart>
+                            <Pie
+                              data={Object.entries(stats.counts).map(([name, value]) => ({ name, value }))}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={expandedChart === 'pie' ? 80 : 60}
+                              outerRadius={expandedChart === 'pie' ? 120 : 90}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {Object.entries(stats.counts).map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e'][index % 8]} />
+                              ))}
+                            </Pie>
+                            <ReTooltip 
+                              contentStyle={{ 
+                                borderRadius: '16px', 
+                                border: 'none', 
+                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                                backgroundColor: profile.preferences.appearanceMode === 'dark' ? '#111827' : '#ffffff'
+                              }}
+                            />
+                          </RePieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </motion.div>
+
+                    {/* Collection Timeline (Area) */}
+                    <motion.div 
+                      layout
+                      className={`ios-surface p-6 overflow-hidden ${expandedChart === 'timeline' ? 'fixed inset-4 z-[100] h-auto flex flex-col' : 'h-[300px]'}`}
+                    >
+                      <div className="flex justify-between items-center mb-6">
+                        <div>
+                          <h4 className="font-black text-gray-800 dark:text-gray-200">Collection Growth</h4>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Coins Added Over Time</p>
+                        </div>
+                        {expandedChart === 'timeline' && (
+                          <button onClick={() => setExpandedChart(null)} className="p-2 ios-button text-gray-400"><X size={20} /></button>
+                        )}
+                      </div>
+                      <div className="flex-1 min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={Object.entries(stats.monthlyTotals).sort((a, b) => a[0].localeCompare(b[0])).map(([month, data]) => ({ month, count: (data as { count: number }).count }))}>
+                            <defs>
+                              <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={profile.preferences.appearanceMode === 'dark' ? '#374151' : '#f3f4f6'} />
+                            <XAxis 
+                              dataKey="month" 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{ fontSize: 10, fontWeight: 700, fill: '#9ca3af' }}
+                              tickFormatter={(val) => {
+                                const [y, m] = val.split('-');
+                                return new Date(parseInt(y), parseInt(m)-1).toLocaleString('default', { month: 'short' });
+                              }}
+                            />
+                            <YAxis hide />
+                            <ReTooltip 
+                              contentStyle={{ 
+                                borderRadius: '16px', 
+                                border: 'none', 
+                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                                backgroundColor: profile.preferences.appearanceMode === 'dark' ? '#111827' : '#ffffff'
+                              }}
+                            />
+                            <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+
+                {/* Section 4: Insights */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200">Smart Insights</h3>
+                    <Lightbulb size={18} className="text-blue-600" />
+                  </div>
+                  <div className="relative h-[100px]">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeInsightIndex}
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 1.05, y: -10 }}
+                        className="absolute inset-0 ios-surface p-6 flex items-center gap-4 bg-blue-600 text-white border-none shadow-xl shadow-blue-500/20"
+                      >
+                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                          {activeInsightIndex === 0 ? <TrendingUp size={24} /> :
+                           activeInsightIndex === 1 ? <Calendar size={24} /> :
+                           activeInsightIndex === 2 ? <Tag size={24} /> : <Zap size={24} />}
+                        </div>
+                        <div>
+                          <p className="text-blue-100/80 text-[10px] font-black uppercase tracking-widest mb-1">
+                            {activeInsightIndex === 0 ? 'Collection Trend' :
+                             activeInsightIndex === 1 ? 'Peak Activity' :
+                             activeInsightIndex === 2 ? 'Value Insight' : 'Daily Tip'}
+                          </p>
+                          <p className="font-bold text-sm leading-tight">
+                            {activeInsightIndex === 0 ? `You collect mostly ${stats.insights.mostCollectedType} coins.` :
+                             activeInsightIndex === 1 ? `Most active in ${stats.insights.mostCollectedYear || 'recent years'}.` :
+                             activeInsightIndex === 2 ? `Average paid per coin is £${stats.insights.averagePaid.toFixed(2)}.` :
+                             suggestion}
+                          </p>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+                </div>
+
+                {/* Section 5: Activity */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-black text-gray-800 dark:text-gray-200">Activity</h3>
+                    <Activity size={18} className="text-blue-600" />
+                  </div>
+                  
+                  {/* Streak Card */}
+                  <div className="ios-surface p-6 flex items-center justify-between bg-gradient-to-r from-orange-500 to-red-600 text-white border-none shadow-xl shadow-orange-500/20">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <Flame size={28} className="animate-bounce" />
+                      </div>
+                      <div>
+                        <p className="text-orange-100/80 text-[10px] font-black uppercase tracking-widest mb-1">Current Streak</p>
+                        <h4 className="text-2xl font-black tracking-tight">{profile.streak.current} Days</h4>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-orange-100/80 text-[10px] font-black uppercase tracking-widest mb-1">Best</p>
+                      <p className="text-lg font-black">{profile.streak.best}d</p>
+                    </div>
+                  </div>
+
+                  {/* Recent Additions */}
+                  <div className="ios-surface overflow-hidden divide-y divide-gray-50 dark:divide-gray-800/50">
+                    <div className="p-4 bg-gray-50/50 dark:bg-gray-800/30">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Recent Additions</p>
+                    </div>
+                    {coins.slice(-3).reverse().map(coin => (
+                      <motion.div 
+                        key={coin.id}
+                        whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                        onClick={() => openCoin(coin)}
+                        className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-[10px] font-black text-gray-400">
+                            {coin.type}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{coin.name}</p>
+                            <p className="text-[10px] font-bold text-gray-400">{new Date(coin.dateAdded).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-300" />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
               </motion.div>
             )}
 
