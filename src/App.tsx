@@ -61,7 +61,7 @@ type Rarity = 'Common' | 'Rare' | 'Very Rare';
 type SortOption = 'year' | 'denomination' | 'date' | 'month' | 'added' | 'opened' | 'name';
 type GroupOption = 'year' | 'denomination' | 'date' | 'month' | 'country' | 'none';
 type ExploreMode = 'timeline' | 'mindmap' | 'story';
-type LayoutType = 'grid' | 'list' | 'carousel' | 'masonry' | 'board' | 'timeline' | 'gallery' | 'spotlight' | 'compact' | 'split' | 'hexagon';
+type LayoutType = 'grid' | 'list' | 'carousel' | 'masonry' | 'board' | 'timeline' | 'gallery' | 'spotlight' | 'compact' | 'split' | 'hexagon' | 'card' | 'table';
 
 interface Coin {
   id: string;
@@ -3263,73 +3263,79 @@ export default function App() {
   const renderLayoutSwitcher = () => {
     if (!profile.preferences.showLayoutSwitcher) return null;
 
-    const layouts: { type: LayoutType; icon: any; label: string }[] = [
-      { type: 'grid', icon: LayoutGrid, label: 'Grid' },
-      { type: 'list', icon: ListIcon, label: 'List' },
-      { type: 'carousel', icon: PlayCircle, label: 'Carousel' },
-      { type: 'masonry', icon: Grid, label: 'Masonry' },
-      { type: 'board', icon: Columns, label: 'Board' },
-      { type: 'timeline', icon: History, label: 'Timeline' },
-      { type: 'gallery', icon: ImageIcon, label: 'Gallery' },
-      { type: 'spotlight', icon: Eye, label: 'Spotlight' },
-      { type: 'compact', icon: Smartphone, label: 'Compact' },
-      { type: 'split', icon: Layout, label: 'Split' },
-      { type: 'hexagon', icon: Zap, label: 'Hexagon' },
+    const layouts: { type: LayoutType; icon: any; label: string; summary: string }[] = [
+      { type: 'grid', icon: LayoutGrid, label: 'Grid', summary: "Balanced visual grid of coins" },
+      { type: 'card', icon: Layers, label: 'Card', summary: "Detailed coin view in clean text cards" },
+      { type: 'table', icon: BarChart2, label: 'Table', summary: "Structured columns for quick comparison" },
+      { type: 'list', icon: ListIcon, label: 'List', summary: "Simple vertical list with key details" },
+      { type: 'compact', icon: Smartphone, label: 'Compact', summary: "Dense single-line overview of coins" },
+      { type: 'carousel', icon: PlayCircle, label: 'Carousel', summary: "Swipe through coins one by one" },
+      { type: 'masonry', icon: Grid, label: 'Masonry', summary: "Dynamic stacked layout with varied sizes" },
+      { type: 'board', icon: Columns, label: 'Board', summary: "Grouped sections like a collection board" },
+      { type: 'timeline', icon: History, label: 'Timeline', summary: "Coins arranged by time and history" },
+      { type: 'gallery', icon: ImageIcon, label: 'Gallery', summary: "Visual showcase of coin images" },
+      { type: 'spotlight', icon: Eye, label: 'Spotlight', summary: "Focus on one coin at a time" },
+      { type: 'split', icon: Layout, label: 'Split', summary: "Dual view for comparison and browsing" },
+      { type: 'hexagon', icon: Zap, label: 'Hexagon', summary: "Unique geometric coin arrangement" },
     ];
 
-    const currentLayout = layouts.find(l => l.type === profile.preferences.layoutType) || layouts[0];
-
     return (
-      <div className="relative">
-        <motion.button 
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setShowLayoutDropdown(!showLayoutDropdown)}
-          className="flex items-center gap-2 px-3 py-1.5 ios-glass rounded-xl border border-white/20 dark:border-white/5 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm w-[120px] justify-center"
-        >
-          <currentLayout.icon size={14} className="text-blue-500" />
-          <span className="text-gray-900 dark:text-white hidden sm:inline">{currentLayout.label}</span>
-          <ChevronDown size={12} className={`text-gray-400 transition-transform duration-300 ${showLayoutDropdown ? 'rotate-180' : ''}`} />
-        </motion.button>
-
-        <AnimatePresence>
-          {showLayoutDropdown && (
-            <>
-              <div className="fixed inset-0 z-[100]" onClick={() => setShowLayoutDropdown(false)} />
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute top-full right-0 mt-2 w-48 ios-surface p-2 shadow-2xl z-[110] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
+      <div className="w-full overflow-x-auto no-scrollbar pb-6 pt-2 -mx-4 px-4">
+        <div className="flex gap-4 min-w-max">
+          {layouts.map((layout) => {
+            const isActive = profile.preferences.layoutType === layout.type;
+            const Icon = layout.icon;
+            
+            return (
+              <motion.button
+                key={layout.type}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setProfile(prev => ({
+                    ...prev,
+                    preferences: { ...prev.preferences, layoutType: layout.type }
+                  }));
+                  addLog(`Layout changed to ${layout.label}`, 'action');
+                }}
+                className={`flex flex-col items-start p-4 rounded-[2.5rem] transition-all w-[200px] text-left border-2 relative overflow-hidden ${
+                  isActive 
+                    ? 'bg-blue-600 border-blue-500 text-white shadow-2xl shadow-blue-500/30' 
+                    : 'ios-surface border-gray-100 dark:border-gray-800 text-gray-500 hover:border-blue-200 dark:hover:border-blue-900/30'
+                }`}
               >
-                <div className="max-h-64 overflow-y-auto no-scrollbar grid grid-cols-1 gap-1">
-                  {layouts.map(l => (
-                    <button
-                      key={l.type}
-                      onClick={() => {
-                        setProfile(prev => ({
-                          ...prev,
-                          preferences: { ...prev.preferences, layoutType: l.type }
-                        }));
-                        setShowLayoutDropdown(false);
-                        addLog(`Layout changed to ${l.label}`, 'action');
-                      }}
-                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
-                        profile.preferences.layoutType === l.type 
-                          ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' 
-                          : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400'
-                      }`}
-                    >
-                      <l.icon size={16} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{l.label}</span>
-                      {profile.preferences.layoutType === l.type && <Check size={12} className="ml-auto" />}
-                    </button>
-                  ))}
+                <div className={`w-full h-24 rounded-[1.5rem] flex items-center justify-center mb-4 relative overflow-hidden ${
+                  isActive ? 'bg-white/10' : 'bg-gray-50 dark:bg-gray-800'
+                }`}>
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="grid grid-cols-4 gap-1 p-2">
+                       {[...Array(16)].map((_, i) => <div key={i} className="aspect-square bg-current rounded-sm" />)}
+                    </div>
+                  </div>
+                  <Icon size={32} className={isActive ? 'text-white' : 'text-blue-500'} />
                 </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+                
+                <div className="px-1">
+                  <p className={`text-[13px] font-black uppercase tracking-widest mb-1 ${isActive ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                    {layout.label}
+                  </p>
+                  <p className={`text-[10px] font-bold leading-relaxed line-clamp-2 h-[30px] ${isActive ? 'text-blue-100' : 'text-gray-400'}`}>
+                    {layout.summary}
+                  </p>
+                </div>
+
+                {isActive && (
+                  <motion.div 
+                    layoutId="active-check"
+                    className="absolute top-4 right-4 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg"
+                  >
+                    <Check size={14} className="text-blue-600" />
+                  </motion.div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -3340,6 +3346,103 @@ export default function App() {
     const layout = profile.preferences.layoutType;
 
     switch (layout) {
+      case 'card':
+        return (
+          <div className="grid grid-cols-1 gap-4">
+            {coinsToRender.map(coin => (
+              <motion.div 
+                key={coin.id}
+                layout
+                onClick={() => openCoin(coin)}
+                className="ios-surface p-6 flex flex-col gap-4 cursor-pointer hover:shadow-lg transition-all"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center flex-shrink-0">
+                      {coin.image || coin.imageId ? (
+                        <CoinImage coin={coin} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xl font-black text-gray-300">{coin.type}</span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black tracking-tight">{coin.name}</h3>
+                      <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{coin.year} • {coin.type}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-blue-600">£{coin.amountPaid.toFixed(2)}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{coin.rarity}</p>
+                  </div>
+                </div>
+                {coin.summary && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed italic">"{coin.summary}"</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {coin.tags.map(tag => (
+                    <span key={tag} className="px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded-lg text-[9px] font-black uppercase tracking-widest text-gray-400">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case 'table':
+        return (
+          <div className="ios-surface overflow-hidden border border-gray-100 dark:border-gray-800">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Coin</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Year</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Type</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Rarity</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Price</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
+                  {coinsToRender.map(coin => (
+                    <tr 
+                      key={coin.id} 
+                      onClick={() => openCoin(coin)}
+                      className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center flex-shrink-0">
+                            {coin.image || coin.imageId ? (
+                              <CoinImage coin={coin} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[10px] font-black text-gray-400">{coin.type}</span>
+                            )}
+                          </div>
+                          <span className="text-xs font-bold truncate max-w-[120px]">{coin.name}</span>
+                        </div>
+                      </td>
+                      <td className="p-4 text-xs font-black text-gray-500">{coin.year}</td>
+                      <td className="p-4 text-xs font-bold text-gray-400">{coin.type}</td>
+                      <td className="p-4">
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                          coin.rarity === 'Very Rare' ? 'bg-red-50 text-red-600' :
+                          coin.rarity === 'Rare' ? 'bg-amber-50 text-amber-600' :
+                          'bg-gray-50 text-gray-500'
+                        }`}>
+                          {coin.rarity}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right text-xs font-black text-blue-600">£{coin.amountPaid.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+
       case 'list':
         return (
           <div className="space-y-2">
@@ -5267,28 +5370,28 @@ export default function App() {
                   </motion.button>
                 </div>
 
+                {/* Layout Picker */}
+                {renderLayoutSwitcher()}
+
                 {/* Sorting & Grouping Controls */}
-                <div className="flex flex-col gap-3 bg-white dark:bg-gray-900 p-4 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm h-[136px]">
+                <div className="flex flex-col gap-3 bg-white dark:bg-gray-900 p-4 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm">
                   <div className="flex items-center justify-between h-[32px]">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">View Options</span>
-                    <div className="flex items-center gap-2">
-                      {renderLayoutSwitcher()}
-                      <motion.button 
-                        whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
-                        transition={springConfig}
-                        onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupViewEnabled: !prev.preferences.groupViewEnabled } }))}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all w-[110px] h-[32px] justify-center ${
-                          profile.preferences.groupViewEnabled 
-                            ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20' 
-                            : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400'
-                        }`}
-                      >
-                        <Layers size={12} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">
-                          {profile.preferences.groupViewEnabled ? 'Grouping On' : 'Grouping Off'}
-                        </span>
-                      </motion.button>
-                    </div>
+                    <motion.button 
+                      whileTap={shouldReduceMotion ? {} : BUTTON_TAP}
+                      transition={springConfig}
+                      onClick={() => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupViewEnabled: !prev.preferences.groupViewEnabled } }))}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all w-[110px] h-[32px] justify-center ${
+                        profile.preferences.groupViewEnabled 
+                          ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20' 
+                          : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400'
+                      }`}
+                    >
+                      <Layers size={12} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">
+                        {profile.preferences.groupViewEnabled ? 'Grouping On' : 'Grouping Off'}
+                      </span>
+                    </motion.button>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2">
@@ -6358,11 +6461,13 @@ export default function App() {
                   <SettingsSection id="display" title="Display & Layout" icon={Layout}>
                     <SettingSelect 
                       label="Default View" 
-                      icon={Grid} 
+                      icon={Layout} 
                       value={profile.preferences.layoutType}
                       onChange={(val) => setProfile({ ...profile, preferences: { ...profile.preferences, layoutType: val as any } })}
                       options={[
                         { value: 'grid', label: 'Grid' },
+                        { value: 'card', label: 'Card' },
+                        { value: 'table', label: 'Table' },
                         { value: 'list', label: 'List' },
                         { value: 'carousel', label: 'Carousel' },
                         { value: 'masonry', label: 'Masonry' },
