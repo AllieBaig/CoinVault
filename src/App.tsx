@@ -256,6 +256,8 @@ interface Profile {
     denominationPrices: { [key: string]: number };
     layoutType: LayoutType;
     showLayoutSwitcher: boolean;
+    showHorizontalLayoutPicker: boolean;
+    enabledLayouts: LayoutType[];
     showOldCoins: boolean;
     currencyFilter: 'modern' | 'old' | 'both';
     visibleCountries: string[];
@@ -1303,6 +1305,8 @@ export default function App() {
           },
           layoutType: parsed.preferences?.layoutType ?? 'grid',
           showLayoutSwitcher: parsed.preferences?.showLayoutSwitcher ?? true,
+          showHorizontalLayoutPicker: parsed.preferences?.showHorizontalLayoutPicker ?? true,
+          enabledLayouts: parsed.preferences?.enabledLayouts ?? ['grid', 'list', 'carousel', 'masonry', 'board', 'timeline', 'gallery', 'spotlight', 'compact', 'split', 'hexagon', 'card', 'table'],
           showOldCoins: parsed.preferences?.showOldCoins ?? true,
           currencyFilter: parsed.preferences?.currencyFilter ?? 'both',
           visibleCountries: parsed.preferences?.visibleCountries ?? [],
@@ -1363,6 +1367,8 @@ export default function App() {
         },
         layoutType: 'grid',
         showLayoutSwitcher: true,
+        showHorizontalLayoutPicker: true,
+        enabledLayouts: ['grid', 'list', 'carousel', 'masonry', 'board', 'timeline', 'gallery', 'spotlight', 'compact', 'split', 'hexagon', 'card', 'table'],
         showOldCoins: true,
         currencyFilter: 'both',
         visibleCountries: EUROPEAN_COUNTRIES,
@@ -3263,79 +3269,149 @@ export default function App() {
   const renderLayoutSwitcher = () => {
     if (!profile.preferences.showLayoutSwitcher) return null;
 
-    const layouts: { type: LayoutType; icon: any; label: string; summary: string }[] = [
-      { type: 'grid', icon: LayoutGrid, label: 'Grid', summary: "Balanced visual grid of coins" },
-      { type: 'card', icon: Layers, label: 'Card', summary: "Detailed coin view in clean text cards" },
-      { type: 'table', icon: BarChart2, label: 'Table', summary: "Structured columns for quick comparison" },
-      { type: 'list', icon: ListIcon, label: 'List', summary: "Simple vertical list with key details" },
-      { type: 'compact', icon: Smartphone, label: 'Compact', summary: "Dense single-line overview of coins" },
-      { type: 'carousel', icon: PlayCircle, label: 'Carousel', summary: "Swipe through coins one by one" },
-      { type: 'masonry', icon: Grid, label: 'Masonry', summary: "Dynamic stacked layout with varied sizes" },
-      { type: 'board', icon: Columns, label: 'Board', summary: "Grouped sections like a collection board" },
-      { type: 'timeline', icon: History, label: 'Timeline', summary: "Coins arranged by time and history" },
-      { type: 'gallery', icon: ImageIcon, label: 'Gallery', summary: "Visual showcase of coin images" },
-      { type: 'spotlight', icon: Eye, label: 'Spotlight', summary: "Focus on one coin at a time" },
-      { type: 'split', icon: Layout, label: 'Split', summary: "Dual view for comparison and browsing" },
-      { type: 'hexagon', icon: Zap, label: 'Hexagon', summary: "Unique geometric coin arrangement" },
+    const allLayouts: { type: LayoutType; icon: any; label: string; summary: string; category: 'text' | 'visual' }[] = [
+      { type: 'grid', icon: LayoutGrid, label: 'Grid', summary: "Balanced visual grid of coins", category: 'visual' },
+      { type: 'card', icon: Layers, label: 'Card', summary: "Detailed coin view in clean text cards", category: 'text' },
+      { type: 'table', icon: BarChart2, label: 'Table', summary: "Structured columns for quick comparison", category: 'text' },
+      { type: 'list', icon: ListIcon, label: 'List', summary: "Simple vertical list with key details", category: 'text' },
+      { type: 'compact', icon: Smartphone, label: 'Compact', summary: "Dense single-line overview of coins", category: 'text' },
+      { type: 'carousel', icon: PlayCircle, label: 'Carousel', summary: "Swipe through coins one by one", category: 'visual' },
+      { type: 'masonry', icon: Grid, label: 'Masonry', summary: "Dynamic stacked layout with varied sizes", category: 'visual' },
+      { type: 'board', icon: Columns, label: 'Board', summary: "Grouped sections like a collection board", category: 'visual' },
+      { type: 'timeline', icon: History, label: 'Timeline', summary: "Coins arranged by time and history", category: 'visual' },
+      { type: 'gallery', icon: ImageIcon, label: 'Gallery', summary: "Visual showcase of coin images", category: 'visual' },
+      { type: 'spotlight', icon: Eye, label: 'Spotlight', summary: "Focus on one coin at a time", category: 'visual' },
+      { type: 'split', icon: Layout, label: 'Split', summary: "Dual view for comparison and browsing", category: 'visual' },
+      { type: 'hexagon', icon: Zap, label: 'Hexagon', summary: "Unique geometric coin arrangement", category: 'visual' },
     ];
 
-    return (
-      <div className="w-full overflow-x-auto no-scrollbar pb-6 pt-2 -mx-4 px-4">
-        <div className="flex gap-4 min-w-max">
-          {layouts.map((layout) => {
-            const isActive = profile.preferences.layoutType === layout.type;
-            const Icon = layout.icon;
-            
-            return (
-              <motion.button
-                key={layout.type}
-                whileHover={{ y: -4, scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setProfile(prev => ({
-                    ...prev,
-                    preferences: { ...prev.preferences, layoutType: layout.type }
-                  }));
-                  addLog(`Layout changed to ${layout.label}`, 'action');
-                }}
-                className={`flex flex-col items-start p-4 rounded-[2.5rem] transition-all w-[200px] text-left border-2 relative overflow-hidden ${
-                  isActive 
-                    ? 'bg-blue-600 border-blue-500 text-white shadow-2xl shadow-blue-500/30' 
-                    : 'ios-surface border-gray-100 dark:border-gray-800 text-gray-500 hover:border-blue-200 dark:hover:border-blue-900/30'
-                }`}
-              >
-                <div className={`w-full h-24 rounded-[1.5rem] flex items-center justify-center mb-4 relative overflow-hidden ${
-                  isActive ? 'bg-white/10' : 'bg-gray-50 dark:bg-gray-800'
-                }`}>
-                  <div className="absolute inset-0 opacity-10">
-                    <div className="grid grid-cols-4 gap-1 p-2">
-                       {[...Array(16)].map((_, i) => <div key={i} className="aspect-square bg-current rounded-sm" />)}
-                    </div>
-                  </div>
-                  <Icon size={32} className={isActive ? 'text-white' : 'text-blue-500'} />
-                </div>
-                
-                <div className="px-1">
-                  <p className={`text-[13px] font-black uppercase tracking-widest mb-1 ${isActive ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                    {layout.label}
-                  </p>
-                  <p className={`text-[10px] font-bold leading-relaxed line-clamp-2 h-[30px] ${isActive ? 'text-blue-100' : 'text-gray-400'}`}>
-                    {layout.summary}
-                  </p>
-                </div>
+    const layouts = allLayouts.filter(l => profile.preferences.enabledLayouts.includes(l.type));
+    const currentLayout = layouts.find(l => l.type === profile.preferences.layoutType) || layouts[0];
 
-                {isActive && (
-                  <motion.div 
-                    layoutId="active-check"
-                    className="absolute top-4 right-4 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg"
-                  >
-                    <Check size={14} className="text-blue-600" />
-                  </motion.div>
-                )}
-              </motion.button>
-            );
-          })}
+    if (profile.preferences.showHorizontalLayoutPicker) {
+      return (
+        <div className="w-full overflow-x-auto no-scrollbar pb-6 pt-2 -mx-4 px-4">
+          <div className="flex gap-4 min-w-max">
+            {layouts.map((layout) => {
+              const isActive = profile.preferences.layoutType === layout.type;
+              const Icon = layout.icon;
+              
+              return (
+                <motion.button
+                  key={layout.type}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setProfile(prev => ({
+                      ...prev,
+                      preferences: { ...prev.preferences, layoutType: layout.type }
+                    }));
+                    addLog(`Layout changed to ${layout.label}`, 'action');
+                  }}
+                  className={`flex flex-col items-start p-4 rounded-[2.5rem] transition-all w-[200px] text-left border-2 relative overflow-hidden ${
+                    isActive 
+                      ? 'bg-blue-600 border-blue-500 text-white shadow-2xl shadow-blue-500/30' 
+                      : 'ios-surface border-gray-100 dark:border-gray-800 text-gray-500 hover:border-blue-200 dark:hover:border-blue-900/30'
+                  }`}
+                >
+                  <div className={`w-full h-24 rounded-[1.5rem] flex items-center justify-center mb-4 relative overflow-hidden ${
+                    isActive ? 'bg-white/10' : 'bg-gray-50 dark:bg-gray-800'
+                  }`}>
+                    <div className="absolute inset-0 opacity-10">
+                      <div className="grid grid-cols-4 gap-1 p-2">
+                         {[...Array(16)].map((_, i) => <div key={i} className="aspect-square bg-current rounded-sm" />)}
+                      </div>
+                    </div>
+                    <Icon size={32} className={isActive ? 'text-white' : 'text-blue-500'} />
+                  </div>
+                  
+                  <div className="px-1">
+                    <p className={`text-[13px] font-black uppercase tracking-widest mb-1 ${isActive ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                      {layout.label}
+                    </p>
+                    <p className={`text-[10px] font-bold leading-relaxed line-clamp-2 h-[30px] ${isActive ? 'text-blue-100' : 'text-gray-400'}`}>
+                      {layout.summary}
+                    </p>
+                  </div>
+
+                  {isActive && (
+                    <motion.div 
+                      layoutId="active-check"
+                      className="absolute top-4 right-4 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg"
+                    >
+                      <Check size={14} className="text-blue-600" />
+                    </motion.div>
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
         </div>
+      );
+    }
+
+    return (
+      <div className="relative">
+        <motion.button 
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setShowLayoutDropdown(!showLayoutDropdown)}
+          className="flex items-center gap-2 px-3 py-1.5 ios-glass rounded-xl border border-white/20 dark:border-white/5 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm w-[120px] justify-center"
+        >
+          {currentLayout && <currentLayout.icon size={14} className="text-blue-500" />}
+          <span className="text-gray-900 dark:text-white hidden sm:inline">{currentLayout?.label || 'Layout'}</span>
+          <ChevronDown size={12} className={`text-gray-400 transition-transform duration-300 ${showLayoutDropdown ? 'rotate-180' : ''}`} />
+        </motion.button>
+
+        <AnimatePresence>
+          {showLayoutDropdown && (
+            <>
+              <div className="fixed inset-0 z-[100]" onClick={() => setShowLayoutDropdown(false)} />
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute top-full right-0 mt-2 w-56 ios-surface p-2 shadow-2xl z-[110] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
+              >
+                <div className="max-h-80 overflow-y-auto no-scrollbar space-y-4 p-1">
+                  {['text', 'visual'].map((cat) => {
+                    const catLayouts = layouts.filter(l => l.category === cat);
+                    if (catLayouts.length === 0) return null;
+                    return (
+                      <div key={cat} className="space-y-1">
+                        <h4 className="px-3 py-1 text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">
+                          {cat === 'text' ? 'Text Layouts' : 'Visual Layouts'}
+                        </h4>
+                        {catLayouts.map(l => (
+                          <button
+                            key={l.type}
+                            onClick={() => {
+                              setProfile(prev => ({
+                                ...prev,
+                                preferences: { ...prev.preferences, layoutType: l.type }
+                              }));
+                              setShowLayoutDropdown(false);
+                              addLog(`Layout changed to ${l.label}`, 'action');
+                            }}
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                              profile.preferences.layoutType === l.type 
+                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' 
+                                : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400'
+                            }`}
+                          >
+                            <l.icon size={16} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">{l.label}</span>
+                            {profile.preferences.layoutType === l.type && <Check size={12} className="ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
     );
   };
@@ -6481,6 +6557,45 @@ export default function App() {
                       ]}
                     />
                     <SettingToggle 
+                      label="Horizontal Layout Picker" 
+                      icon={Layout} 
+                      value={profile.preferences.showHorizontalLayoutPicker}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showHorizontalLayoutPicker: !profile.preferences.showHorizontalLayoutPicker } })}
+                      description="Apple-style preview cards"
+                    />
+                    <SettingToggle 
+                      label="Show Layout Switcher" 
+                      icon={Layout} 
+                      value={profile.preferences.showLayoutSwitcher}
+                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showLayoutSwitcher: !profile.preferences.showLayoutSwitcher } })}
+                    />
+                    <div className="px-5 py-2">
+                      <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3">Enabled Layouts</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {['grid', 'card', 'table', 'list', 'compact', 'carousel', 'masonry', 'board', 'timeline', 'gallery', 'spotlight', 'split', 'hexagon'].map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              const current = profile.preferences.enabledLayouts;
+                              const next = current.includes(type as LayoutType)
+                                ? current.filter(t => t !== type)
+                                : [...current, type as LayoutType];
+                              if (next.length === 0) return; // Must have at least one
+                              setProfile({ ...profile, preferences: { ...profile.preferences, enabledLayouts: next } });
+                            }}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                              profile.preferences.enabledLayouts.includes(type as LayoutType)
+                                ? 'bg-blue-50 border-blue-100 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800'
+                                : 'bg-gray-50 border-gray-100 text-gray-400 dark:bg-gray-800/50 dark:border-gray-800'
+                            }`}
+                          >
+                            <div className={`w-1.5 h-1.5 rounded-full ${profile.preferences.enabledLayouts.includes(type as LayoutType) ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                            <span className="text-[9px] font-black uppercase tracking-widest">{type}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <SettingToggle 
                       label="Compact Mode" 
                       icon={Smartphone} 
                       value={profile.preferences.compactUI}
@@ -6731,13 +6846,6 @@ export default function App() {
                         } 
                       })}
                       description="Enable timeline & mindmap views"
-                    />
-                    <SettingToggle 
-                      label="Layout Switcher" 
-                      icon={Layout} 
-                      value={profile.preferences.showLayoutSwitcher}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showLayoutSwitcher: !profile.preferences.showLayoutSwitcher } })}
-                      description="Toggle layout selector in toolbar"
                     />
                   </SettingsSection>
 
