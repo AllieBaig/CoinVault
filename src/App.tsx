@@ -45,7 +45,7 @@ const EUROPEAN_COUNTRIES = [
 ];
 
 const PRE_EURO_CURRENCIES: { [key: string]: string[] } = {
-  'Ireland': ['Farthing', 'Half Penny', 'Penny', 'Threepence', 'Sixpence', 'Shilling', 'Florin', 'Half Crown', 'Crown'],
+  'Ireland': ['1p', '2p', '5p', '10p', '20p', '50p', '£1', '£2', 'Farthing', 'Half Penny', 'Penny', 'Threepence', 'Sixpence', 'Shilling', 'Florin', 'Half Crown', 'Crown'],
   'France': ['Franc', 'Centime'],
   'Germany': ['Deutsche Mark', 'Pfennig'],
   'Italy': ['Lira', 'Centesimo'],
@@ -3131,6 +3131,7 @@ export default function App() {
         c.type.toLowerCase().includes(query) ||
         c.summary.toLowerCase().includes(query) ||
         c.country?.toLowerCase().includes(query) ||
+        (c.country === 'Ireland' && (query.includes('eire') || query.includes('punt'))) ||
         c.region?.toLowerCase().includes(query) ||
         (c.tags && c.tags.some(t => t.toLowerCase().includes(query)))
       );
@@ -3182,6 +3183,8 @@ export default function App() {
         const country = coin.country || 'United Kingdom';
         if (country === 'United Kingdom') {
           key = `UK / ${coin.region || 'Mainland'}`;
+        } else if (country === 'Ireland' && coin.currencyType === 'Old') {
+          key = 'Ireland / Irish Pound (Punt)';
         } else {
           const currency = coin.currencyType || 'Modern';
           key = `${country} / ${currency}`;
