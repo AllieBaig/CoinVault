@@ -52,10 +52,13 @@ const PRE_EURO_CURRENCIES: { [key: string]: string[] } = {
   'Spain': ['Peseta', 'Centimo'],
   'Netherlands': ['Guilder', 'Cent'],
   'Belgium': ['Franc', 'Centime'],
-  'Austria': ['Schilling', 'Groschen']
+  'Austria': ['Schilling', 'Groschen'],
+  'United Kingdom': ['Farthing', 'Half Penny', 'Penny', 'Threepence', 'Sixpence', 'Shilling', 'Florin', 'Half Crown', 'Crown']
 };
 
 const MODERN_CURRENCIES = ['1c', '2c', '5c', '10c', '20c', '50c', '€1', '€2'];
+
+const UK_REGIONS = ['Mainland', 'Jersey', 'Guernsey', 'Isle of Man'];
 
 type Rarity = 'Common' | 'Rare' | 'Very Rare';
 type SortOption = 'year' | 'denomination' | 'date' | 'month' | 'added' | 'opened' | 'name';
@@ -80,6 +83,7 @@ interface Coin {
   mint?: string;
   era?: string;
   country?: string;
+  region?: string;
   currencyType?: 'Modern' | 'Old';
 }
 
@@ -2343,6 +2347,7 @@ export default function App() {
   const [newMint, setNewMint] = useState('');
   const [newEra, setNewEra] = useState('');
   const [newCountry, setNewCountry] = useState('United Kingdom');
+  const [newRegion, setNewRegion] = useState('Mainland');
   const [newCurrencyType, setNewCurrencyType] = useState<'Modern' | 'Old'>('Modern');
 
   const availableDenominations = useMemo(() => {
@@ -2734,6 +2739,7 @@ export default function App() {
       mint: newMint,
       era: newEra,
       country: newCountry,
+      region: newCountry === 'United Kingdom' ? newRegion : undefined,
       currencyType: newCurrencyType,
     };
 
@@ -2854,6 +2860,7 @@ export default function App() {
     setNewMint('');
     setNewEra('');
     setNewCountry('United Kingdom');
+    setNewRegion('Mainland');
     setNewCurrencyType('Modern');
     setIsAdding(false);
     setIsEditing(null);
@@ -2871,6 +2878,7 @@ export default function App() {
     setNewMint(coin.mint || '');
     setNewEra(coin.era || '');
     setNewCountry(coin.country || 'United Kingdom');
+    setNewRegion(coin.region || 'Mainland');
     setNewCurrencyType(coin.currencyType || 'Modern');
     setIsEditing(coin);
     setIsAdding(true);
@@ -3068,9 +3076,9 @@ export default function App() {
       filtered = filtered.filter(c => c.currencyType !== 'Old');
     } else {
       if (profile.preferences.currencyFilter === 'modern') {
-        filtered = filtered.filter(c => c.currencyType === 'Modern' || !c.currencyType);
+        filtered = filtered.filter(c => (c.currencyType === 'Modern' || !c.currencyType) && !(c.country === 'United Kingdom' && c.region && c.region !== 'Mainland'));
       } else if (profile.preferences.currencyFilter === 'old') {
-        filtered = filtered.filter(c => c.currencyType === 'Old');
+        filtered = filtered.filter(c => c.currencyType === 'Old' || (c.country === 'United Kingdom' && c.region && c.region !== 'Mainland'));
       }
     }
 
@@ -3086,6 +3094,8 @@ export default function App() {
         c.year.includes(query) || 
         c.type.toLowerCase().includes(query) ||
         c.summary.toLowerCase().includes(query) ||
+        c.country?.toLowerCase().includes(query) ||
+        c.region?.toLowerCase().includes(query) ||
         (c.tags && c.tags.some(t => t.toLowerCase().includes(query)))
       );
     }
@@ -3134,8 +3144,12 @@ export default function App() {
         key = new Date(coin.dateAdded).toLocaleString('default', { month: 'long', year: 'numeric' });
       } else if (groupBy === 'country') {
         const country = coin.country || 'United Kingdom';
-        const currency = coin.currencyType || 'Modern';
-        key = `${country} / ${currency}`;
+        if (country === 'United Kingdom') {
+          key = `UK / ${coin.region || 'Mainland'}`;
+        } else {
+          const currency = coin.currencyType || 'Modern';
+          key = `${country} / ${currency}`;
+        }
       }
       
       if (!groups[key]) groups[key] = [];
@@ -5610,6 +5624,25 @@ export default function App() {
                         </select>
                       </div>
                     </div>
+
+                    {newCountry === 'United Kingdom' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="space-y-1"
+                      >
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Region / Territory</label>
+                        <select
+                          value={newRegion}
+                          onChange={(e) => setNewRegion(e.target.value)}
+                          className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
+                        >
+                          {UK_REGIONS.map(r => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      </motion.div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
