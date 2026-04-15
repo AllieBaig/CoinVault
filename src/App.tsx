@@ -214,7 +214,7 @@ interface LogEntry {
   id: string;
   timestamp: number;
   message: string;
-  type: 'info' | 'error' | 'action' | 'load';
+  type: 'info' | 'error' | 'action' | 'load' | 'system';
 }
 
 interface FeatureFlags {
@@ -832,6 +832,47 @@ const imageStorage = {
     }
   },
 
+  delete: async (id: string) => {
+    try {
+      const db = await imageStorage.init();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(imageStorage.storeName, 'readwrite');
+        transaction.objectStore(imageStorage.storeName).delete(id);
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(transaction.error);
+      });
+    } catch (e) {
+      console.error('Failed to delete image from IndexedDB:', e);
+      return false;
+    }
+  },
+
+  list: async (): Promise<{id: string, url: string}[]> => {
+    try {
+      const db = await imageStorage.init();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(imageStorage.storeName, 'readonly');
+        const store = transaction.objectStore(imageStorage.storeName);
+        const request = store.openCursor();
+        const results: {id: string, url: string}[] = [];
+
+        request.onsuccess = (event: any) => {
+          const cursor = event.target.result;
+          if (cursor) {
+            results.push({ id: cursor.key, url: cursor.value });
+            cursor.continue();
+          } else {
+            resolve(results);
+          }
+        };
+        request.onerror = () => reject(request.error);
+      });
+    } catch (e) {
+      console.error('Failed to list images from IndexedDB:', e);
+      return [];
+    }
+  },
+
   load: async (id: string): Promise<string | null> => {
     try {
       const db = await imageStorage.init();
@@ -896,6 +937,71 @@ const storage = {
 
 // --- Components ---
 
+const ImageLibraryPicker = ({ 
+  isOpen, 
+  onClose, 
+  onSelect, 
+  images 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSelect: (id: string, url: string) => void;
+  images: {id: string, url: string}[];
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800"
+      >
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <h3 className="text-xl font-black tracking-tight">Select from Library</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-4 max-h-[60vh] overflow-y-auto grid grid-cols-3 gap-3">
+          {images.length === 0 ? (
+            <div className="col-span-3 py-12 text-center text-gray-400 font-bold">
+              No images in library yet.
+            </div>
+          ) : (
+            images.map(img => (
+              <button
+                key={img.id}
+                type="button"
+                onClick={() => onSelect(img.id, img.url)}
+                className="aspect-square rounded-2xl overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all bg-gray-50 dark:bg-gray-800"
+              >
+                <img src={img.url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              </button>
+            ))
+          )}
+        </div>
+        
+        <div className="p-6 bg-gray-50 dark:bg-gray-800/50">
+          <button 
+            type="button"
+            onClick={onClose}
+            className="w-full py-4 bg-white dark:bg-gray-900 rounded-2xl font-black text-sm uppercase tracking-widest border border-gray-200 dark:border-gray-700"
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 const CoinImage = React.memo(({ coin, className, motionProps }: { coin: Coin; className?: string; motionProps?: any }) => {
   const [src, setSrc] = useState<string | undefined>(coin.image);
 
@@ -903,10 +1009,26 @@ const CoinImage = React.memo(({ coin, className, motionProps }: { coin: Coin; cl
     let isMounted = true;
     if (coin.imageId) {
       imageStorage.load(coin.imageId).then(url => {
-        if (url && isMounted) setSrc(url);
+        if (isMounted) {
+          if (url) {
+            setSrc(url);
+          } else {
+            // If imageId exists but not in storage, and image is a reference path, show placeholder
+            if (coin.image && coin.image.startsWith('image_library/')) {
+              setSrc(undefined);
+            } else {
+              setSrc(coin.image);
+            }
+          }
+        }
       });
     } else {
-      setSrc(coin.image);
+      // If no imageId, check if image is a reference path
+      if (coin.image && coin.image.startsWith('image_library/')) {
+        setSrc(undefined);
+      } else {
+        setSrc(coin.image);
+      }
     }
     return () => { isMounted = false; };
   }, [coin.imageId, coin.image]);
@@ -1274,6 +1396,35 @@ export default function App() {
     return SAMPLE_COINS;
   });
 
+  const migrateImages = async (currentCoins: Coin[]) => {
+    let changed = false;
+    const updatedCoins = await Promise.all(currentCoins.map(async (coin) => {
+      if (coin.image && coin.image.startsWith('data:image')) {
+        const imageId = coin.imageId || crypto.randomUUID();
+        await imageStorage.save(imageId, coin.image);
+        changed = true;
+        return { 
+          ...coin, 
+          image: `image_library/${imageId}.jpg`, 
+          imageId 
+        };
+      }
+      return coin;
+    }));
+
+    if (changed) {
+      setCoins(updatedCoins);
+      addLog('System: Optimized image storage (moved base64 to library)', 'system');
+    }
+  };
+
+  // --- Migration: Base64 to IndexedDB ---
+  useEffect(() => {
+    if (coins.length > 0) {
+      migrateImages(coins);
+    }
+  }, []);
+
   const [folders, setFolders] = useState<Folder[]>(() => {
     const key = isSafeMode ? 'coin-backup-folders' : 'coin-folders';
     const saved = storage.load(key);
@@ -1426,6 +1577,42 @@ export default function App() {
   const [newTags, setNewTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [fullLibrary, setFullLibrary] = useState<{id: string, url: string}[]>([]);
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  
+  useEffect(() => {
+    if (activeTab === 'library' || showLibraryPicker) {
+      imageStorage.list().then(setFullLibrary);
+    }
+  }, [activeTab, showLibraryPicker]);
+
+  const cleanupLibrary = async () => {
+    const allImages = await imageStorage.list();
+    const usedImageIds = new Set(coins.map(c => c.imageId).filter(Boolean));
+    
+    let removedCount = 0;
+    for (const img of allImages) {
+      if (!usedImageIds.has(img.id)) {
+        await imageStorage.delete(img.id);
+        removedCount++;
+      }
+    }
+    
+    if (removedCount > 0) {
+      imageStorage.list().then(setFullLibrary);
+      setFeedback({ message: `Cleaned up ${removedCount} unused images`, type: 'success' });
+      addLog(`System: Cleaned up ${removedCount} unused images from library`, 'system');
+    } else {
+      setFeedback({ message: 'Library is already clean', type: 'info' });
+    }
+  };
+
+  const deleteFromLibrary = async (id: string) => {
+    await imageStorage.delete(id);
+    setCoins(prev => prev.map(c => c.imageId === id ? { ...c, image: undefined, imageId: undefined } : c));
+    imageStorage.list().then(setFullLibrary);
+    setFeedback({ message: 'Image removed from library', type: 'info' });
+  };
   const [isSpinning, setIsSpinning] = useState(false);
   const [showSpinModal, setShowSpinModal] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | 'all'>('all');
@@ -2372,6 +2559,7 @@ export default function App() {
   const [newRarity, setNewRarity] = useState<Rarity>('Common');
   const [newSummary, setNewSummary] = useState('');
   const [newImage, setNewImage] = useState<string | undefined>();
+  const [newImageId, setNewImageId] = useState<string | undefined>(undefined);
   const [newFolderId, setNewFolderId] = useState<string>('purchased');
   const [newAmountPaid, setNewAmountPaid] = useState('0');
   const [newMint, setNewMint] = useState('');
@@ -2713,6 +2901,7 @@ export default function App() {
   const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setNewImageId(undefined); // Reset library ID if uploading new
       if (profile.preferences.autoRemoveBackground) {
         setIsProcessingImage(true);
         try {
@@ -2749,10 +2938,10 @@ export default function App() {
     e.preventDefault();
     if (!newName.trim()) return;
 
-    let imageId = isEditing?.imageId;
+    let imageId = newImageId || isEditing?.imageId;
     if (!newImage) {
       imageId = undefined;
-    } else if (newImage !== isEditing?.image) {
+    } else if (newImage !== isEditing?.image && !newImageId) {
       imageId = crypto.randomUUID();
       await imageStorage.save(imageId, newImage);
     }
@@ -2765,7 +2954,7 @@ export default function App() {
       type: newType,
       rarity: newRarity,
       summary: newSummary,
-      image: newImage,
+      image: imageId ? `image_library/${imageId}.jpg` : undefined,
       imageId,
       folderId: newFolderId,
       amountPaid: parseFloat(newAmountPaid) || 0,
@@ -2883,6 +3072,7 @@ export default function App() {
     setNewRarity('Common');
     setNewSummary('');
     setNewImage(undefined);
+    setNewImageId(undefined);
     setNewFolderId('purchased');
     
     // Auto-fill price if fixed price mode is enabled
@@ -2909,6 +3099,15 @@ export default function App() {
     setNewRarity(coin.rarity);
     setNewSummary(coin.summary);
     setNewImage(coin.image);
+    setNewImageId(coin.imageId);
+    
+    // If we have an imageId but no base64 in newImage, load it for preview
+    if (coin.imageId && (!coin.image || coin.image.startsWith('image_library/'))) {
+      imageStorage.load(coin.imageId).then(url => {
+        if (url) setNewImage(url);
+      });
+    }
+
     setNewFolderId(coin.folderId);
     setNewAmountPaid(coin.amountPaid?.toString() || '0');
     setNewMint(coin.mint || '');
@@ -2919,6 +3118,12 @@ export default function App() {
     setIsEditing(coin);
     setIsAdding(true);
     setSelectedCoin(null);
+  };
+
+  const handleSelectFromLibrary = (id: string, url: string) => {
+    setNewImage(url);
+    setNewImageId(id);
+    setShowLibraryPicker(false);
   };
 
   const deleteCoin = (id: string) => {
@@ -2944,8 +3149,16 @@ export default function App() {
   };
 
   const exportData = () => {
+    // Ensure no base64 is exported in the JSON
+    const sanitizedCoins = coins.map(c => {
+      if (c.image && c.image.startsWith('data:image')) {
+        return { ...c, image: c.imageId ? `image_library/${c.imageId}.jpg` : undefined };
+      }
+      return c;
+    });
+
     const data = {
-      coins,
+      coins: sanitizedCoins,
       folders,
       profile,
       version: '1.2'
@@ -3017,15 +3230,27 @@ export default function App() {
                   type: (c.type || '50p') as CoinType,
                   rarity: (['Common', 'Rare', 'Very Rare'].includes(c.rarity) ? c.rarity : 'Common') as Rarity,
                   image: c.image || null,
+                  imageId: c.imageId || null,
                   amountPaid: Number(c.amountPaid) || 0,
                   summary: String(c.summary ?? '').substring(0, 100),
                   folderId: String(c.folderId ?? 'purchased'),
                   dateAdded: Number(c.dateAdded) || Date.now(),
                   lastOpened: Number(c.lastOpened) || Date.now(),
+                  tags: Array.isArray(c.tags) ? c.tags.map(String) : [],
+                  mint: c.mint ? String(c.mint) : undefined,
+                  era: c.era ? String(c.era) : undefined,
+                  country: c.country ? String(c.country) : undefined,
+                  region: c.region ? String(c.region) : undefined,
+                  currencyType: c.currencyType === 'Old' ? 'Old' : 'Modern',
+                  denomValue: c.denomValue !== undefined ? Number(c.denomValue) : undefined,
+                  denomUnit: c.denomUnit ? String(c.denomUnit) : undefined,
                 };
               });
             importedCount = newCoins.length;
-            return [...prev, ...newCoins];
+            const finalCoins = [...prev, ...newCoins];
+            // Trigger migration for imported coins if they have base64
+            setTimeout(() => migrateImages(finalCoins), 0);
+            return finalCoins;
           });
 
           // Add new denominations to custom list
@@ -5597,25 +5822,44 @@ export default function App() {
 
                     {/* Image Upload - Hidden in Quick Add unless editing */}
                     {(!profile.preferences.quickAddMode || isEditing) && (
-                      <div 
-                        onClick={() => !isProcessingImage && fileInputRef.current?.click()}
-                        className="w-full aspect-video bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative"
-                      >
-                        {isProcessingImage ? (
-                          <div className="flex flex-col items-center gap-2 p-4 text-center">
-                            <Loader2 size={32} className="text-blue-600 animate-spin" />
-                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Removing Background...</span>
-                          </div>
-                        ) : newImage ? (
-                          <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
-                        ) : (
-                          <>
-                            <ImageIcon className="text-gray-300 mb-2" size={32} />
-                            <span className="text-xs font-bold text-gray-400">Add Coin Image</span>
-                          </>
-                        )}
-                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-                      </div>
+                      <>
+                        <div 
+                          onClick={() => !isProcessingImage && fileInputRef.current?.click()}
+                          className="w-full aspect-video bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative"
+                        >
+                          {isProcessingImage ? (
+                            <div className="flex flex-col items-center gap-2 p-4 text-center">
+                              <Loader2 size={32} className="text-blue-600 animate-spin" />
+                              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Removing Background...</span>
+                            </div>
+                          ) : newImage ? (
+                            <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <>
+                              <ImageIcon className="text-gray-300 mb-2" size={32} />
+                              <span className="text-xs font-bold text-gray-400">Add Coin Image</span>
+                            </>
+                          )}
+                          <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button 
+                            type="button"
+                            onClick={() => setShowLibraryPicker(true)}
+                            className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 border border-gray-200 dark:border-gray-700"
+                          >
+                            <FolderIcon size={16} /> Library
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex-1 py-3 bg-blue-600/10 text-blue-600 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+                          >
+                            <ImageIcon size={16} /> Upload
+                          </button>
+                        </div>
+                      </>
                     )}
 
                     <div>
@@ -6076,10 +6320,18 @@ export default function App() {
               >
                 <div className="flex items-center justify-between px-2">
                   <h2 className="text-2xl font-black text-gray-800 dark:text-gray-200">Image Library</h2>
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{coins.filter(c => c.image).length} Images</span>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={cleanupLibrary}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <RefreshCw size={12} /> Cleanup
+                    </button>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{fullLibrary.length} Images</span>
+                  </div>
                 </div>
 
-                {coins.filter(c => c.image).length === 0 ? (
+                {fullLibrary.length === 0 ? (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -6095,18 +6347,35 @@ export default function App() {
                   </motion.div>
                 ) : (
                   <div className="grid grid-cols-3 gap-3">
-                    {coins.filter(c => c.image || c.imageId).map(coin => (
-                      <motion.button
-                        key={coin.id}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => openCoin(coin)}
-                        className="aspect-square bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-2 shadow-sm overflow-hidden flex items-center justify-center"
+                    {fullLibrary.map(img => (
+                      <motion.div
+                        key={img.id}
+                        layout
+                        className="group relative aspect-square bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-2 shadow-sm overflow-hidden"
                       >
-                        <CoinImage 
-                          coin={coin}
+                        <img 
+                          src={img.url} 
                           className="w-full h-full object-contain"
+                          referrerPolicy="no-referrer"
                         />
-                      </motion.button>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => {
+                              const coin = coins.find(c => c.imageId === img.id);
+                              if (coin) openCoin(coin);
+                            }}
+                            className="p-2 bg-white text-gray-900 rounded-full shadow-lg"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button 
+                            onClick={() => deleteFromLibrary(img.id)}
+                            className="p-2 bg-red-500 text-white rounded-full shadow-lg"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
@@ -7751,6 +8020,17 @@ export default function App() {
 
         {renderMultiSelectBar()}
         {renderLogsModal()}
+
+        <AnimatePresence>
+          {showLibraryPicker && (
+            <ImageLibraryPicker 
+              isOpen={showLibraryPicker}
+              onClose={() => setShowLibraryPicker(false)}
+              onSelect={handleSelectFromLibrary}
+              images={fullLibrary}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </ErrorBoundary>
   );
