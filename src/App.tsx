@@ -56,7 +56,20 @@ const PRE_EURO_CURRENCIES: { [key: string]: string[] } = {
   'United Kingdom': ['Farthing', 'Half Penny', 'Penny', 'Threepence', 'Sixpence', 'Shilling', 'Florin', 'Half Crown', 'Crown']
 };
 
-const MODERN_CURRENCIES = ['1c', '2c', '5c', '10c', '20c', '50c', '€1', '€2'];
+const EURO_MODERN_CURRENCIES = ['1c', '2c', '5c', '10c', '20c', '50c', '€1', '€2'];
+const UK_MODERN_CURRENCIES = ['1p', '2p', '5p', '10p', '20p', '50p', '£1', '£2'];
+
+const MODERN_CURRENCIES_BY_COUNTRY: { [key: string]: string[] } = {
+  'United Kingdom': UK_MODERN_CURRENCIES,
+  'Austria': EURO_MODERN_CURRENCIES,
+  'Belgium': EURO_MODERN_CURRENCIES,
+  'France': EURO_MODERN_CURRENCIES,
+  'Germany': EURO_MODERN_CURRENCIES,
+  'Ireland': EURO_MODERN_CURRENCIES,
+  'Italy': EURO_MODERN_CURRENCIES,
+  'Netherlands': EURO_MODERN_CURRENCIES,
+  'Spain': EURO_MODERN_CURRENCIES,
+};
 
 const UK_REGIONS = ['Mainland', 'Jersey', 'Guernsey', 'Isle of Man'];
 
@@ -85,6 +98,8 @@ interface Coin {
   country?: string;
   region?: string;
   currencyType?: 'Modern' | 'Old';
+  denomValue?: number;
+  denomUnit?: string;
 }
 
 interface Folder {
@@ -672,6 +687,21 @@ const CLUE_MAP: Record<string, string> = {
 const isNightTime = () => {
   const hour = new Date().getHours();
   return hour >= 20 || hour < 6; // 8 PM to 6 AM
+};
+
+const parseDenomination = (type: string) => {
+  // Matches things like 50p, £1, 20c, €2, 1.50
+  const match = type.match(/^([£€])?(\d+(?:\.\d+)?)([pc])?$/i);
+  if (match) {
+    const prefix = match[1];
+    const value = parseFloat(match[2]);
+    const suffix = match[3];
+    return {
+      value,
+      unit: prefix || suffix || ''
+    };
+  }
+  return { value: 0, unit: type };
 };
 
 const DEFAULT_MISSIONS: Mission[] = [
@@ -2351,7 +2381,9 @@ export default function App() {
   const [newCurrencyType, setNewCurrencyType] = useState<'Modern' | 'Old'>('Modern');
 
   const availableDenominations = useMemo(() => {
-    if (newCurrencyType === 'Modern') return MODERN_CURRENCIES;
+    if (newCurrencyType === 'Modern') {
+      return MODERN_CURRENCIES_BY_COUNTRY[newCountry] || EURO_MODERN_CURRENCIES;
+    }
     if (newCurrencyType === 'Old' && PRE_EURO_CURRENCIES[newCountry]) {
       return PRE_EURO_CURRENCIES[newCountry];
     }
@@ -2359,7 +2391,7 @@ export default function App() {
   }, [newCountry, newCurrencyType]);
 
   const allPossibleDenominations = useMemo(() => {
-    const denoms = new Set([...DEFAULT_DENOMINATIONS, ...MODERN_CURRENCIES]);
+    const denoms = new Set([...DEFAULT_DENOMINATIONS, ...EURO_MODERN_CURRENCIES, ...UK_MODERN_CURRENCIES]);
     Object.values(PRE_EURO_CURRENCIES).forEach(list => list.forEach(d => denoms.add(d)));
     profile.preferences.customDenominations.forEach(d => denoms.add(d));
     return Array.from(denoms).sort();
@@ -2725,6 +2757,8 @@ export default function App() {
       await imageStorage.save(imageId, newImage);
     }
 
+    const { value: denomValue, unit: denomUnit } = parseDenomination(newType);
+
     const coinData = {
       name: newName.trim(),
       year: newYear,
@@ -2741,6 +2775,8 @@ export default function App() {
       country: newCountry,
       region: newCountry === 'United Kingdom' ? newRegion : undefined,
       currencyType: newCurrencyType,
+      denomValue,
+      denomUnit,
     };
 
     if (isEditing) {
@@ -3160,7 +3196,7 @@ export default function App() {
   }, [sortedCoins, profile.preferences.groupViewEnabled, profile.preferences.groupBy]);
 
   const stats = useMemo(() => {
-    const allDenoms = [...DEFAULT_DENOMINATIONS, ...profile.preferences.customDenominations];
+    const allDenoms = allPossibleDenominations;
     const counts: { [key: string]: number } = {};
     allDenoms.forEach(denom => {
       counts[denom] = coins.filter(c => c.type === denom).length;
@@ -5597,9 +5633,11 @@ export default function App() {
                         <select
                           value={newCountry}
                           onChange={(e) => {
-                            setNewCountry(e.target.value);
+                            const country = e.target.value;
+                            setNewCountry(country);
                             // Reset type if not available in new country
-                            setNewType(newCurrencyType === 'Modern' ? MODERN_CURRENCIES[0] : (PRE_EURO_CURRENCIES[e.target.value]?.[0] || DEFAULT_DENOMINATIONS[0]));
+                            const modernDenoms = MODERN_CURRENCIES_BY_COUNTRY[country] || EURO_MODERN_CURRENCIES;
+                            setNewType(newCurrencyType === 'Modern' ? modernDenoms[0] : (PRE_EURO_CURRENCIES[country]?.[0] || DEFAULT_DENOMINATIONS[0]));
                           }}
                           className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
                         >
@@ -5615,7 +5653,8 @@ export default function App() {
                           onChange={(e) => {
                             const ct = e.target.value as 'Modern' | 'Old';
                             setNewCurrencyType(ct);
-                            setNewType(ct === 'Modern' ? MODERN_CURRENCIES[0] : (PRE_EURO_CURRENCIES[newCountry]?.[0] || DEFAULT_DENOMINATIONS[0]));
+                            const modernDenoms = MODERN_CURRENCIES_BY_COUNTRY[newCountry] || EURO_MODERN_CURRENCIES;
+                            setNewType(ct === 'Modern' ? modernDenoms[0] : (PRE_EURO_CURRENCIES[newCountry]?.[0] || DEFAULT_DENOMINATIONS[0]));
                           }}
                           className="w-full h-[48px] px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
                         >
