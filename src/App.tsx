@@ -267,6 +267,10 @@ interface Profile {
     showTopSummary: boolean;
     showRankSystem: boolean;
     showProgressCard: boolean;
+    showCoinName: boolean;
+    showYear: boolean;
+    showType: boolean;
+    showRarity: boolean;
     debugMode: boolean;
     ambientMotionEnabled: boolean;
     showFolder: boolean;
@@ -1477,6 +1481,10 @@ export default function App() {
           showTopSummary: parsed.preferences?.showTopSummary ?? true,
           showRankSystem: parsed.preferences?.showRankSystem ?? true,
           showProgressCard: parsed.preferences?.showProgressCard ?? true,
+          showCoinName: parsed.preferences?.showCoinName ?? true,
+          showYear: parsed.preferences?.showYear ?? true,
+          showType: parsed.preferences?.showType ?? true,
+          showRarity: parsed.preferences?.showRarity ?? true,
           debugMode: parsed.preferences?.debugMode ?? false,
           ambientMotionEnabled: parsed.preferences?.ambientMotionEnabled ?? true,
           showFolder: parsed.preferences?.showFolder ?? true,
@@ -3720,13 +3728,21 @@ export default function App() {
                       )}
                     </div>
                     <div>
-                      <h3 className="text-lg font-black tracking-tight">{coin.name}</h3>
-                      <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{coin.year} • {coin.type}</p>
+                      {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && (
+                        <h3 className="text-lg font-black tracking-tight">{coin.name}</h3>
+                      )}
+                      {(profile.preferences.showYear || profile.preferences.showType) && (
+                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+                          {profile.preferences.showYear && coin.year}
+                          {profile.preferences.showYear && profile.preferences.showType && ' • '}
+                          {profile.preferences.showType && coin.type}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-blue-600">£{coin.amountPaid.toFixed(2)}</p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{coin.rarity}</p>
+                    {profile.preferences.showPrice && <p className="text-sm font-black text-blue-600">£{coin.amountPaid.toFixed(2)}</p>}
+                    {profile.preferences.showRarity && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{coin.rarity}</p>}
                   </div>
                 </div>
                 {coin.summary && (
@@ -3751,11 +3767,11 @@ export default function App() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Coin</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Year</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Type</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Rarity</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Price</th>
+                    {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Coin</th>}
+                    {profile.preferences.showYear && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Year</th>}
+                    {profile.preferences.showType && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Type</th>}
+                    {profile.preferences.showRarity && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Rarity</th>}
+                    {profile.preferences.showPrice && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Price</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
@@ -3765,30 +3781,34 @@ export default function App() {
                       onClick={() => openCoin(coin)}
                       className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
                     >
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center flex-shrink-0">
-                            {coin.image || coin.imageId ? (
-                              <CoinImage coin={coin} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-[10px] font-black text-gray-400">{coin.type}</span>
-                            )}
+                      {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && (
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center flex-shrink-0">
+                              {coin.image || coin.imageId ? (
+                                <CoinImage coin={coin} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-[10px] font-black text-gray-400">{coin.type}</span>
+                              )}
+                            </div>
+                            <span className="text-xs font-bold truncate max-w-[120px]">{coin.name}</span>
                           </div>
-                          <span className="text-xs font-bold truncate max-w-[120px]">{coin.name}</span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-xs font-black text-gray-500">{coin.year}</td>
-                      <td className="p-4 text-xs font-bold text-gray-400">{coin.type}</td>
-                      <td className="p-4">
-                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                          coin.rarity === 'Very Rare' ? 'bg-red-50 text-red-600' :
-                          coin.rarity === 'Rare' ? 'bg-amber-50 text-amber-600' :
-                          'bg-gray-50 text-gray-500'
-                        }`}>
-                          {coin.rarity}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right text-xs font-black text-blue-600">£{coin.amountPaid.toFixed(2)}</td>
+                        </td>
+                      )}
+                      {profile.preferences.showYear && <td className="p-4 text-xs font-black text-gray-500">{coin.year}</td>}
+                      {profile.preferences.showType && <td className="p-4 text-xs font-bold text-gray-400">{coin.type}</td>}
+                      {profile.preferences.showRarity && (
+                        <td className="p-4">
+                          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                            coin.rarity === 'Very Rare' ? 'bg-red-50 text-red-600' :
+                            coin.rarity === 'Rare' ? 'bg-amber-50 text-amber-600' :
+                            'bg-gray-50 text-gray-500'
+                          }`}>
+                            {coin.rarity}
+                          </span>
+                        </td>
+                      )}
+                      {profile.preferences.showPrice && <td className="p-4 text-right text-xs font-black text-blue-600">£{coin.amountPaid.toFixed(2)}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -3815,10 +3835,25 @@ export default function App() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-xs font-black truncate h-[16px]">{coin.name}</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest h-[14px]">{coin.year} • {coin.type}</p>
+                  {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && (
+                    <h3 className="text-xs font-black truncate h-[16px]">{coin.name}</h3>
+                  )}
+                  {(profile.preferences.showYear || profile.preferences.showType || profile.preferences.showRarity) && (
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest h-[14px] flex items-center gap-1.5">
+                      {profile.preferences.showYear && <span>{coin.year}</span>}
+                      {profile.preferences.showYear && (profile.preferences.showType || profile.preferences.showRarity) && <span>•</span>}
+                      {profile.preferences.showType && <span>{coin.type}</span>}
+                      {profile.preferences.showType && profile.preferences.showRarity && <span>•</span>}
+                      {profile.preferences.showRarity && (
+                        <span className={
+                          coin.rarity === 'Very Rare' ? 'text-amber-500' :
+                          coin.rarity === 'Rare' ? 'text-blue-500' : ''
+                        }>{coin.rarity}</span>
+                      )}
+                    </p>
+                  )}
                 </div>
-                <div className="text-xs font-black text-blue-500 w-16 text-right">£{coin.amountPaid.toFixed(2)}</div>
+                {profile.preferences.showPrice && <div className="text-xs font-black text-blue-500 w-16 text-right">£{coin.amountPaid.toFixed(2)}</div>}
               </motion.div>
             ))}
           </div>
@@ -4012,8 +4047,12 @@ export default function App() {
                   ) : (
                     <span className="text-lg font-black text-gray-300">{coin.type}</span>
                   )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] text-white font-black uppercase text-center p-1">
-                    {coin.year}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-[8px] text-white font-black uppercase text-center p-1 gap-0.5">
+                    {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && <span className="truncate w-full">{coin.name}</span>}
+                    {profile.preferences.showYear && <span>{coin.year}</span>}
+                    {profile.preferences.showType && <span className="truncate w-full">{coin.type}</span>}
+                    {profile.preferences.showRarity && <span className="truncate w-full">{coin.rarity}</span>}
+                    {profile.preferences.showPrice && <span>£{coin.amountPaid.toFixed(2)}</span>}
                   </div>
                 </div>
               </motion.div>
@@ -4511,23 +4550,31 @@ export default function App() {
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1 h-[20px]">
-              <h4 className={`font-bold text-gray-900 dark:text-gray-100 leading-tight text-locked-1 ${isCompact ? 'text-sm' : 'text-base'}`}>
-                {coin.name}
-              </h4>
-              {!profile.preferences.textMode && coin.rarity !== 'Common' && (
+              {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && (
+                <h4 className={`font-bold text-gray-900 dark:text-gray-100 leading-tight text-locked-1 ${isCompact ? 'text-sm' : 'text-base'}`}>
+                  {coin.name}
+                </h4>
+              )}
+              {!profile.preferences.textMode && profile.preferences.showRarity && coin.rarity !== 'Common' && (
                 <div className={`p-1 rounded-full flex-shrink-0 ${coin.rarity === 'Very Rare' ? 'bg-amber-100/50 dark:bg-amber-900/30' : 'bg-blue-100/50 dark:bg-blue-900/30'}`}>
                   <Star size={10} className={`fill-current ${coin.rarity === 'Very Rare' ? 'text-amber-600' : 'text-blue-600'}`} />
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2.5 h-[16px]">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] whitespace-nowrap">{coin.year}</span>
-              <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0" />
-              <span className={`text-[10px] font-bold uppercase tracking-[0.15em] truncate ${
-                coin.rarity === 'Very Rare' ? 'text-amber-600' :
-                coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-400'
-              }`}>{coin.rarity}</span>
-            </div>
+            {(profile.preferences.showYear || profile.preferences.showRarity || profile.preferences.showType) && (
+              <div className="flex items-center gap-2.5 h-[16px]">
+                {profile.preferences.showYear && <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] whitespace-nowrap">{coin.year}</span>}
+                {profile.preferences.showYear && (profile.preferences.showRarity || profile.preferences.showType) && <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0" />}
+                {profile.preferences.showType && <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] whitespace-nowrap">{coin.type}</span>}
+                {profile.preferences.showType && profile.preferences.showRarity && <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0" />}
+                {profile.preferences.showRarity && (
+                  <span className={`text-[10px] font-bold uppercase tracking-[0.15em] truncate ${
+                    coin.rarity === 'Very Rare' ? 'text-amber-600' :
+                    coin.rarity === 'Rare' ? 'text-blue-600' : 'text-gray-400'
+                  }`}>{coin.rarity}</span>
+                )}
+              </div>
+            )}
             {profile.preferences.showFolder && (
               <div className="flex items-center gap-1 mt-1.5 h-[14px]">
                 <FolderIcon size={10} className="text-gray-400" />
@@ -6953,12 +7000,50 @@ export default function App() {
                       onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, textMode: !profile.preferences.textMode } })}
                       description="Minimal interface without images"
                     />
-                    <SettingToggle 
-                      label="Show Coin Price" 
-                      icon={Coins} 
-                      value={profile.preferences.showPrice}
-                      onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
-                    />
+
+                    <div className="px-5 py-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4 px-4">Text Layout Settings</p>
+                      <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-3xl overflow-hidden border border-gray-100/50 dark:border-gray-800/50 scale-[0.98] origin-top">
+                        <SettingToggle 
+                          label="Coin Name" 
+                          icon={ListIcon} 
+                          value={profile.preferences.showCoinName}
+                          onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showCoinName: !profile.preferences.showCoinName } })}
+                          description="Display the coin's main title"
+                        />
+                        <SettingToggle 
+                          label="Year" 
+                          icon={Calendar} 
+                          value={profile.preferences.showYear}
+                          onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showYear: !profile.preferences.showYear } })}
+                          description="Display the minting/issue year"
+                        />
+                        <SettingToggle 
+                          label="Type" 
+                          icon={Tag} 
+                          value={profile.preferences.showType}
+                          onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showType: !profile.preferences.showType } })}
+                          description="Display denomination & system"
+                        />
+                        <SettingToggle 
+                          label="Rarity" 
+                          icon={Star} 
+                          value={profile.preferences.showRarity}
+                          onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showRarity: !profile.preferences.showRarity } })}
+                          description="Display collection scarcity"
+                        />
+                        <SettingToggle 
+                          label="Price" 
+                          icon={Coins} 
+                          value={profile.preferences.showPrice}
+                          onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, showPrice: !profile.preferences.showPrice } })}
+                          description="Display purchase value"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-50 dark:border-gray-800/50 my-1" />
+
                     <SettingToggle 
                       label="Show Top Summary" 
                       icon={Layout} 
