@@ -41,14 +41,33 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 80px;
+
+  /* Semantic System Colors */
+  --color-system-label: var(--system-label);
+  --color-system-secondary-label: var(--system-secondary-label);
+  --color-system-tertiary-label: var(--system-tertiary-label);
+  --color-system-quaternary-label: var(--system-quaternary-label);
+  
+  --color-system-background: var(--system-background);
+  --color-secondary-system-background: var(--secondary-system-background);
+  --color-tertiary-system-background: var(--tertiary-system-background);
 }
 
 :root {
-  --theme-bg: #F2F2F7;
-  --theme-surface: #FFFFFF;
-  --theme-surface-secondary: #F2F2F7;
-  --theme-text: #000000;
-  --theme-text-secondary: #8E8E93;
+  --system-label: #000000;
+  --system-secondary-label: #8E8E93;
+  --system-tertiary-label: #AEAEB2;
+  --system-quaternary-label: #C7C7CC;
+  
+  --system-background: #FFFFFF;
+  --secondary-system-background: #F2F2F7;
+  --tertiary-system-background: #FFFFFF;
+
+  --theme-bg: var(--secondary-system-background);
+  --theme-surface: var(--system-background);
+  --theme-surface-secondary: var(--secondary-system-background);
+  --theme-text: var(--system-label);
+  --theme-text-secondary: var(--system-secondary-label);
   --theme-accent: #007AFF;
   --theme-border: rgba(0, 0, 0, 0.05);
   --theme-radius: 24px;
@@ -57,11 +76,20 @@
 }
 
 .dark {
+  --system-label: #FFFFFF;
+  --system-secondary-label: #8E8E93;
+  --system-tertiary-label: #48484A;
+  --system-quaternary-label: #3A3A3C;
+  
+  --system-background: #1C1C1E;
+  --secondary-system-background: #2C2C2E;
+  --tertiary-system-background: #3A3A3C;
+
   --theme-bg: #121214;
-  --theme-surface: #1C1C1E;
-  --theme-surface-secondary: #121214;
-  --theme-text: #F2F2F7;
-  --theme-text-secondary: #8E8E93;
+  --theme-surface: var(--system-background);
+  --theme-surface-secondary: var(--secondary-system-background);
+  --theme-text: var(--system-label);
+  --theme-text-secondary: var(--system-secondary-label);
   --theme-accent: #0A84FF;
   --theme-border: rgba(255, 255, 255, 0.06);
 }

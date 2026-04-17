@@ -2433,20 +2433,20 @@ export default function App() {
           transition={springConfig}
           onClick={() => toggleSection(id)}
           className={`w-full flex items-center justify-between p-4 rounded-[2rem] transition-all ${
-            isExpanded ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'ios-surface'
+            isExpanded ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'bg-system-background'
           } border premium-border`}
         >
           <div className="flex items-center gap-4">
-            <div className={`p-2.5 rounded-2xl shadow-sm transition-all ${isExpanded ? 'bg-blue-600 text-white shadow-blue-200/50' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-400'}`}>
+            <div className={`p-2.5 rounded-2xl shadow-sm transition-all ${isExpanded ? 'bg-blue-600 text-white shadow-blue-200/50' : 'bg-secondary-system-background text-system-tertiary-label'}`}>
               <Icon size={20} />
             </div>
             <div className="flex flex-col items-start">
-              <span className={`font-black uppercase tracking-widest text-[11px] ${isExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>{title}</span>
+              <span className={`font-black uppercase tracking-widest text-[11px] ${isExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-system-tertiary-label'}`}>{title}</span>
               {badge && <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest mt-0.5">{badge}</span>}
             </div>
           </div>
           <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-            <ChevronDown size={20} className={isExpanded ? 'text-blue-600' : 'text-gray-300 dark:text-gray-600'} />
+            <ChevronDown size={20} className={isExpanded ? 'text-blue-600' : 'text-system-quaternary-label'} />
           </motion.div>
         </motion.button>
         <AnimatePresence>
@@ -2457,7 +2457,7 @@ export default function App() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="ios-surface divide-y divide-gray-50/50 dark:divide-gray-800/50 overflow-hidden">
+              <div className="bg-system-background divide-y divide-gray-50/50 dark:divide-gray-800/50 overflow-hidden rounded-[2rem] border border-gray-100 dark:border-gray-800/50 mt-1">
                 {children}
               </div>
             </motion.div>
@@ -2484,20 +2484,20 @@ export default function App() {
   }) => (
     <div className={`px-4 h-[88px] flex items-center justify-between transition-all ${value ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''}`}>
       <div className="flex items-center gap-4">
-        <div className={`p-2.5 rounded-xl transition-all ${value ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'bg-gray-100/50 dark:bg-gray-800/50 text-gray-400'}`}>
+        <div className={`p-2.5 rounded-xl transition-all ${value ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'bg-secondary-system-background text-system-tertiary-label'}`}>
           <Icon size={18} />
         </div>
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <span className="font-black text-gray-800 dark:text-gray-200 text-sm tracking-tight">{label}</span>
+            <span className="font-black text-system-label text-sm tracking-tight">{label}</span>
             {badge && <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest leading-none bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-md">{badge}</span>}
           </div>
-          {description && <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold leading-tight mt-1 tracking-tight">{description}</span>}
+          {description && <span className="text-[10px] text-system-secondary-label font-bold leading-tight mt-1 tracking-tight">{description}</span>}
         </div>
       </div>
       <button 
         onClick={onChange}
-        className={`w-14 h-7 rounded-full transition-all relative flex-shrink-0 p-1 ${value ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+        className={`w-14 h-7 rounded-full transition-all relative flex-shrink-0 p-1 ${value ? 'bg-blue-600' : 'bg-secondary-system-background border border-gray-100 dark:border-gray-800'}`}
       >
         <motion.div 
           animate={{ x: value ? 28 : 0 }}
@@ -2523,15 +2523,15 @@ export default function App() {
   }) => (
     <div className="px-4 h-[72px] flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <div className="p-2.5 rounded-xl bg-gray-100/50 dark:bg-gray-800/50 text-gray-400">
+        <div className="p-2.5 rounded-xl bg-secondary-system-background text-system-tertiary-label">
           <Icon size={18} />
         </div>
-        <span className="font-black text-gray-800 dark:text-gray-200 text-sm tracking-tight">{label}</span>
+        <span className="font-black text-system-label text-sm tracking-tight">{label}</span>
       </div>
       <select 
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-gray-100/50 dark:bg-gray-800/50 px-4 h-[36px] rounded-2xl text-[11px] font-black border-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 dark:text-gray-300 transition-all appearance-none pr-8 relative"
+        className="bg-secondary-system-background px-4 h-[36px] rounded-2xl text-[11px] font-black border-none focus:ring-2 focus:ring-blue-500/50 text-system-label transition-all appearance-none pr-8 relative"
         style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
       >
         {options.map(opt => (
@@ -3657,7 +3657,7 @@ export default function App() {
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute top-full right-0 mt-2 w-56 ios-surface p-2 shadow-2xl z-[110] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
+                className="absolute top-full right-0 mt-2 w-56 bg-system-background p-2 shadow-2xl z-[110] border border-gray-100 dark:border-gray-800 rounded-2xl"
               >
                 <div className="max-h-80 overflow-y-auto no-scrollbar space-y-4 p-1">
                   {['text', 'visual'].map((cat) => {
@@ -3665,7 +3665,7 @@ export default function App() {
                     if (catLayouts.length === 0) return null;
                     return (
                       <div key={cat} className="space-y-1">
-                        <h4 className="px-3 py-1 text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">
+                        <h4 className="px-3 py-1 text-[8px] font-black uppercase tracking-[0.2em] text-system-tertiary-label">
                           {cat === 'text' ? 'Text Layouts' : 'Visual Layouts'}
                         </h4>
                         {catLayouts.map(l => (
@@ -3682,7 +3682,7 @@ export default function App() {
                             className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
                               profile.preferences.layoutType === l.type 
                                 ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' 
-                                : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400'
+                                : 'hover:bg-secondary-system-background text-system-secondary-label'
                             }`}
                           >
                             <l.icon size={16} />
@@ -3729,10 +3729,10 @@ export default function App() {
                     </div>
                     <div>
                       {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && (
-                        <h3 className="text-lg font-black tracking-tight">{coin.name}</h3>
+                        <h3 className="text-lg font-black tracking-tight text-system-label">{coin.name}</h3>
                       )}
                       {(profile.preferences.showYear || profile.preferences.showType) && (
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+                        <p className="text-xs text-system-tertiary-label font-bold uppercase tracking-widest">
                           {profile.preferences.showYear && coin.year}
                           {profile.preferences.showYear && profile.preferences.showType && ' • '}
                           {profile.preferences.showType && coin.type}
@@ -3742,15 +3742,15 @@ export default function App() {
                   </div>
                   <div className="text-right">
                     {profile.preferences.showPrice && <p className="text-sm font-black text-blue-600">£{coin.amountPaid.toFixed(2)}</p>}
-                    {profile.preferences.showRarity && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{coin.rarity}</p>}
+                    {profile.preferences.showRarity && <p className="text-[10px] font-bold text-system-tertiary-label uppercase tracking-widest">{coin.rarity}</p>}
                   </div>
                 </div>
                 {coin.summary && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed italic">"{coin.summary}"</p>
+                  <p className="text-xs text-system-secondary-label leading-relaxed italic">"{coin.summary}"</p>
                 )}
                 <div className="flex flex-wrap gap-2">
                   {coin.tags.map(tag => (
-                    <span key={tag} className="px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded-lg text-[9px] font-black uppercase tracking-widest text-gray-400">
+                    <span key={tag} className="px-2 py-1 bg-secondary-system-background rounded-lg text-[9px] font-black uppercase tracking-widest text-system-tertiary-label">
                       #{tag}
                     </span>
                   ))}
@@ -3766,43 +3766,43 @@ export default function App() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                    {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Coin</th>}
-                    {profile.preferences.showYear && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Year</th>}
-                    {profile.preferences.showType && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Type</th>}
-                    {profile.preferences.showRarity && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Rarity</th>}
-                    {profile.preferences.showPrice && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Price</th>}
+                  <tr className="bg-secondary-system-background border-b border-gray-100 dark:border-gray-800">
+                    {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-system-secondary-label">Coin</th>}
+                    {profile.preferences.showYear && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-system-secondary-label">Year</th>}
+                    {profile.preferences.showType && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-system-secondary-label">Type</th>}
+                    {profile.preferences.showRarity && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-system-secondary-label">Rarity</th>}
+                    {profile.preferences.showPrice && <th className="p-4 text-[10px] font-black uppercase tracking-widest text-system-secondary-label text-right">Price</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50 bg-system-background">
                   {coinsToRender.map(coin => (
                     <tr 
                       key={coin.id} 
                       onClick={() => openCoin(coin)}
-                      className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                      className="hover:bg-secondary-system-background transition-colors cursor-pointer"
                     >
                       {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && (
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-secondary-system-background overflow-hidden flex items-center justify-center flex-shrink-0">
                               {coin.image || coin.imageId ? (
                                 <CoinImage coin={coin} className="w-full h-full object-cover" />
                               ) : (
-                                <span className="text-[10px] font-black text-gray-400">{coin.type}</span>
+                                <span className="text-[10px] font-black text-system-secondary-label">{coin.type}</span>
                               )}
                             </div>
-                            <span className="text-xs font-bold truncate max-w-[120px]">{coin.name}</span>
+                            <span className="text-xs font-bold truncate max-w-[120px] text-system-label">{coin.name}</span>
                           </div>
                         </td>
                       )}
-                      {profile.preferences.showYear && <td className="p-4 text-xs font-black text-gray-500">{coin.year}</td>}
-                      {profile.preferences.showType && <td className="p-4 text-xs font-bold text-gray-400">{coin.type}</td>}
+                      {profile.preferences.showYear && <td className="p-4 text-xs font-black text-system-secondary-label">{coin.year}</td>}
+                      {profile.preferences.showType && <td className="p-4 text-xs font-bold text-system-secondary-label">{coin.type}</td>}
                       {profile.preferences.showRarity && (
                         <td className="p-4">
                           <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
                             coin.rarity === 'Very Rare' ? 'bg-red-50 text-red-600' :
                             coin.rarity === 'Rare' ? 'bg-amber-50 text-amber-600' :
-                            'bg-gray-50 text-gray-500'
+                            'bg-secondary-system-background text-system-secondary-label'
                           }`}>
                             {coin.rarity}
                           </span>
@@ -3836,10 +3836,10 @@ export default function App() {
                 </div>
                 <div className="flex-1 min-w-0">
                   {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && (
-                    <h3 className="text-xs font-black truncate h-[16px]">{coin.name}</h3>
+                    <h3 className="text-xs font-black truncate h-[16px] text-system-label">{coin.name}</h3>
                   )}
                   {(profile.preferences.showYear || profile.preferences.showType || profile.preferences.showRarity) && (
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest h-[14px] flex items-center gap-1.5">
+                    <p className="text-[10px] text-system-tertiary-label font-bold uppercase tracking-widest h-[14px] flex items-center gap-1.5">
                       {profile.preferences.showYear && <span>{coin.year}</span>}
                       {profile.preferences.showYear && (profile.preferences.showType || profile.preferences.showRarity) && <span>•</span>}
                       {profile.preferences.showType && <span>{coin.type}</span>}
@@ -4039,13 +4039,13 @@ export default function App() {
                 key={coin.id}
                 layout
                 onClick={() => openCoin(coin)}
-                className="aspect-square ios-surface p-1 cursor-pointer overflow-hidden group"
+                className="aspect-square bg-system-background rounded-[1.5rem] border border-gray-100 dark:border-gray-800 p-1 cursor-pointer overflow-hidden group"
               >
-                <div className="w-full h-full rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden relative flex items-center justify-center">
+                <div className="w-full h-full rounded-lg bg-secondary-system-background overflow-hidden relative flex items-center justify-center">
                   {coin.image || coin.imageId ? (
                     <CoinImage coin={coin} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-lg font-black text-gray-300">{coin.type}</span>
+                    <span className="text-lg font-black text-system-quaternary-label">{coin.type}</span>
                   )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-[8px] text-white font-black uppercase text-center p-1 gap-0.5">
                     {(profile.preferences.showCoinName || (!profile.preferences.showCoinName && !profile.preferences.showYear && !profile.preferences.showType && !profile.preferences.showRarity && !profile.preferences.showPrice)) && <span className="truncate w-full">{coin.name}</span>}
@@ -4068,18 +4068,18 @@ export default function App() {
                 key={coin.id}
                 layout
                 onClick={() => openCoin(coin)}
-                className="ios-surface overflow-hidden flex h-32 cursor-pointer"
+                className="bg-system-background rounded-[2rem] border border-gray-100 dark:border-gray-800 overflow-hidden flex h-32 cursor-pointer"
               >
-                <div className="w-1/3 bg-gray-100 dark:bg-gray-800 h-full flex items-center justify-center overflow-hidden">
+                <div className="w-1/3 bg-secondary-system-background h-full flex items-center justify-center overflow-hidden">
                   {coin.image || coin.imageId ? (
                     <CoinImage coin={coin} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-black text-gray-300">{coin.type}</span>
+                    <span className="text-2xl font-black text-system-quaternary-label">{coin.type}</span>
                   )}
                 </div>
                 <div className="flex-1 p-4 flex flex-col justify-center">
-                  <h3 className="text-sm font-black mb-1 truncate h-[20px]">{coin.name}</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest h-[14px]">{coin.year} • {coin.type}</p>
+                  <h3 className="text-sm font-black mb-1 truncate h-[20px] text-system-label">{coin.name}</h3>
+                  <p className="text-[10px] text-system-secondary-label font-bold uppercase tracking-widest h-[14px]">{coin.year} • {coin.type}</p>
                 </div>
               </motion.div>
             ))}
@@ -4203,8 +4203,8 @@ export default function App() {
                       <Flame size={isMini ? 12 : 14} className="text-orange-500 fill-orange-500/20" />
                       <span className={`${isMini ? 'text-[10px]' : 'text-xs'} font-black text-orange-600 dark:text-orange-400 tracking-tight`}>{profile.streak.current}</span>
                     </motion.div>
-                    <div className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full" />
-                    <p className={`${isMini ? 'text-[8px]' : 'text-[10px]'} font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.25em]`}>{currentLevel.name}</p>
+                    <div className="w-1 h-1 bg-secondary-system-background rounded-full" />
+                    <p className={`${isMini ? 'text-[8px]' : 'text-[10px]'} font-black text-system-tertiary-label uppercase tracking-[0.25em]`}>{currentLevel.name}</p>
                   </div>
                 )}
               </div>
@@ -4219,7 +4219,7 @@ export default function App() {
                   disabled={isSpinning}
                   className={`${isMini ? 'p-2' : isCompact ? 'p-2.5' : 'p-3.5'} rounded-[1.25rem] transition-all relative overflow-hidden ios-button ${
                     isSpinning 
-                      ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 animate-spin' 
+                      ? 'bg-secondary-system-background text-system-tertiary-label animate-spin' 
                       : 'text-blue-600 dark:text-blue-400'
                   }`}
                   title="Daily Lucky Spin"
@@ -4236,7 +4236,7 @@ export default function App() {
                       transition={springConfig}
                       id="refresh-app-btn" 
                       onClick={() => window.location.reload()} 
-                      className={`${isMini ? 'p-2' : 'p-3.5'} text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button`} 
+                      className={`${isMini ? 'p-2' : 'p-3.5'} text-system-tertiary-label hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button`} 
                       title="Refresh App"
                     >
                       <Clock size={isMini ? 18 : 22} />
@@ -4247,7 +4247,7 @@ export default function App() {
                       transition={springConfig}
                       id="export-data-btn" 
                       onClick={exportData} 
-                      className={`${isMini ? 'p-2' : 'p-3.5'} text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button`} 
+                      className={`${isMini ? 'p-2' : 'p-3.5'} text-system-tertiary-label hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-[1.25rem] ios-button`} 
                       title="Export Data"
                     >
                       <Download size={isMini ? 18 : 22} />
@@ -5606,25 +5606,25 @@ export default function App() {
   const SettingAction = ({ icon: Icon, title, description, onClick, color = "text-blue-600" }: { icon: any, title: string, description: string, onClick: () => void, color?: string }) => (
     <button 
       onClick={onClick}
-      className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+      className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors group"
     >
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center ${color} group-hover:scale-110 transition-transform`}>
+        <div className={`w-10 h-10 rounded-xl bg-secondary-system-background flex items-center justify-center ${color} group-hover:scale-110 transition-transform`}>
           <Icon size={20} />
         </div>
         <div className="flex flex-col items-start">
-          <span className="font-bold text-sm text-gray-700 dark:text-gray-300">{title}</span>
-          <span className="text-[10px] text-gray-400 font-medium">{description}</span>
+          <span className="font-bold text-sm text-system-label">{title}</span>
+          <span className="text-[10px] text-system-secondary-label font-medium">{description}</span>
         </div>
       </div>
-      <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
+      <ChevronRight size={16} className="text-system-quaternary-label group-hover:translate-x-1 transition-transform" />
     </button>
   );
 
   return (
     <ErrorBoundary onExport={exportData}>
       <AmbientBackground enabled={profile.preferences.ambientMotionEnabled} />
-      <div className={`locked-viewport ios-base text-gray-900 dark:text-gray-100 font-sans transition-colors relative theme-${profile.preferences.theme}`}>
+      <div className={`locked-viewport ios-base text-system-label font-sans transition-colors relative theme-${profile.preferences.theme}`}>
         {/* Global Texture Overlay - Extremely subtle as per request */}
         <div className="fixed inset-0 pointer-events-none opacity-[0.01] dark:opacity-[0.02] z-50 bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
         
@@ -5664,19 +5664,19 @@ export default function App() {
               >
                 {/* Search Bar */}
                 <div className={`relative ${isCompact ? 'h-[48px]' : 'h-[56px]'}`}>
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-system-tertiary-label" size={18} />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search collection..."
-                    className={`w-full h-full pl-11 pr-4 ios-surface border-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-gray-400 font-medium`}
+                    className={`w-full h-full pl-11 pr-4 ios-surface border-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-system-tertiary-label font-medium bg-system-background text-system-label`}
                   />
                   {searchQuery && (
                     <motion.button 
                       whileTap={{ scale: 0.8 }}
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-system-tertiary-label"
                     >
                       <X size={16} />
                     </motion.button>
@@ -5690,7 +5690,7 @@ export default function App() {
                     transition={springConfig}
                     onClick={() => setSelectedFolderId('all')}
                     className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all h-[36px] flex items-center justify-center ${
-                      selectedFolderId === 'all' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
+                      selectedFolderId === 'all' ? 'bg-blue-600 text-white' : 'bg-secondary-system-background text-system-secondary-label border border-gray-100 dark:border-gray-800'
                     }`}
                   >
                     All Coins
@@ -5725,7 +5725,7 @@ export default function App() {
                           });
                         }}
                         className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 h-full ${
-                          selectedFolderId === folder.id ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
+                          selectedFolderId === folder.id ? 'bg-blue-600 text-white' : 'bg-secondary-system-background text-system-secondary-label border border-gray-100 dark:border-gray-800'
                         }`}
                       >
                         {folder.isLocked && (
@@ -5796,14 +5796,14 @@ export default function App() {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700">
-                      <Layout size={14} className="text-gray-400" />
+                    <div className="flex items-center gap-2 bg-secondary-system-background px-3 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <Layout size={14} className="text-system-tertiary-label" />
                       <div className="flex flex-col flex-1">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Sort By</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-system-tertiary-label">Sort By</span>
                         <select 
                           value={profile.preferences.sortBy}
                           onChange={(e) => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, sortBy: e.target.value as SortOption } }))}
-                          className="text-[11px] font-black uppercase tracking-tight bg-transparent border-none p-0 focus:ring-0 cursor-pointer text-gray-700 dark:text-gray-200 w-full"
+                          className="text-[11px] font-black uppercase tracking-tight bg-transparent border-none p-0 focus:ring-0 cursor-pointer text-system-label w-full"
                         >
                           <option value="added">Date Added</option>
                           <option value="month">Month Added</option>
@@ -5815,14 +5815,14 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700">
-                      <Grid size={14} className="text-gray-400" />
+                    <div className="flex items-center gap-2 bg-secondary-system-background px-3 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <Grid size={14} className="text-system-tertiary-label" />
                       <div className="flex flex-col flex-1">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Group By</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-system-tertiary-label">Group By</span>
                         <select 
                           value={profile.preferences.groupBy}
                           onChange={(e) => setProfile(prev => ({ ...prev, preferences: { ...prev.preferences, groupBy: e.target.value as GroupOption } }))}
-                          className="text-[11px] font-black uppercase tracking-tight bg-transparent border-none p-0 focus:ring-0 cursor-pointer text-gray-700 dark:text-gray-200 w-full"
+                          className="text-[11px] font-black uppercase tracking-tight bg-transparent border-none p-0 focus:ring-0 cursor-pointer text-system-label w-full"
                           disabled={!profile.preferences.groupViewEnabled}
                         >
                           <option value="none">No Grouping</option>
@@ -5860,11 +5860,11 @@ export default function App() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     onSubmit={addCoin}
-                    className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4"
+                    className="bg-system-background p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-bold text-lg">{isEditing ? 'Edit Coin' : (profile.preferences.quickAddMode ? 'Quick Add' : 'New Coin')}</h3>
-                      <button type="button" onClick={resetForm} className="text-gray-400"><X size={20} /></button>
+                      <h3 className="font-bold text-lg text-system-label">{isEditing ? 'Edit Coin' : (profile.preferences.quickAddMode ? 'Quick Add' : 'New Coin')}</h3>
+                      <button type="button" onClick={resetForm} className="text-system-tertiary-label"><X size={20} /></button>
                     </div>
 
                     {/* Image Upload - Hidden in Quick Add unless editing */}
@@ -5872,7 +5872,7 @@ export default function App() {
                       <>
                         <div 
                           onClick={() => !isProcessingImage && fileInputRef.current?.click()}
-                          className="w-full aspect-video bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative"
+                          className="w-full aspect-video bg-secondary-system-background rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative"
                         >
                           {isProcessingImage ? (
                             <div className="flex flex-col items-center gap-2 p-4 text-center">
@@ -5883,8 +5883,8 @@ export default function App() {
                             <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
                           ) : (
                             <>
-                              <ImageIcon className="text-gray-300 mb-2" size={32} />
-                              <span className="text-xs font-bold text-gray-400">Add Coin Image</span>
+                              <ImageIcon className="text-system-quaternary-label mb-2" size={32} />
+                              <span className="text-xs font-bold text-system-tertiary-label">Add Coin Image</span>
                             </>
                           )}
                           <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
