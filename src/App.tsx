@@ -275,6 +275,7 @@ interface Profile {
     ambientMotionEnabled: boolean;
     showFolder: boolean;
     fixedPriceMode: boolean;
+    enableDeleteMode: boolean;
     customDenominations: string[];
     denominationPrices: { [key: string]: number };
     layoutType: LayoutType;
@@ -964,18 +965,18 @@ const ImageLibraryPicker = ({
       <motion.div 
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800"
+        className="bg-system-background w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800"
       >
         <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <h3 className="text-xl font-black tracking-tight">Select from Library</h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+          <h3 className="text-xl font-black tracking-tight text-system-label">Select from Library</h3>
+          <button onClick={onClose} className="p-2 hover:bg-secondary-system-background rounded-full transition-colors text-system-secondary-label">
             <X size={20} />
           </button>
         </div>
         
-        <div className="p-4 max-h-[60vh] overflow-y-auto grid grid-cols-3 gap-3">
+        <div className="p-4 max-h-[60vh] overflow-y-auto grid grid-cols-3 gap-3 no-scrollbar">
           {images.length === 0 ? (
-            <div className="col-span-3 py-12 text-center text-gray-400 font-bold">
+            <div className="col-span-3 py-12 text-center text-system-tertiary-label font-bold">
               No images in library yet.
             </div>
           ) : (
@@ -984,19 +985,19 @@ const ImageLibraryPicker = ({
                 key={img.id}
                 type="button"
                 onClick={() => onSelect(img.id, img.url)}
-                className="aspect-square rounded-2xl overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all bg-gray-50 dark:bg-gray-800"
+                className="aspect-square rounded-2xl overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all bg-secondary-system-background group"
               >
-                <img src={img.url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <img src={img.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" referrerPolicy="no-referrer" />
               </button>
             ))
           )}
         </div>
         
-        <div className="p-6 bg-gray-50 dark:bg-gray-800/50">
+        <div className="p-6 bg-secondary-system-background">
           <button 
             type="button"
             onClick={onClose}
-            className="w-full py-4 bg-white dark:bg-gray-900 rounded-2xl font-black text-sm uppercase tracking-widest border border-gray-200 dark:border-gray-700"
+            className="w-full py-4 bg-system-background text-system-label rounded-2xl font-black text-sm uppercase tracking-widest border border-gray-100 dark:border-gray-800 shadow-sm"
           >
             Cancel
           </button>
@@ -1489,6 +1490,7 @@ export default function App() {
           ambientMotionEnabled: parsed.preferences?.ambientMotionEnabled ?? true,
           showFolder: parsed.preferences?.showFolder ?? true,
           fixedPriceMode: parsed.preferences?.fixedPriceMode ?? false,
+          enableDeleteMode: parsed.preferences?.enableDeleteMode ?? false,
           customDenominations: parsed.preferences?.customDenominations ?? [],
           denominationPrices: parsed.preferences?.denominationPrices ?? { 
             '50p': 0.5, '£1': 1.0, '£2': 2.0,
@@ -1616,10 +1618,33 @@ export default function App() {
   };
 
   const deleteFromLibrary = async (id: string) => {
+    const img = fullLibrary.find(i => i.id === id);
+    if (!img) return;
+
+    // Save for undo
+    const affectedCoins = coins.filter(c => c.imageId === id).map(c => c.id);
+    setLastDeletedImage({ ...img, affectedCoins });
+
     await imageStorage.delete(id);
     setCoins(prev => prev.map(c => c.imageId === id ? { ...c, image: undefined, imageId: undefined } : c));
     imageStorage.list().then(setFullLibrary);
-    setFeedback({ message: 'Image removed from library', type: 'info' });
+    
+    setFeedback({ 
+      message: 'Image removed from library', 
+      type: 'info',
+      action: {
+        label: 'Undo',
+        onAction: () => {
+          if (img) {
+            imageStorage.save(img.id, img.url).then(() => {
+              setCoins(prev => prev.map(c => affectedCoins.includes(c.id) ? { ...c, image: `image_library/${img.id}.jpg`, imageId: img.id } : c));
+              imageStorage.list().then(setFullLibrary);
+              setFeedback({ message: 'Deletion undone', type: 'success' });
+            });
+          }
+        }
+      }
+    });
   };
   const [isSpinning, setIsSpinning] = useState(false);
   const [showSpinModal, setShowSpinModal] = useState(false);
@@ -1628,7 +1653,12 @@ export default function App() {
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState<Coin | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const [feedback, setFeedback] = useState<{ 
+    message: string; 
+    type: 'success' | 'info' | 'error' | 'load';
+    action?: { label: string; onAction: () => void };
+  } | null>(null);
+  const [lastDeletedImage, setLastDeletedImage] = useState<{ id: string; url: string; affectedCoins: string[] } | null>(null);
   const [importProgress, setImportProgress] = useState<number | null>(null);
   const [xpGain, setXpGain] = useState<number | null>(null);
   const [spinResult, setSpinResult] = useState<number | null>(null);
@@ -6398,29 +6428,44 @@ export default function App() {
                       <motion.div
                         key={img.id}
                         layout
-                        className="group relative aspect-square bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-2 shadow-sm overflow-hidden"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
+                        onClick={() => {
+                          const coin = coins.find(c => c.imageId === img.id);
+                          if (coin) openCoin(coin);
+                        }}
+                        className="group relative aspect-square bg-system-background rounded-2xl border border-gray-100 dark:border-gray-800 p-2 shadow-sm overflow-hidden cursor-pointer"
                       >
                         <img 
                           src={img.url} 
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110"
                           referrerPolicy="no-referrer"
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <button 
-                            onClick={() => {
-                              const coin = coins.find(c => c.imageId === img.id);
-                              if (coin) openCoin(coin);
+                        
+                        {profile.preferences.enableDeleteMode && (
+                          <motion.button 
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmModal({
+                                title: 'Delete Image',
+                                message: 'Are you sure you want to delete this image from your library?',
+                                onConfirm: () => deleteFromLibrary(img.id)
+                              });
                             }}
-                            className="p-2 bg-white text-gray-900 rounded-full shadow-lg"
+                            className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full shadow-lg flex items-center justify-center z-10 hover:bg-red-600 transition-colors"
                           >
-                            <Eye size={16} />
-                          </button>
-                          <button 
-                            onClick={() => deleteFromLibrary(img.id)}
-                            className="p-2 bg-red-500 text-white rounded-full shadow-lg"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                            <Trash2 size={12} />
+                          </motion.button>
+                        )}
+                        
+                        <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                          <p className="text-[7px] font-black text-white uppercase tracking-widest text-center truncate">
+                            {coins.find(c => c.imageId === img.id)?.name || 'Unlinked'}
+                          </p>
                         </div>
                       </motion.div>
                     ))}
@@ -7281,6 +7326,14 @@ export default function App() {
                   {/* Data & System Section */}
                   <SettingsSection id="data" title="Data & System" icon={Database}>
                     <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+                      <SettingToggle 
+                        label="Enable Delete Mode" 
+                        icon={Trash2} 
+                        value={profile.preferences.enableDeleteMode}
+                        onChange={() => setProfile({ ...profile, preferences: { ...profile.preferences, enableDeleteMode: !profile.preferences.enableDeleteMode } })}
+                        description="Safe browsing vs. edit mode"
+                        badge="Safety"
+                      />
                       <SettingAction 
                         icon={RefreshCcw}
                         title="Refresh App"
@@ -7732,7 +7785,18 @@ export default function App() {
                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                   {feedback.type === 'success' ? <CheckCircle2 size={18} /> : <Info size={18} />}
                 </div>
-                {feedback.message}
+                <span className="flex-1">{feedback.message}</span>
+                {feedback.action && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      feedback.action?.onAction();
+                    }}
+                    className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors"
+                  >
+                    {feedback.action.label}
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
@@ -7745,7 +7809,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-6"
               onClick={() => setConfirmModal(null)}
             >
               <motion.div
@@ -7753,15 +7817,15 @@ export default function App() {
                 animate={{ scale: 1, y: 0, opacity: 1 }}
                 exit={{ scale: 0.9, y: 20, opacity: 0 }}
                 transition={modalTransition}
-                className="bg-white dark:bg-gray-900 w-full max-w-xs rounded-3xl p-6 shadow-2xl border border-gray-100 dark:border-gray-800"
+                className="bg-system-background w-full max-w-xs rounded-3xl p-6 shadow-2xl border border-gray-100 dark:border-gray-800"
                 onClick={e => e.stopPropagation()}
               >
-                <h3 className="text-xl font-black mb-2">{confirmModal.title}</h3>
-                <p className="text-gray-500 dark:text-gray-400 font-bold text-sm mb-6">{confirmModal.message}</p>
+                <h3 className="text-xl font-black mb-2 text-system-label">{confirmModal.title}</h3>
+                <p className="text-system-secondary-label font-bold text-sm mb-6 leading-relaxed">{confirmModal.message}</p>
                 <div className="flex gap-3">
                   <button 
                     onClick={() => setConfirmModal(null)}
-                    className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl font-black text-sm"
+                    className="flex-1 py-3 bg-secondary-system-background text-system-label rounded-xl font-black text-sm border border-gray-100 dark:border-gray-800"
                   >
                     Cancel
                   </button>
@@ -7770,7 +7834,7 @@ export default function App() {
                       confirmModal.onConfirm();
                       setConfirmModal(null);
                     }}
-                    className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black text-sm shadow-lg shadow-red-200 dark:shadow-none"
+                    className="flex-1 py-3 bg-red-500 text-white rounded-xl font-black text-sm shadow-lg shadow-red-500/20"
                   >
                     Confirm
                   </button>
