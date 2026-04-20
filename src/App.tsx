@@ -1579,6 +1579,37 @@ export default function App() {
     profileRef.current = profile;
   }, [profile]);
 
+  // Track Service Worker Status
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+
+    const updateStatus = () => {
+      if (!navigator.serviceWorker.controller) {
+        setSwStatus('None');
+        return;
+      }
+      
+      const state = navigator.serviceWorker.controller.state;
+      if (state === 'activated') setSwStatus('Active');
+      else if (state === 'installed') setSwStatus('Waiting');
+      else if (state === 'installing') setSwStatus('Installing');
+      else setSwStatus('None');
+    };
+
+    updateStatus();
+    
+    // Listen for changes
+    navigator.serviceWorker.ready.then(reg => {
+      const sw = reg.active || reg.waiting || reg.installing;
+      if (sw) {
+        sw.addEventListener('statechange', updateStatus);
+      }
+    });
+
+    const interval = setInterval(updateStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'collection' | 'library' | 'explore' | 'stats' | 'profile'>('collection');
   const [activeGameMode, setActiveGameMode] = useState<string | null>(null);
   const [activeNarrativeStoryId, setActiveNarrativeStoryId] = useState<string | null>(null);
@@ -1791,6 +1822,7 @@ export default function App() {
   const [compareCoins, setCompareCoins] = useState<string[]>([]);
   const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
   const [expandedEventIdx, setExpandedEventIdx] = useState<number | null>(null);
+  const [swStatus, setSwStatus] = useState<'Active' | 'Waiting' | 'Installing' | 'None'>('None');
   const [exploreMode, setExploreMode] = useState<ExploreMode>(() => {
     const saved = localStorage.getItem('exploreMode');
     return (saved as ExploreMode) || 'timeline';
@@ -2638,6 +2670,45 @@ export default function App() {
     
     setFeedback({ message: 'App state refreshed from storage', type: 'load' });
     addLog('User action: Refresh App', 'action');
+  };
+
+  const resetServiceWorker = async () => {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const clearAppCache = async () => {
+    if ('caches' in window) {
+      const names = await caches.keys();
+      for (const name of names) {
+        await caches.delete(name);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const clearAppIndexedDB = async () => {
+    if ('indexedDB' in window && (indexedDB as any).databases) {
+      const dbs = await (indexedDB as any).databases();
+      for (const db of dbs) {
+        if (db.name) {
+          indexedDB.deleteDatabase(db.name);
+        }
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const hardReload = () => {
+    window.location.reload();
   };
 
   const handleFontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -7368,6 +7439,99 @@ export default function App() {
                           });
                         }}
                       />
+                    </div>
+                  </SettingsSection>
+
+                  {/* Advanced Section */}
+                  <SettingsSection id="advanced" title="Advanced" icon={Zap}>
+                    <div className="p-4 space-y-4">
+                      <div className="ios-surface p-4 bg-gray-50/50 dark:bg-gray-800/20">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-system-secondary-label mb-0.5">Service Worker</p>
+                            <div className="flex items-center gap-1.5">
+                              <div className={`w-2 h-2 rounded-full ${
+                                swStatus === 'Active' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' :
+                                swStatus === 'Installing' ? 'bg-blue-500 animate-pulse' :
+                                swStatus === 'Waiting' ? 'bg-amber-500' : 'bg-gray-400'
+                              }`} />
+                              <span className="text-xs font-black text-system-label capitalize">{swStatus}</span>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={hardReload}
+                            className="p-2.5 bg-system-background text-system-label rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm active:scale-95 transition-all"
+                          >
+                            <RefreshCw size={16} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button 
+                            onClick={() => {
+                              setConfirmModal({
+                                title: 'Reset SW',
+                                message: 'Unregister all service workers? This can fix update issues.',
+                                onConfirm: async () => {
+                                  const success = await resetServiceWorker();
+                                  setFeedback({ message: success ? 'Service workers cleared' : 'No service workers found', type: success ? 'success' : 'load' });
+                                }
+                              });
+                            }}
+                            className="py-2.5 bg-system-background rounded-xl text-[9px] font-black uppercase tracking-widest text-system-secondary-label border border-gray-100 dark:border-gray-800 shadow-sm"
+                          >
+                            Reset SW
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setConfirmModal({
+                                title: 'Clear Cache',
+                                message: 'Clear all application cache storage?',
+                                onConfirm: async () => {
+                                  const success = await clearAppCache();
+                                  setFeedback({ message: success ? 'App cache cleared' : 'No cache found', type: success ? 'success' : 'load' });
+                                }
+                              });
+                            }}
+                            className="py-2.5 bg-system-background rounded-xl text-[9px] font-black uppercase tracking-widest text-system-secondary-label border border-gray-100 dark:border-gray-800 shadow-sm"
+                          >
+                            Clear Cache
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setConfirmModal({
+                                title: 'Clear IndexedDB',
+                                message: 'Clear all IndexedDB databases? This will delete all local images!',
+                                onConfirm: async () => {
+                                  const success = await clearAppIndexedDB();
+                                  setFeedback({ message: success ? 'IndexedDB cleared' : 'No databases found', type: success ? 'success' : 'load' });
+                                }
+                              });
+                            }}
+                            className="py-2.5 bg-system-background rounded-xl text-[9px] font-black uppercase tracking-widest text-system-secondary-label border border-gray-100 dark:border-gray-800 shadow-sm"
+                          >
+                            Clear DB
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setConfirmModal({
+                                title: 'Full Reset',
+                                message: 'Perform a full system reset? All data (coins, settings, images) will be lost and the app will reload!',
+                                onConfirm: async () => {
+                                  localStorage.clear();
+                                  await resetServiceWorker();
+                                  await clearAppCache();
+                                  await clearAppIndexedDB();
+                                  window.location.reload();
+                                }
+                              });
+                            }}
+                            className="py-2.5 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+                          >
+                            Full Reset
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </SettingsSection>
 
